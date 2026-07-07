@@ -211,6 +211,61 @@ create policy "Orientadora lê todas as curvas"
 -- Controle, DM1, Controle+EBH75 — nomes livres, definidos por projeto) e
 -- adiciona pessoas como "coautor" (mesmo acesso do criador) ou "ajudante"
 -- (só enxerga o teste que foi designado a ele, não o projeto inteiro).
+--
+-- Ordem importa aqui: primeiro TODAS as tabelas (bare, sem policy), depois
+-- as funções auxiliares (que já podem referenciar qualquer uma delas), só
+-- então RLS + policies de cada tabela. Colocar uma função que referencia
+-- "projeto_membros" antes de essa tabela existir quebra o "create or
+-- replace function" (funções "language sql" validam os nomes na hora de
+-- criar, diferente de plpgsql).
+
+create table if not exists public.projetos (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  descricao text,
+  -- Contagem informativa de quantas levas de sacrifício estão previstas.
+  -- Não distribui ratos por leva automaticamente (isso é feito na hora de
+  -- registrar o resultado, numa etapa futura) — só ajuda a orientadora a
+  -- ver o tamanho do projeto de cara.
+  numero_levas integer,
+  criado_por uuid not null references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.projetos add column if not exists numero_levas integer;
+
+create table if not exists public.projeto_membros (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  profile_id uuid not null references public.profiles (id) on delete cascade,
+  papel text not null check (papel in ('coautor', 'ajudante')),
+  created_at timestamptz not null default now(),
+  unique (projeto_id, profile_id)
+);
+
+create table if not exists public.projeto_grupos (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  nome text not null,
+  -- Quantos ratos esse grupo tem. Numeração dos ratos é sequencial e
+  -- global no projeto (rato 1..N cruzando todos os grupos, igual ao
+  -- exemplo real em "Para análise estatísica" — grupo Controle = ratos
+  -- 1-3, DM1 = 4-5 etc.), calculada a partir da ordem dos grupos.
+  numero_ratos integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (projeto_id, nome)
+);
+
+alter table public.projeto_grupos add column if not exists numero_ratos integer not null default 0;
+
+create table if not exists public.projeto_testes (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  teste_slug text not null,
+  responsavel_id uuid not null references public.profiles (id),
+  status text not null default 'pendente' check (status in ('pendente', 'concluido')),
+  created_at timestamptz not null default now()
+);
 
 -- Funções auxiliares "security definer": rodam com o dono da função (que
 -- tem bypass de RLS no Supabase), pra evitar recursão de política quando a
@@ -257,21 +312,6 @@ as $$
   );
 $$;
 
-create table if not exists public.projetos (
-  id uuid primary key default gen_random_uuid(),
-  nome text not null,
-  descricao text,
-  -- Contagem informativa de quantas levas de sacrifício estão previstas.
-  -- Não distribui ratos por leva automaticamente (isso é feito na hora de
-  -- registrar o resultado, numa etapa futura) — só ajuda a orientadora a
-  -- ver o tamanho do projeto de cara.
-  numero_levas integer,
-  criado_por uuid not null references public.profiles (id),
-  created_at timestamptz not null default now()
-);
-
-alter table public.projetos add column if not exists numero_levas integer;
-
 alter table public.projetos enable row level security;
 alter table public.projetos force row level security;
 
@@ -302,15 +342,6 @@ create policy "Coautor edita o projeto"
   using (public.eh_coautor_projeto(id))
   with check (public.eh_coautor_projeto(id));
 
-create table if not exists public.projeto_membros (
-  id uuid primary key default gen_random_uuid(),
-  projeto_id uuid not null references public.projetos (id) on delete cascade,
-  profile_id uuid not null references public.profiles (id) on delete cascade,
-  papel text not null check (papel in ('coautor', 'ajudante')),
-  created_at timestamptz not null default now(),
-  unique (projeto_id, profile_id)
-);
-
 alter table public.projeto_membros enable row level security;
 alter table public.projeto_membros force row level security;
 
@@ -336,21 +367,6 @@ create policy "Coautor remove membro"
 -- função criar_projeto abaixo, não por esta policy de insert — evita o
 -- problema do "ovo e a galinha" (precisar já ser coautor pra virar coautor).
 
-create table if not exists public.projeto_grupos (
-  id uuid primary key default gen_random_uuid(),
-  projeto_id uuid not null references public.projetos (id) on delete cascade,
-  nome text not null,
-  -- Quantos ratos esse grupo tem. Numeração dos ratos é sequencial e
-  -- global no projeto (rato 1..N cruzando todos os grupos, igual ao
-  -- exemplo real em "Para análise estatísica" — grupo Controle = ratos
-  -- 1-3, DM1 = 4-5 etc.), calculada a partir da ordem dos grupos.
-  numero_ratos integer not null default 0,
-  created_at timestamptz not null default now(),
-  unique (projeto_id, nome)
-);
-
-alter table public.projeto_grupos add column if not exists numero_ratos integer not null default 0;
-
 alter table public.projeto_grupos enable row level security;
 alter table public.projeto_grupos force row level security;
 
@@ -366,15 +382,6 @@ create policy "Coautor gerencia grupos"
   for all
   using (public.eh_coautor_projeto(projeto_id))
   with check (public.eh_coautor_projeto(projeto_id));
-
-create table if not exists public.projeto_testes (
-  id uuid primary key default gen_random_uuid(),
-  projeto_id uuid not null references public.projetos (id) on delete cascade,
-  teste_slug text not null,
-  responsavel_id uuid not null references public.profiles (id),
-  status text not null default 'pendente' check (status in ('pendente', 'concluido')),
-  created_at timestamptz not null default now()
-);
 
 alter table public.projeto_testes enable row level security;
 alter table public.projeto_testes force row level security;
