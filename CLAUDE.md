@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # plataforma-lanc
 
 Site do **LANC — Laboratório de Neurociências e Comportamento** (FURB), sob
@@ -7,18 +9,43 @@ grupo de pesquisa em vez do treinamento de atletismo.
 
 ## Status atual (2026-07-07)
 
-Ainda **não há código de aplicação** (Next.js) — este repositório começou
-pelos subagentes/skills do pipeline de conteúdo, que já são úteis mesmo
-antes do site existir (o rascunho das notícias fica em `content/noticias/`
-até o Supabase estar no ar).
+Scaffold do Next.js já existe (mesma stack/versões do `plataforma-atletas`:
+Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
+`npm run build` e `npm run lint` passam limpos. Implementado até aqui:
 
-O Ariel já criou um projeto Supabase novo e dedicado a este site. Existe um
-`supabase/schema.sql` inicial (login com papéis `bolsista`/`orientador` +
-tabela de notícias, RLS `force` em tudo) — ele ainda precisa ser rodado
-manualmente no SQL Editor do projeto. O schema de testes/projetos/TCC/
-resultados ainda não foi desenhado, entra numa versão seguinte deste
-arquivo. O scaffold do Next.js entra depois disso, quando o Ariel confirmar
-a arquitetura da área de bolsistas.
+- `src/proxy.ts` — renova sessão e bloqueia `/bolsista` e `/orientador` por
+  papel (redireciona pra `/login` se não logado, ou pra `/` se o papel não
+  bate com a rota).
+- `src/lib/supabase/{client,server,profile}.ts` e `src/lib/actions/auth.ts`
+  — login, cadastro (sempre cria papel `bolsista` — não existe formulário
+  público para criar conta de `orientador`, ver seção de segurança abaixo)
+  e logout.
+- Página inicial pública (`src/app/page.tsx`) — lista notícias publicadas e
+  o carrossel de bolsistas, direto da tabela `profiles`/`noticias`. Se as
+  variáveis de ambiente do Supabase não estiverem configuradas, mostra um
+  aviso em vez de quebrar a página.
+- `/login`, `/cadastro`, `/bolsista` (placeholder), `/orientador`
+  (placeholder).
+
+O Ariel já criou um projeto Supabase novo e dedicado a este site.
+`supabase/schema.sql` está pronto (login com papéis `bolsista`/
+`orientador` + tabela de notícias, RLS `force` em tudo), mas ainda não há
+confirmação de que já foi rodado no SQL Editor do projeto. Falta preencher
+`.env.local` (copiar de `.env.local.example`) com a URL/chaves desse
+projeto para o site rodar de verdade — sem isso, `npm run dev` sobe mas as
+páginas mostram o aviso de configuração pendente.
+
+**Segurança do papel "orientador":** de propósito, não existe nenhum jeito
+de virar `orientador` pelo site. A Débora precisa se cadastrar como
+qualquer bolsista e depois o Ariel promove ela manualmente rodando, no SQL
+Editor do Supabase (com a chave de serviço, que ignora RLS):
+`update profiles set papel = 'orientador' where id = '<uuid da Débora>';`
+
+Ainda não implementado (próxima fase, precisa de mais desenho de schema
+junto com o Ariel): testes bioquímicos (sidebar + protocolos do manual),
+calculadora de curva de Lowry com R², sistema de projetos/TCC, resultados
+de ensaio com controle de qualidade, exportação para o formato de planilha
+que o R do LANC espera, import do formato bruto do leitor Tecano.
 
 ## As duas frentes do site (visão do produto)
 
