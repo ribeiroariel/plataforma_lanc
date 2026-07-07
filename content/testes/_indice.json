@@ -1,0 +1,172 @@
+[
+  {
+    "slug": "preparo-amostras-cortex-rins",
+    "titulo": "Preparo das amostras (tecido)",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "cat-cortex-rins",
+    "titulo": "Catalase (CAT)",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "sod-cortex-rins",
+    "titulo": "Superóxido dismutase (SOD)",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "tbars-cortex-rins",
+    "titulo": "TBARS — peroxidação lipídica",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "sulfidrilas-cortex-rins",
+    "titulo": "Sulfidrilas totais e não-proteicas",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "carboniladas-cortex-rins",
+    "titulo": "Proteínas carboniladas",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "lowry-cortex-rins",
+    "titulo": "Dosagem de proteínas — método de Lowry",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "tiois-dissulfetos-cortex-rins",
+    "titulo": "Tióis e dissulfetos",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "acido-ascorbico-cortex-rins",
+    "titulo": "Ácido ascórbico (vitamina C)",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "h2o2-cortex-rins",
+    "titulo": "Conteúdo de peróxido de hidrogênio (H2O2)",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "valores-referencia-cortex-rins",
+    "titulo": "Valores de referência — controles",
+    "tecido": "cortex-rins"
+  },
+  {
+    "slug": "preparo-amostras-eritrocitos-plasma",
+    "titulo": "Preparo das amostras",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "cat-eritrocitos",
+    "titulo": "Catalase (CAT) — eritrócitos",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "sod-eritrocitos",
+    "titulo": "SOD — eritrócitos",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "tbars-eritrocitos",
+    "titulo": "TBARS — eritrócitos",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "carboniladas-eritrocitos",
+    "titulo": "Proteínas carboniladas — eritrócitos",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "tbars-plasma",
+    "titulo": "TBARS — plasma",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "sulfidrilas-eritrocitos-plasma",
+    "titulo": "Sulfidrilas — eritrócitos/plasma",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "carboniladas-plasma",
+    "titulo": "Proteínas carboniladas — plasma",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "acido-ascorbico-plasma",
+    "titulo": "Ácido ascórbico — plasma",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "lowry-eritrocitos-plasma",
+    "titulo": "Dosagem de proteínas (Lowry) — eritrócitos/plasma",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "valores-referencia-eritrocitos-plasma",
+    "titulo": "Valores de referência — controles",
+    "tecido": "eritrocitos-plasma"
+  },
+  {
+    "slug": "preparo-amostras-figado",
+    "titulo": "Preparo das amostras — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "cat-figado",
+    "titulo": "Catalase (CAT) — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "sod-figado",
+    "titulo": "SOD — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "tbars-figado",
+    "titulo": "TBARS — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "sulfidrilas-figado",
+    "titulo": "Sulfidrilas — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "tiois-dissulfetos-figado",
+    "titulo": "Tióis e dissulfetos — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "carboniladas-figado",
+    "titulo": "Proteínas carboniladas — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "acido-ascorbico-figado",
+    "titulo": "Ácido ascórbico — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "lowry-figado",
+    "titulo": "Dosagem de proteínas (Lowry) — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "valores-referencia-figado",
+    "titulo": "Valores de referência — controles",
+    "tecido": "figado"
+  },
+  {
+    "slug": "tampoes-reagentes-gerais",
+    "titulo": "Tampões e reagentes gerais",
+    "tecido": "geral"
+  },
+  {
+    "slug": "referencias-bibliograficas",
+    "titulo": "Referências bibliográficas",
+    "tecido": "geral"
+  }
+]

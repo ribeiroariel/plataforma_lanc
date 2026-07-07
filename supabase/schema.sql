@@ -147,3 +147,56 @@ create policy "Orientadora gerencia notícias"
 -- computador do Ariel) vai publicar notícias usando a chave de serviço do
 -- Supabase, que ignora essas travas — as políticas acima protegem o que
 -- acontece pelo site, não o script local.
+
+-- ----------------------------------------------------------------------------
+-- CURVAS PADRÃO DE LOWRY (registro de transparência)
+-- ----------------------------------------------------------------------------
+-- Cada linha é uma curva padrão de BSA que um bolsista rodou (6 pontos fixos,
+-- conforme content/testes/lowry-cortex-rins.md) + as amostras lidas com essa
+-- curva. É um registro de transparência: uma vez salva, não é editável nem
+-- apagável pelo site — só leitura, para o próprio bolsista e para a
+-- orientadora (inclusive para revisores de artigo no futuro).
+
+create table if not exists public.curvas_lowry (
+  id uuid primary key default gen_random_uuid(),
+  bolsista_id uuid not null references public.profiles (id) on delete cascade,
+  abs_branco numeric not null,
+  abs_10 numeric not null,
+  abs_20 numeric not null,
+  abs_40 numeric not null,
+  abs_60 numeric not null,
+  abs_80 numeric not null,
+  inclinacao numeric not null,
+  intercepto numeric not null,
+  r_quadrado numeric not null,
+  amostras jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.curvas_lowry enable row level security;
+alter table public.curvas_lowry force row level security;
+
+drop policy if exists "Bolsista lê as próprias curvas" on public.curvas_lowry;
+create policy "Bolsista lê as próprias curvas"
+  on public.curvas_lowry
+  for select
+  using (auth.uid() = bolsista_id);
+
+drop policy if exists "Bolsista registra a própria curva" on public.curvas_lowry;
+create policy "Bolsista registra a própria curva"
+  on public.curvas_lowry
+  for insert
+  with check (auth.uid() = bolsista_id);
+
+drop policy if exists "Orientadora lê todas as curvas" on public.curvas_lowry;
+create policy "Orientadora lê todas as curvas"
+  on public.curvas_lowry
+  for select
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.papel = 'orientador'
+    )
+  );
+
+-- Sem política de update/delete de propósito: uma curva salva é definitiva.

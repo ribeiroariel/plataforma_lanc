@@ -24,17 +24,33 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
   o carrossel de bolsistas, direto da tabela `profiles`/`noticias`. Se as
   variáveis de ambiente do Supabase não estiverem configuradas, mostra um
   aviso em vez de quebrar a página.
-- `/login`, `/cadastro`, `/bolsista` (placeholder), `/orientador`
-  (placeholder).
+- `/login`, `/cadastro`, `/bolsista`, `/orientador` (placeholder).
+- `/bolsista/testes` — barra lateral com todos os testes bioquímicos do
+  manual, agrupados por tecido (córtex/rins, eritrócitos/plasma, fígado).
+  Conteúdo em `content/testes/*.md`, extraído **literalmente** (sem
+  reescrita) do manual via `content/testes/_indice.json` +
+  `src/lib/testes.ts` — ver script que gerou os cortes em
+  `$CLAUDE_JOB_DIR` (não versionado; se precisar refatiar após o manual
+  mudar, recriar o script de corte por número de linha).
+- `/bolsista/testes/lowry-cortex-rins/calculadora` — calculadora da curva
+  padrão de Lowry: bolsista digita a absorbância dos 6 tubos padrão (0,
+  10, 20, 40, 60, 80 µg de BSA, conforme o manual), a página calcula
+  regressão linear, R² e concentração das amostras na hora (client-side,
+  sem lib externa de estatística), mostra gráfico (recharts) e salva em
+  `curvas_lowry` (registro de transparência: sem update/delete pelo site).
+  Ainda só existe para o tecido córtex/rins — eritrócitos/plasma e fígado
+  têm curva idêntica (mesmos 6 pontos), replicar a mesma página quando for
+  a hora.
 
-O Ariel já criou o projeto Supabase deste site (ref `yfjvgjpaorpryixumlfz`).
-`.env.local` já tem `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-preenchidos; falta `SUPABASE_SERVICE_ROLE_KEY` (chave "secret", em
-Settings → API → Secret keys), necessária só para os scripts locais
-(aprovar cadastro, futuramente publicar notícias). `supabase/schema.sql`
-está pronto (login com papéis `bolsista`/`orientador`, coluna `aprovado`,
-tabela de notícias, RLS `force` em tudo), mas ainda não há confirmação de
-que já foi rodado no SQL Editor do projeto.
+O Ariel já criou o projeto Supabase deste site (ref `yfjvgjpaorpryixumlfz`)
+e já confirmou ter rodado o `supabase/schema.sql`. `.env.local` está
+completo (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`) e testado (script de aprovação de cadastro
+conectou com sucesso). **Atenção:** a tabela `curvas_lowry` foi adicionada
+ao `schema.sql` numa sessão em que o Ariel ainda não confirmou ter rodado
+essa parte nova no SQL Editor — antes de testar a calculadora em produção,
+confirmar que essa tabela existe (rodar o arquivo inteiro de novo é
+seguro, usa `create table if not exists`).
 
 **Segurança do papel "orientador":** de propósito, não existe nenhum jeito
 de virar `orientador` pelo site. A Débora precisa se cadastrar como
@@ -43,16 +59,18 @@ Editor do Supabase (com a chave de serviço, que ignora RLS):
 `update profiles set papel = 'orientador', aprovado = true where id = '<uuid da Débora>';`
 
 **Aprovação de cadastro:** todo cadastro novo nasce com `aprovado = false`
-e a página `/bolsista` mostra "aguardando aprovação" em vez do conteúdo
-real até o Ariel liberar. Não há e-mail automático — o Ariel pede pelo chat
-("tem cadastro pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/
-rejeita via `scripts/revisar-cadastros.mjs` (usa a chave de serviço).
+e a página `/bolsista` (e tudo dentro dela, incl. `/bolsista/testes`)
+mostra "aguardando aprovação" em vez do conteúdo real até o Ariel liberar.
+Não há e-mail automático — o Ariel pede pelo chat ("tem cadastro
+pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/rejeita via
+`scripts/revisar-cadastros.mjs` (usa a chave de serviço).
 
 Ainda não implementado (próxima fase, precisa de mais desenho de schema
-junto com o Ariel): testes bioquímicos (sidebar + protocolos do manual),
-calculadora de curva de Lowry com R², sistema de projetos/TCC, resultados
-de ensaio com controle de qualidade, exportação para o formato de planilha
-que o R do LANC espera, import do formato bruto do leitor Tecano.
+junto com o Ariel): sistema de projetos/TCC (criar projeto, adicionar
+coautor/ajudantes, designar teste por pessoa), registro de resultado dos
+demais testes (com controle de qualidade tipo o do pirogalol/SOD),
+exportação para o formato de planilha que o R do LANC espera, import do
+formato bruto do leitor Tecano.
 
 ## As duas frentes do site (visão do produto)
 
@@ -124,3 +142,16 @@ está no `.gitignore` por não ser claramente conteúdo pensado para ser
 público, mesmo não sendo dado de pesquisa. Fica só local até o Ariel
 decidir. `content/noticias/` continua rastreado normalmente — nasce para
 virar conteúdo público do hall de notícias.
+
+`content/testes/*.md` **é rastreado** (diferente do `referencias-manual/`
+acima) — é metodologia científica padrão (Aebi 1984, Lowry 1951, Marklund
+&amp; Marklund 1974 etc.), precisa estar no repositório para o site
+funcionar em produção, e é conteúdo bem mais restrito que o manual
+completo: só os capítulos de ensaio bioquímico (preparo de amostra,
+princípio, reagentes, procedimento, expressão de resultados) + valores de
+referência + tampões gerais + bibliografia. Ficaram de fora as seções 1-7
+(regras do laboratório, biossegurança, manejo/sacrifício animal) e o
+capítulo 39 inteiro (limpeza, POP-002, tabela de bombonas/códigos FURB por
+resíduo). Cada procedimento individual ainda cita o código FURB da bombona
+específica daquele ensaio (ex.: "FURB 40255" no Lowry) porque isso está
+embutido no parágrafo do próprio método, não é a tabela consolidada.
