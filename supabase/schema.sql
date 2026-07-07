@@ -24,17 +24,29 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   nome text not null,
+  email text not null,
   papel text not null check (papel in ('bolsista', 'orientador')),
+  aprovado boolean not null default false,
   foto_url text,
   apresentacao text,
   created_at timestamptz not null default now()
 );
 
+-- Se a tabela já existia de uma versão anterior deste arquivo, garante que
+-- as colunas novas apareçam sem apagar nada.
+alter table public.profiles add column if not exists email text not null default '';
+alter table public.profiles add column if not exists aprovado boolean not null default false;
+
 alter table public.profiles enable row level security;
 alter table public.profiles force row level security;
 
 -- Qualquer visitante do site (mesmo sem login) pode ler os perfis — é o que
--- alimenta o carrossel público "quem somos" na página inicial.
+-- alimenta o carrossel público "quem somos" na página inicial. O e-mail
+-- fica de fora da leitura pública (só quem usa a chave de serviço enxerga).
+revoke select on public.profiles from anon, authenticated;
+grant select (id, nome, papel, aprovado, foto_url, apresentacao, created_at)
+  on public.profiles to anon, authenticated;
+
 drop policy if exists "Perfis são públicos para leitura" on public.profiles;
 create policy "Perfis são públicos para leitura"
   on public.profiles
@@ -49,14 +61,16 @@ create policy "Usuário atualiza o próprio perfil"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- Ninguém edita o próprio "papel" (bolsista/orientador) direto pelo site —
--- isso evita que um bolsista se autopromova a orientador. Só é definido na
--- criação da conta (via trigger abaixo) ou manualmente pelo Ariel no painel.
-revoke update (papel) on public.profiles from authenticated;
+-- Ninguém edita o próprio "papel" (bolsista/orientador) nem o próprio
+-- "aprovado" direto pelo site — evita autopromoção e autoaprovação. Só é
+-- definido na criação da conta (trigger abaixo) ou manualmente pelo Ariel,
+-- via script com a chave de serviço, quando ele aprova o cadastro.
+revoke update (papel, aprovado) on public.profiles from authenticated;
 
 -- Quando alguém se cadastra (auth.users), cria automaticamente a linha
 -- correspondente em profiles, lendo nome/papel que o formulário de cadastro
--- vai enviar.
+-- vai enviar. "aprovado" nasce sempre false — todo cadastro novo fica
+-- pendente até o Ariel revisar e aprovar manualmente.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -64,10 +78,11 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, nome, papel)
+  insert into public.profiles (id, nome, email, papel)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'nome', ''),
+    new.email,
     coalesce(new.raw_user_meta_data ->> 'papel', 'bolsista')
   );
   return new;

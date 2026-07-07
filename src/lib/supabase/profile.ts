@@ -6,11 +6,12 @@ export type Profile = {
   id: string;
   nome: string;
   papel: Papel;
+  aprovado: boolean;
   foto_url: string | null;
   apresentacao: string | null;
 };
 
-/** Usuário logado + perfil (nome/papel), ou null se ninguém estiver logado. */
+/** Usuário logado + perfil (nome/papel/aprovado), ou null se ninguém estiver logado. */
 export async function getUsuarioAtual(): Promise<Profile | null> {
   const supabase = await createClient();
 
@@ -22,7 +23,7 @@ export async function getUsuarioAtual(): Promise<Profile | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, nome, papel, foto_url, apresentacao")
+    .select("id, nome, papel, aprovado, foto_url, apresentacao")
     .eq("id", user.id)
     .single();
 

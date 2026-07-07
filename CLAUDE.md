@@ -27,19 +27,26 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
 - `/login`, `/cadastro`, `/bolsista` (placeholder), `/orientador`
   (placeholder).
 
-O Ariel já criou um projeto Supabase novo e dedicado a este site.
-`supabase/schema.sql` está pronto (login com papéis `bolsista`/
-`orientador` + tabela de notícias, RLS `force` em tudo), mas ainda não há
-confirmação de que já foi rodado no SQL Editor do projeto. Falta preencher
-`.env.local` (copiar de `.env.local.example`) com a URL/chaves desse
-projeto para o site rodar de verdade — sem isso, `npm run dev` sobe mas as
-páginas mostram o aviso de configuração pendente.
+O Ariel já criou o projeto Supabase deste site (ref `yfjvgjpaorpryixumlfz`).
+`.env.local` já tem `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+preenchidos; falta `SUPABASE_SERVICE_ROLE_KEY` (chave "secret", em
+Settings → API → Secret keys), necessária só para os scripts locais
+(aprovar cadastro, futuramente publicar notícias). `supabase/schema.sql`
+está pronto (login com papéis `bolsista`/`orientador`, coluna `aprovado`,
+tabela de notícias, RLS `force` em tudo), mas ainda não há confirmação de
+que já foi rodado no SQL Editor do projeto.
 
 **Segurança do papel "orientador":** de propósito, não existe nenhum jeito
 de virar `orientador` pelo site. A Débora precisa se cadastrar como
 qualquer bolsista e depois o Ariel promove ela manualmente rodando, no SQL
 Editor do Supabase (com a chave de serviço, que ignora RLS):
-`update profiles set papel = 'orientador' where id = '<uuid da Débora>';`
+`update profiles set papel = 'orientador', aprovado = true where id = '<uuid da Débora>';`
+
+**Aprovação de cadastro:** todo cadastro novo nasce com `aprovado = false`
+e a página `/bolsista` mostra "aguardando aprovação" em vez do conteúdo
+real até o Ariel liberar. Não há e-mail automático — o Ariel pede pelo chat
+("tem cadastro pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/
+rejeita via `scripts/revisar-cadastros.mjs` (usa a chave de serviço).
 
 Ainda não implementado (próxima fase, precisa de mais desenho de schema
 junto com o Ariel): testes bioquímicos (sidebar + protocolos do manual),
@@ -89,6 +96,10 @@ que o R do LANC espera, import do formato bruto do leitor Tecano.
   — dev full-stack deste repo (mesma função que `dev-plataforma-atletas`
   tem no projeto irmão): convenções de stack, deploy, RLS, e apoio nas
   tarefas de interface/adaptabilidade das áreas de bolsista e orientadora.
+- **Skill `revisar-cadastros-lanc`** (`.claude/skills/revisar-cadastros-lanc/`)
+  — lista cadastros de bolsista pendentes e aprova/rejeita quando o Ariel
+  pedir explicitamente pelo chat (nunca sozinha). Ver
+  `scripts/revisar-cadastros.mjs`.
 
 ## Convenção de stack (decidida por analogia ao `plataforma-atletas`)
 

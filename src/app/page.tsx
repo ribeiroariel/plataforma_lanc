@@ -33,6 +33,7 @@ async function buscarDadosPublicos() {
     supabase
       .from("profiles")
       .select("id, nome, papel, foto_url, apresentacao")
+      .eq("aprovado", true)
       .returns<Bolsista[]>(),
   ]);
 
