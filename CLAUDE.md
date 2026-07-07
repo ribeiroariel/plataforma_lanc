@@ -42,15 +42,40 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
   têm curva idêntica (mesmos 6 pontos), replicar a mesma página quando for
   a hora.
 
-O Ariel já criou o projeto Supabase deste site (ref `yfjvgjpaorpryixumlfz`)
-e já confirmou ter rodado o `supabase/schema.sql`. `.env.local` está
-completo (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-`SUPABASE_SERVICE_ROLE_KEY`) e testado (script de aprovação de cadastro
-conectou com sucesso). **Atenção:** a tabela `curvas_lowry` foi adicionada
-ao `schema.sql` numa sessão em que o Ariel ainda não confirmou ter rodado
-essa parte nova no SQL Editor — antes de testar a calculadora em produção,
-confirmar que essa tabela existe (rodar o arquivo inteiro de novo é
-seguro, usa `create table if not exists`).
+- `/bolsista/projetos`, `/bolsista/projetos/novo`, `/bolsista/projetos/[id]`
+  — sistema de projetos (TCC/estudo). Criar projeto define nome, descrição,
+  número de levas de sacrifício (só informativo por enquanto) e os grupos
+  experimentais com a quantidade de ratos de cada um (numeração sequencial
+  e global entre grupos, do jeito que o Ariel já faz fora do site). O
+  criador vira automaticamente "coautor" (função `criar_projeto`, security
+  definer, resolve o problema do "ovo e a galinha" das políticas). Coautor
+  pode adicionar membros (por e-mail, via `buscar_bolsista_por_email` —
+  não expõe a coluna `email` livremente) e designar testes do catálogo
+  (`src/lib/testes.ts`) a um responsável. **Regra de visibilidade:** um
+  "ajudante" só vê as designações de teste onde ele é o responsável, não o
+  projeto inteiro — reforçado via RLS (`eh_coautor_projeto`/
+  `eh_responsavel_teste`), não só na interface.
+- Registro de resultado por rato (`resultados_teste`, schema pronto) e as
+  calculadoras por tipo de teste (cinéticos tipo CAT/SOD no estilo da
+  calculadora de Lowry; delta-absorbância simples pra Carboniladas/TBARS)
+  ainda **não têm interface** — é a próxima etapa. O botão de exportar pra
+  Excel no formato do R (`Dados_Brutos`/`R_Tidy`, ver
+  `Para análise estatísica/*_organizado_*.xlsx` no OneDrive) também.
+
+**Exportação de dados é só do Ariel:** `profiles.pode_exportar_dados`
+(boolean, default false, protegida de autoedição igual `papel`/`aprovado`)
+controla quem vê o botão de baixar a planilha pro R — só a conta do Ariel
+deve ter essa flag `true`, nem a orientadora nem outros bolsistas. Setar
+manualmente: `update profiles set pode_exportar_dados = true where id = '<uuid do Ariel>';`
+
+O Ariel já criou o projeto Supabase deste site (ref `yfjvgjpaorpryixumlfz`).
+`.env.local` está completo e testado (script de aprovação de cadastro
+conectou com sucesso). **Atenção:** `curvas_lowry` e todo o bloco de
+projetos/`resultados_teste`/`pode_exportar_dados` foram adicionados ao
+`schema.sql` numa sessão em que o Ariel ainda não confirmou ter rodado
+essa parte nova no SQL Editor — antes de testar em produção, confirmar
+(rodar o arquivo inteiro de novo é seguro, usa `create table if not
+exists`/`create or replace function`).
 
 **Segurança do papel "orientador":** de propósito, não existe nenhum jeito
 de virar `orientador` pelo site. A Débora precisa se cadastrar como
@@ -65,12 +90,10 @@ Não há e-mail automático — o Ariel pede pelo chat ("tem cadastro
 pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/rejeita via
 `scripts/revisar-cadastros.mjs` (usa a chave de serviço).
 
-Ainda não implementado (próxima fase, precisa de mais desenho de schema
-junto com o Ariel): sistema de projetos/TCC (criar projeto, adicionar
-coautor/ajudantes, designar teste por pessoa), registro de resultado dos
-demais testes (com controle de qualidade tipo o do pirogalol/SOD),
-exportação para o formato de planilha que o R do LANC espera, import do
-formato bruto do leitor Tecano.
+Ainda não implementado (próxima fase): telas de registro de resultado por
+rato/grupo dentro de um teste designado (com as calculadoras cinéticas e o
+controle de qualidade tipo pirogalol/SOD), exportação para o formato de
+planilha que o R do LANC espera, import do formato bruto do leitor Tecano.
 
 ## As duas frentes do site (visão do produto)
 
