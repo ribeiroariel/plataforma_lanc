@@ -7,11 +7,18 @@ grupo de pesquisa em vez do treinamento de atletismo.
 
 ## Status atual (2026-07-07)
 
-Ainda **não há código de aplicação** — este repositório começou pelos
-subagentes/skills do pipeline de conteúdo, que já são úteis mesmo antes do
-site existir (o rascunho das notícias fica em `content/noticias/` até o
-Supabase estar no ar). O scaffold do Next.js/Supabase entra numa fase
-seguinte, quando o Ariel confirmar a arquitetura da área de bolsistas.
+Ainda **não há código de aplicação** (Next.js) — este repositório começou
+pelos subagentes/skills do pipeline de conteúdo, que já são úteis mesmo
+antes do site existir (o rascunho das notícias fica em `content/noticias/`
+até o Supabase estar no ar).
+
+O Ariel já criou um projeto Supabase novo e dedicado a este site. Existe um
+`supabase/schema.sql` inicial (login com papéis `bolsista`/`orientador` +
+tabela de notícias, RLS `force` em tudo) — ele ainda precisa ser rodado
+manualmente no SQL Editor do projeto. O schema de testes/projetos/TCC/
+resultados ainda não foi desenhado, entra numa versão seguinte deste
+arquivo. O scaffold do Next.js entra depois disso, quando o Ariel confirmar
+a arquitetura da área de bolsistas.
 
 ## As duas frentes do site (visão do produto)
 
