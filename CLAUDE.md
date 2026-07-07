@@ -64,9 +64,18 @@ Vercel, mesmo padrão de `supabase/schema.sql` como fonte única de verdade
 em todas as tabelas. Ainda não scaffolded — ver subagente `dev-plataforma-lanc`
 para os detalhes assim que o código começar.
 
-## Dados sensíveis
+## Dados sensíveis e visibilidade do repositório
 
-A área de bolsistas guarda dados de pesquisa (resultados de ensaios,
-controles de qualidade) — não é dado pessoal como CPF/RG, mas é dado
-institucional/de pesquisa não público. Definir com o Ariel se o repositório
-do site será público ou privado antes do primeiro push a um remoto.
+Decisão (2026-07-07): o dado de pesquisa de verdade (resultados de ensaio,
+controles de qualidade, projetos/TCC) mora só no Supabase, protegido por
+RLS — nunca no repositório. Com essa separação, o **repositório de código
+pode ser público** (mesmo espírito do `plataforma-atletas`). O Ariel vai
+criar um projeto Supabase novo e dedicado para este site (não reaproveitar
+o do `plataforma-atletas`).
+
+Exceção: `content/referencias-manual/*.txt` (espelho do manual interno do
+laboratório — biossegurança, sacrifício animal, códigos de descarte FURB)
+está no `.gitignore` por não ser claramente conteúdo pensado para ser
+público, mesmo não sendo dado de pesquisa. Fica só local até o Ariel
+decidir. `content/noticias/` continua rastreado normalmente — nasce para
+virar conteúdo público do hall de notícias.
