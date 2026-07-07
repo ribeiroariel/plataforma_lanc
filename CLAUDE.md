@@ -51,31 +51,58 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
   definer, resolve o problema do "ovo e a galinha" das políticas). Coautor
   pode adicionar membros (por e-mail, via `buscar_bolsista_por_email` —
   não expõe a coluna `email` livremente) e designar testes do catálogo
-  (`src/lib/testes.ts`) a um responsável. **Regra de visibilidade:** um
-  "ajudante" só vê as designações de teste onde ele é o responsável, não o
-  projeto inteiro — reforçado via RLS (`eh_coautor_projeto`/
-  `eh_responsavel_teste`), não só na interface.
-- Registro de resultado por rato (`resultados_teste`, schema pronto) e as
-  calculadoras por tipo de teste (cinéticos tipo CAT/SOD no estilo da
-  calculadora de Lowry; delta-absorbância simples pra Carboniladas/TBARS)
-  ainda **não têm interface** — é a próxima etapa. O botão de exportar pra
-  Excel no formato do R (`Dados_Brutos`/`R_Tidy`, ver
-  `Para análise estatísica/*_organizado_*.xlsx` no OneDrive) também.
+  (`src/lib/tiposTeste.ts` filtra pra só os designáveis — ver abaixo) a um
+  responsável. **Regra de visibilidade:** um "ajudante" só vê as
+  designações de teste onde ele é o responsável, não o projeto inteiro —
+  reforçado via RLS (`eh_coautor_projeto`/`eh_responsavel_teste`), não só
+  na interface.
+- `/bolsista/projetos/[id]/testes/[testeId]` — registro de resultado, um
+  rato por vez (roster gerado por `src/lib/roster.ts` a partir dos grupos).
+  O comportamento muda por "família" de teste
+  (`src/lib/tiposTeste.ts`, `configDoTeste`):
+  - **CAT e SOD**: cálculo automático completo (fórmula do manual é
+    autocontida). Entrada cinética (11 pontos/10s pra CAT, 5 pontos/30s
+    pra SOD) com regressão linear + gráfico ao vivo
+    (`src/lib/estatistica.ts`, mesma função usada pela calculadora de
+    Lowry). SOD tem um controle de sessão (pirogalol sem amostra,
+    compartilhado por todos os ratos daquela rodada) com o QC do manual
+    (0,030–0,070 ΔAbs/min); CAT tem QC do meio de reação (0,70–0,85 Abs).
+  - **TBARS, Sulfidrilas, Carboniladas, Tióis-Dissulfetos, Ácido
+    Ascórbico, H2O2** ("simples"): a plataforma registra os valores
+    brutos exatamente como no protocolo, mas o **valor final é digitado
+    pelo bolsista**, não calculado pela plataforma — o manual não fecha
+    numa fórmula única (depende de fator de diluição e da concentração de
+    proteína de um ensaio de Lowry separado), e decidi não arriscar
+    inventar essa conversão. Isso está explicado na própria tela, não é
+    um bug escondido.
+  - **Lowry**: fica de fora do sistema de projetos por enquanto — a
+    calculadora existente salva em `curvas_lowry` (por bolsista, sem
+    rato/grupo/projeto), formato diferente do resto. Integrar isso é um
+    próximo passo, não fiz às pressas.
+- `/api/exportar/[id]` — exporta o projeto pra `.xlsx`: uma aba
+  "Dados_Brutos"-style por teste designado + uma aba "R_Tidy"
+  (rato/grupo/teste/valor, formato longo) juntando todos os testes do
+  projeto, no mesmo espírito de
+  `Para análise estatísica/*_organizado_*.xlsx` no OneDrive. Baixado via
+  botão "Exportar para o R" na página do projeto, só visível se
+  `pode_exportar_dados = true`.
 
-**Exportação de dados é só do Ariel:** `profiles.pode_exportar_dados`
-(boolean, default false, protegida de autoedição igual `papel`/`aprovado`)
-controla quem vê o botão de baixar a planilha pro R — só a conta do Ariel
-deve ter essa flag `true`, nem a orientadora nem outros bolsistas. Setar
-manualmente: `update profiles set pode_exportar_dados = true where id = '<uuid do Ariel>';`
+**Exportação de dados é só do Ariel — reforçado em dois lugares:**
+`profiles.pode_exportar_dados` (protegida de autoedição igual
+`papel`/`aprovado`) não só esconde/mostra o botão na interface, como
+também tem uma função `pode_exportar_dados()` somada nas policies de
+leitura de `projetos`/`projeto_membros`/`projeto_grupos`/`projeto_testes`/
+`resultados_teste` — sem isso, marcar a flag não adiantaria nada, porque o
+RLS ainda bloquearia o Ariel de ler projetos onde ele não é membro (esse
+foi um bug que corrigi antes de implementar a exportação, não depois).
+Setar manualmente: `update profiles set pode_exportar_dados = true where id = '<uuid do Ariel>';`
 
 O Ariel já criou o projeto Supabase deste site (ref `yfjvgjpaorpryixumlfz`).
-`.env.local` está completo e testado (script de aprovação de cadastro
-conectou com sucesso). **Atenção:** `curvas_lowry` e todo o bloco de
-projetos/`resultados_teste`/`pode_exportar_dados` foram adicionados ao
-`schema.sql` numa sessão em que o Ariel ainda não confirmou ter rodado
-essa parte nova no SQL Editor — antes de testar em produção, confirmar
-(rodar o arquivo inteiro de novo é seguro, usa `create table if not
-exists`/`create or replace function`).
+`.env.local` está completo e testado. **Atenção:** o bloco de
+`pode_exportar_dados()` + as policies atualizadas foram adicionados numa
+sessão em que o Ariel ainda não confirmou ter rodado essa versão mais
+recente do `schema.sql` — antes de testar a exportação em produção,
+confirmar (rodar o arquivo inteiro de novo é seguro).
 
 **Segurança do papel "orientador":** de propósito, não existe nenhum jeito
 de virar `orientador` pelo site. A Débora precisa se cadastrar como
@@ -90,10 +117,15 @@ Não há e-mail automático — o Ariel pede pelo chat ("tem cadastro
 pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/rejeita via
 `scripts/revisar-cadastros.mjs` (usa a chave de serviço).
 
-Ainda não implementado (próxima fase): telas de registro de resultado por
-rato/grupo dentro de um teste designado (com as calculadoras cinéticas e o
-controle de qualidade tipo pirogalol/SOD), exportação para o formato de
-planilha que o R do LANC espera, import do formato bruto do leitor Tecano.
+Ainda não implementado (próximas fases): integrar Lowry ao sistema de
+projetos (hoje é solto, por bolsista); fórmula automática pra
+TBARS/Sulfidrilas/Carboniladas/Tióis-Dissulfetos/Ácido Ascórbico/H2O2
+(hoje é entrada manual do valor final — ver seção acima); import do
+formato bruto do leitor Tecano pra dentro da tela de registro (hoje o
+bolsista digita a leitura já processada); páginas `/orientador` (ainda
+placeholder — visão geral de todos os projetos/bolsistas) e cadastro de
+foto/apresentação de perfil (pro carrossel público, hoje só nome aparece
+mesmo com o campo já existindo no banco).
 
 ## As duas frentes do site (visão do produto)
 

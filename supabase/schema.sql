@@ -284,6 +284,23 @@ as $$
   );
 $$;
 
+-- Usada pela rota de exportação (/api/exportar) — sem isso, marcar
+-- "pode_exportar_dados = true" só esconderia/mostraria o botão na tela,
+-- mas o RLS ainda bloquearia a leitura de projetos que o Ariel não integra
+-- como membro. Mesma ideia do is_orientador(), outra bandeira.
+create or replace function public.pode_exportar_dados()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid() and profiles.pode_exportar_dados = true
+  );
+$$;
+
 create or replace function public.eh_membro_projeto(p_projeto_id uuid)
 returns boolean
 language sql
@@ -319,7 +336,11 @@ drop policy if exists "Membros e orientadora veem o projeto" on public.projetos;
 create policy "Membros e orientadora veem o projeto"
   on public.projetos
   for select
-  using (public.eh_membro_projeto(id) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
 
 drop policy if exists "Bolsista aprovado cria projeto" on public.projetos;
 create policy "Bolsista aprovado cria projeto"
@@ -349,7 +370,11 @@ drop policy if exists "Membros e orientadora veem a lista de membros" on public.
 create policy "Membros e orientadora veem a lista de membros"
   on public.projeto_membros
   for select
-  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
 
 drop policy if exists "Coautor adiciona membro" on public.projeto_membros;
 create policy "Coautor adiciona membro"
@@ -374,7 +399,11 @@ drop policy if exists "Membros e orientadora veem os grupos" on public.projeto_g
 create policy "Membros e orientadora veem os grupos"
   on public.projeto_grupos
   for select
-  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
 
 drop policy if exists "Coautor gerencia grupos" on public.projeto_grupos;
 create policy "Coautor gerencia grupos"
@@ -396,6 +425,7 @@ create policy "Coautor, responsável e orientadora veem a designação"
     public.eh_coautor_projeto(projeto_id)
     or responsavel_id = auth.uid()
     or public.is_orientador()
+    or public.pode_exportar_dados()
   );
 
 drop policy if exists "Coautor designa teste" on public.projeto_testes;
@@ -485,6 +515,7 @@ as $$
 $$;
 
 grant execute on function public.is_orientador() to authenticated, anon;
+grant execute on function public.pode_exportar_dados() to authenticated;
 grant execute on function public.eh_membro_projeto(uuid) to authenticated;
 grant execute on function public.eh_coautor_projeto(uuid) to authenticated;
 grant execute on function public.criar_projeto(text, text, integer, text[], integer[]) to authenticated;
@@ -552,6 +583,7 @@ create policy "Responsável, coautor e orientadora veem o resultado"
     public.eh_responsavel_teste(projeto_teste_id)
     or public.eh_coautor_do_teste(projeto_teste_id)
     or public.is_orientador()
+    or public.pode_exportar_dados()
   );
 
 drop policy if exists "Responsável registra resultado" on public.resultados_teste;

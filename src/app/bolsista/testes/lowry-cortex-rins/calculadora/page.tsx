@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { salvarCurvaLowry } from "@/lib/actions/lowry";
+import { regressaoLinear } from "@/lib/estatistica";
 
 // Pontos fixos da curva padrão de BSA, conforme
 // content/testes/lowry-cortex-rins.md (seção 14.4 do manual).
@@ -25,34 +26,6 @@ type Amostra = {
   absorbancia: string;
   fatorDiluicao: string;
 };
-
-function regressaoLinear(pontos: { x: number; y: number }[]) {
-  const n = pontos.length;
-  const somaX = pontos.reduce((s, p) => s + p.x, 0);
-  const somaY = pontos.reduce((s, p) => s + p.y, 0);
-  const mediaX = somaX / n;
-  const mediaY = somaY / n;
-
-  let numerador = 0;
-  let denominador = 0;
-  for (const p of pontos) {
-    numerador += (p.x - mediaX) * (p.y - mediaY);
-    denominador += (p.x - mediaX) ** 2;
-  }
-  const inclinacao = denominador === 0 ? 0 : numerador / denominador;
-  const intercepto = mediaY - inclinacao * mediaX;
-
-  let ssRes = 0;
-  let ssTot = 0;
-  for (const p of pontos) {
-    const previsto = inclinacao * p.x + intercepto;
-    ssRes += (p.y - previsto) ** 2;
-    ssTot += (p.y - mediaY) ** 2;
-  }
-  const rQuadrado = ssTot === 0 ? 0 : 1 - ssRes / ssTot;
-
-  return { inclinacao, intercepto, rQuadrado };
-}
 
 export default function CalculadoraLowry() {
   const [absorbancias, setAbsorbancias] = useState<Record<number, string>>({
