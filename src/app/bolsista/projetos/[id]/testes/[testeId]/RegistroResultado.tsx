@@ -18,6 +18,8 @@ import { salvarResultado, definirStatusTeste } from "@/lib/actions/resultados";
 
 const TEMPOS_CAT = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const TEMPOS_SOD = [0, 30, 60, 90, 120];
+const PONTOS_CURVA_LOWRY = [0, 10, 20, 40, 60, 80];
+const VOLUME_AMOSTRA_LOWRY_UL = 10;
 
 const VOLUME_TOTAL_CAT_ML = 0.25;
 const VOLUME_AMOSTRA_CAT_ML = 0.01;
@@ -75,6 +77,9 @@ export default function RegistroResultado({
   const [controleSod, setControleSod] = useState<string[]>(
     TEMPOS_SOD.map(() => "")
   );
+  const [curvaLowry, setCurvaLowry] = useState<string[]>(
+    PONTOS_CURVA_LOWRY.map(() => "")
+  );
 
   const qcCatOk = useMemo(() => {
     if (!config.qc || config.familia !== "cat") return null;
@@ -98,6 +103,21 @@ export default function RegistroResultado({
     if (!config.qc || controleSodSlopeMin === null) return null;
     return controleSodSlopeMin >= config.qc.min && controleSodSlopeMin <= config.qc.max;
   }, [controleSodSlopeMin, config.qc]);
+
+  const regressaoCurvaLowry = useMemo(() => {
+    if (config.familia !== "curva") return null;
+    const pontos = usarPontosValidos(PONTOS_CURVA_LOWRY, curvaLowry);
+    if (pontos.length < 2) return null;
+    return regressaoLinear(pontos);
+  }, [curvaLowry, config.familia]);
+
+  const qcCurvaOk = useMemo(() => {
+    if (!config.qc || !regressaoCurvaLowry) return null;
+    return (
+      regressaoCurvaLowry.rQuadrado >= config.qc.min &&
+      regressaoCurvaLowry.rQuadrado <= config.qc.max
+    );
+  }, [regressaoCurvaLowry, config.qc]);
 
   const grafico = useMemo(() => {
     const dados = roster
@@ -221,6 +241,47 @@ export default function RegistroResultado({
         </div>
       )}
 
+      {config.familia === "curva" && config.qc && (
+        <div className="mb-6 rounded border border-black/10 p-4 dark:border-white/10">
+          <p className="mb-2 text-sm font-medium">
+            Curva padrão da sessão — {config.qc.rotulo}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PONTOS_CURVA_LOWRY.map((p, i) => (
+              <label key={p} className="flex flex-col gap-1 text-xs">
+                {p === 0 ? "Branco" : `${p} µg`}
+                <input
+                  type="number"
+                  step="0.001"
+                  value={curvaLowry[i]}
+                  onChange={(e) =>
+                    setCurvaLowry((prev) =>
+                      prev.map((v, idx) => (idx === i ? e.target.value : v))
+                    )
+                  }
+                  disabled={!podeRegistrar}
+                  className="w-20 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+                />
+              </label>
+            ))}
+          </div>
+          {regressaoCurvaLowry && (
+            <p
+              className={`mt-2 text-xs ${
+                qcCurvaOk
+                  ? "text-green-700 dark:text-green-400"
+                  : "text-red-700 dark:text-red-400"
+              }`}
+            >
+              R² = {regressaoCurvaLowry.rQuadrado.toFixed(4)}
+              {qcCurvaOk === false &&
+                ` — abaixo do exigido pelo manual (≥ ${config.qc.min}). ${config.qc.dica}`}
+              {qcCurvaOk === true && " — dentro do padrão do manual."}
+            </p>
+          )}
+        </div>
+      )}
+
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-black/60 dark:text-white/60">
@@ -275,6 +336,9 @@ export default function RegistroResultado({
           controleSodSlopeMin={controleSodSlopeMin}
           qcSessaoSodOk={qcSodOk}
           controleSodBruto={controleSod}
+          regressaoCurvaLowry={regressaoCurvaLowry}
+          curvaLowryBruta={curvaLowry}
+          qcSessaoCurvaOk={qcCurvaOk}
           onCancelar={() => setRatoSelecionado(null)}
           onSalvar={aoSalvar}
         />
@@ -311,6 +375,9 @@ function FormularioRato({
   controleSodSlopeMin,
   qcSessaoSodOk,
   controleSodBruto,
+  regressaoCurvaLowry,
+  curvaLowryBruta,
+  qcSessaoCurvaOk,
   onCancelar,
   onSalvar,
 }: {
@@ -324,6 +391,9 @@ function FormularioRato({
   controleSodSlopeMin: number | null;
   qcSessaoSodOk: boolean | null;
   controleSodBruto: string[];
+  regressaoCurvaLowry: ReturnType<typeof regressaoLinear> | null;
+  curvaLowryBruta: string[];
+  qcSessaoCurvaOk: boolean | null;
   onCancelar: () => void;
   onSalvar: (rato: string, resultado: Resultado) => void;
 }) {
@@ -355,6 +425,16 @@ function FormularioRato({
     resultadoExistente?.valor_calculado != null
       ? String(resultadoExistente.valor_calculado)
       : ""
+  );
+  const [absorbanciaCurva, setAbsorbanciaCurva] = useState(
+    leiturasExistentes.abs_amostra != null
+      ? String(leiturasExistentes.abs_amostra)
+      : ""
+  );
+  const [fatorDiluicaoCurva, setFatorDiluicaoCurva] = useState(
+    leiturasExistentes.fator_diluicao != null
+      ? String(leiturasExistentes.fator_diluicao)
+      : "1"
   );
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -398,11 +478,22 @@ function FormularioRato({
     return unidades / proteinaNum;
   }, [config.familia, regressaoAmostra, controleSodSlopeMin, proteinaNum]);
 
+  const valorCalculadoCurva = useMemo(() => {
+    if (config.familia !== "curva" || !regressaoCurvaLowry) return null;
+    const abs = parseFloat(absorbanciaCurva);
+    const fator = parseFloat(fatorDiluicaoCurva) || 1;
+    if (Number.isNaN(abs) || regressaoCurvaLowry.inclinacao === 0) return null;
+    const microgramas = (abs - regressaoCurvaLowry.intercepto) / regressaoCurvaLowry.inclinacao;
+    return (microgramas / VOLUME_AMOSTRA_LOWRY_UL) * fator;
+  }, [config.familia, regressaoCurvaLowry, absorbanciaCurva, fatorDiluicaoCurva]);
+
   const valorCalculadoAtual =
     config.familia === "cat"
       ? valorCalculadoCat
       : config.familia === "sod"
       ? valorCalculadoSod
+      : config.familia === "curva"
+      ? valorCalculadoCurva
       : parseFloat(valorFinal);
 
   const dadosGraficoAmostra = tempos.map((t, i) => {
@@ -456,6 +547,23 @@ function FormularioRato({
       };
       valor = valorCalculadoSod;
       dentroDoPadrao = qcSessaoSodOk;
+    } else if (config.familia === "curva") {
+      if (valorCalculadoCurva === null) {
+        setErro("Preencha a curva padrão da sessão e a absorbância da amostra.");
+        return;
+      }
+      leituras = {
+        tipo: "curva",
+        abs_amostra: parseFloat(absorbanciaCurva),
+        fator_diluicao: parseFloat(fatorDiluicaoCurva) || 1,
+        curva_pontos: PONTOS_CURVA_LOWRY,
+        curva_absorbancias: curvaLowryBruta.map((v) => (v === "" ? null : parseFloat(v))),
+        curva_inclinacao: regressaoCurvaLowry?.inclinacao ?? null,
+        curva_intercepto: regressaoCurvaLowry?.intercepto ?? null,
+        curva_r2: regressaoCurvaLowry?.rQuadrado ?? null,
+      };
+      valor = valorCalculadoCurva;
+      dentroDoPadrao = qcSessaoCurvaOk;
     } else {
       if (valorFinal === "" || Number.isNaN(parseFloat(valorFinal))) {
         setErro("Informe o valor final calculado.");
@@ -549,6 +657,37 @@ function FormularioRato({
             </div>
           )}
         </>
+      )}
+
+      {config.familia === "curva" && (
+        <div className="mb-3 flex flex-wrap gap-3">
+          <label className="flex flex-col gap-1 text-xs">
+            Absorbância da amostra
+            <input
+              type="number"
+              step="0.001"
+              value={absorbanciaCurva}
+              onChange={(e) => setAbsorbanciaCurva(e.target.value)}
+              className="w-32 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs">
+            Fator de diluição
+            <input
+              type="number"
+              step="0.1"
+              value={fatorDiluicaoCurva}
+              onChange={(e) => setFatorDiluicaoCurva(e.target.value)}
+              className="w-32 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+            />
+          </label>
+          {!regressaoCurvaLowry && (
+            <p className="w-full text-xs text-black/50 dark:text-white/50">
+              Preencha a curva padrão da sessão (acima da tabela) antes de
+              registrar a amostra.
+            </p>
+          )}
+        </div>
       )}
 
       {config.familia === "simples" && (

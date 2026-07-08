@@ -75,10 +75,15 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
     proteína de um ensaio de Lowry separado), e decidi não arriscar
     inventar essa conversão. Isso está explicado na própria tela, não é
     um bug escondido.
-  - **Lowry**: fica de fora do sistema de projetos por enquanto — a
-    calculadora existente salva em `curvas_lowry` (por bolsista, sem
-    rato/grupo/projeto), formato diferente do resto. Integrar isso é um
-    próximo passo, não fiz às pressas.
+  - **Lowry** (família "curva"): já integrado ao sistema de projetos.
+    Curva padrão (6 pontos de BSA) é preenchida uma vez por sessão, igual
+    ao controle do SOD; cada rato só precisa da própria absorbância +
+    fator de diluição, e o valor (mg proteína/mL) sai por interpolação na
+    curva — usa `resultados_teste` como qualquer outro teste, não
+    `curvas_lowry`. A calculadora solta
+    (`/bolsista/testes/lowry-cortex-rins/calculadora`, salva em
+    `curvas_lowry`) continua existindo à parte, pra uso rápido sem vínculo
+    com projeto — a tela avisa isso e linka pra versão do projeto.
 - `/api/exportar/[id]` — exporta o projeto pra `.xlsx`: uma aba
   "Dados_Brutos"-style por teste designado + uma aba "R_Tidy"
   (rato/grupo/teste/valor, formato longo) juntando todos os testes do

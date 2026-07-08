@@ -1,13 +1,14 @@
 // Classifica cada slug de teste (ver content/testes/_indice.json) numa
 // "família" que define como a tela de registro de resultado se comporta.
 // Fórmula automática só existe onde o manual dá uma fórmula completa e sem
-// ambiguidade (Lowry — já tem calculadora própria —, CAT e SOD). Para os
-// demais, a plataforma registra os valores brutos exatamente como no
-// protocolo e o bolsista informa o valor final já calculado — evita
-// inventar uma fórmula de conversão que o manual não fecha (dependeria de
-// fator de diluição e concentração de proteína de outro ensaio).
+// ambiguidade (Lowry, CAT e SOD). Para os demais, a plataforma registra os
+// valores brutos exatamente como no protocolo e o bolsista informa o valor
+// final já calculado — evita inventar uma fórmula de conversão que o
+// manual não fecha (dependeria de fator de diluição e concentração de
+// proteína de outro ensaio).
 
 export type Familia =
+  | "curva"
   | "cat"
   | "sod"
   | "simples";
@@ -35,6 +36,18 @@ export type ConfigTeste = {
 };
 
 const CONFIG_POR_FAMILIA: Record<Familia, Omit<ConfigTeste, "familia">> = {
+  curva: {
+    unidadeResultado: "mg proteína/mL",
+    calculoAutomatico: true,
+    qc: {
+      rotulo: "R² da curva padrão (6 pontos de BSA)",
+      min: 0.99,
+      max: 1,
+      unidade: "R²",
+      dica:
+        "Verificar a solução estoque de BSA, o Reagente de Folin e o tempo de incubação; refazer a curva.",
+    },
+  },
   cat: {
     unidadeResultado: "µmol H₂O₂·min⁻¹·mg proteína⁻¹",
     calculoAutomatico: true,
@@ -79,7 +92,7 @@ const CAMPOS_BRUTOS_POR_SLUG_PREFIXO: Record<string, CampoBruto[]> = {
 };
 
 function familiaDoSlug(slug: string): Familia | null {
-  if (slug.startsWith("lowry")) return null; // tem calculadora própria, fora deste fluxo
+  if (slug.startsWith("lowry")) return "curva";
   if (slug.startsWith("cat-")) return "cat";
   if (slug.startsWith("sod-")) return "sod";
   for (const prefixo of Object.keys(CAMPOS_BRUTOS_POR_SLUG_PREFIXO)) {
@@ -88,13 +101,7 @@ function familiaDoSlug(slug: string): Familia | null {
   return null; // preparo-amostras-*, valores-referencia-*, tampoes, referências
 }
 
-/**
- * Slugs que podem ser designados como teste dentro de um projeto.
- * Lowry fica de fora por enquanto: a calculadora dele salva em
- * curvas_lowry (por bolsista, sem rato/grupo/projeto) e ainda não foi
- * migrada pro esquema de resultados_teste por rato — integrar isso é um
- * próximo passo, não redesenhar às pressas agora.
- */
+/** Slugs que podem ser designados como teste dentro de um projeto. */
 export function ehTesteDesignavel(slug: string): boolean {
   return familiaDoSlug(slug) !== null;
 }

@@ -146,9 +146,16 @@ export default function CalculadoraLowry() {
           ← Voltar ao protocolo
         </Link>
       </p>
-      <h1 className="mb-4 text-2xl font-semibold">
+      <h1 className="mb-1 text-2xl font-semibold">
         Calculadora — Curva padrão de Lowry
       </h1>
+      <p className="mb-4 text-sm text-black/60 dark:text-white/60">
+        Ferramenta solta, sem vínculo com projeto. Se essa curva é pra um
+        rato de um projeto específico, registre pelo próprio projeto (aba
+        &quot;Testes designados&quot; → Lowry) — assim o resultado fica
+        junto com o resto dos dados desse projeto e entra na exportação
+        pro R.
+      </p>
 
       <section className="mb-8">
         <h2 className="mb-2 font-semibold">
