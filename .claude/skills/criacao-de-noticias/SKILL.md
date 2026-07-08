@@ -56,13 +56,13 @@ anexar as imagens do post diretamente, não tente acessar o perfil sozinho.
    de nunca persistir conteúdo sensível/público sem OK explícito.
 
 4. **Salve o rascunho aprovado** como Markdown com frontmatter em
-   `content/noticias/{AAAA-MM-DD}-{slug}.md`. A tabela `noticias` já existe
-   no Supabase (ver `supabase/schema.sql`) — depois que o Ariel aprovar o
-   rascunho salvo aqui, o passo de publicar de verdade é inserir uma linha
-   nessa tabela com `publicado = true` (via chave de serviço, script local
-   — não existe ainda um script pronto pra isso, criar um
-   `scripts/publicar-noticia.mjs` na primeira vez que for necessário,
-   seguindo o padrão de `scripts/revisar-cadastros.mjs`).
+   `content/noticias/{AAAA-MM-DD}-{slug}.md`. Depois que o Ariel aprovar,
+   publique de verdade rodando `node scripts/publicar-noticias.mjs
+   --publicar` — o script lê todos os `.md` de `content/noticias/`,
+   parseia o frontmatter e insere na tabela `noticias` do Supabase com
+   `publicado = true` (idempotente: apaga por título antes de inserir, dá
+   pra rodar de novo sem duplicar). Rodar sem `--publicar` só lista o que
+   seria publicado (dry-run). Usa a chave de serviço do `.env.local`.
 
 ## Formato do arquivo salvo
 

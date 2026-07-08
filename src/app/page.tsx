@@ -30,26 +30,35 @@ const LINHAS_DE_PESQUISA = [
 async function buscarDadosPublicos() {
   const supabase = await createClient();
 
-  const [{ data: noticias }, { data: pessoas }, { data: projetosAtivos }] =
-    await Promise.all([
-      supabase
-        .from("noticias")
-        .select("id, titulo, tipo, resumo, link_artigo, imagem_url, data")
-        .eq("publicado", true)
-        .order("data", { ascending: false })
-        .returns<Noticia[]>(),
-      supabase
-        .from("profiles")
-        .select("id, nome, papel, foto_url, apresentacao")
-        .eq("aprovado", true)
-        .returns<Pessoa[]>(),
-      supabase.rpc("contagem_projetos_ativos"),
-    ]);
+  const [{ data: noticias }, { data: pessoas }] = await Promise.all([
+    supabase
+      .from("noticias")
+      .select("id, titulo, tipo, resumo, link_artigo, imagem_url, data")
+      .eq("publicado", true)
+      .order("data", { ascending: false })
+      .returns<Noticia[]>(),
+    supabase
+      .from("profiles")
+      .select("id, nome, papel, foto_url, apresentacao")
+      .eq("aprovado", true)
+      .returns<Pessoa[]>(),
+  ]);
+
+  // Contagem à parte e tolerante a falha: se a função contagem_projetos_ativos
+  // ainda não tiver sido criada no banco, a portada continua carregando —
+  // só não mostra esse número, em vez de quebrar a página inteira.
+  let projetosAtivos: number | null = null;
+  try {
+    const { data } = await supabase.rpc("contagem_projetos_ativos");
+    if (typeof data === "number") projetosAtivos = data;
+  } catch {
+    projetosAtivos = null;
+  }
 
   return {
     noticias: noticias ?? [],
     pessoas: pessoas ?? [],
-    projetosAtivos: typeof projetosAtivos === "number" ? projetosAtivos : null,
+    projetosAtivos,
   };
 }
 
