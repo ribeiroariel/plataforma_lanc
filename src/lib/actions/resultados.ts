@@ -39,7 +39,7 @@ export async function salvarResultado(dados: {
     return { erro: "Não foi possível salvar: " + error.message };
   }
 
-  revalidatePath(`/bolsista/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
   return { sucesso: true };
 }
 
@@ -59,7 +59,7 @@ export async function definirStatusTeste(
     return { erro: "Não foi possível atualizar o status: " + error.message };
   }
 
-  revalidatePath(`/bolsista/projetos/${projetoId}/testes/${projetoTesteId}`);
-  revalidatePath(`/bolsista/projetos/${projetoId}`);
+  revalidatePath(`/projetos/${projetoId}/testes/${projetoTesteId}`);
+  revalidatePath(`/projetos/${projetoId}`);
   return { sucesso: true };
 }

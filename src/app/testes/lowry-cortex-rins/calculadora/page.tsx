@@ -142,7 +142,7 @@ export default function CalculadoraLowry() {
   return (
     <article>
       <p className="mb-1 text-sm">
-        <Link href="/bolsista/testes/lowry-cortex-rins" className="underline">
+        <Link href="/testes/lowry-cortex-rins" className="underline">
           ← Voltar ao protocolo
         </Link>
       </p>

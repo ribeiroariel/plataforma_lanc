@@ -55,7 +55,10 @@ export default async function RootLayout({
                 <Link href="/bolsista">Minha área</Link>
               )}
               {usuario?.papel === "orientador" && (
-                <Link href="/orientador">Painel da orientadora</Link>
+                <>
+                  <Link href="/orientador">Painel da orientadora</Link>
+                  <Link href="/testes">Protocolos</Link>
+                </>
               )}
               {usuario && (
                 <form action={logout}>

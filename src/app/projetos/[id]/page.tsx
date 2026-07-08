@@ -79,16 +79,17 @@ export default async function DetalheProjeto({
     membros?.some(
       (m) => m.papel === "coautor" && m.profile_id === usuario?.id
     ) ?? false;
+  const souOrientador = usuario?.papel === "orientador";
 
   const totalRatos = grupos?.reduce((soma, g) => soma + g.numero_ratos, 0) ?? 0;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <Link
-        href="/bolsista/projetos"
+        href={souOrientador ? "/orientador" : "/projetos"}
         className="text-sm text-black/60 hover:underline dark:text-white/60"
       >
-        ← Meus projetos
+        {souOrientador ? "← Painel da orientadora" : "← Meus projetos"}
       </Link>
 
       <div className="mt-2 flex items-start justify-between gap-4">
@@ -158,14 +159,14 @@ export default async function DetalheProjeto({
         {(!testesDesignados || testesDesignados.length === 0) && (
           <p className="text-sm text-black/60 dark:text-white/60">
             Nenhum teste designado ainda
-            {!souCoautor && " (ou você não é responsável por nenhum aqui)"}.
+            {!souCoautor && !souOrientador && " (ou você não é responsável por nenhum aqui)"}.
           </p>
         )}
         <div className="flex flex-col gap-2">
           {testesDesignados?.map((t) => {
             const teste = catalogoTestes.find((c) => c.slug === t.teste_slug);
             const souResponsavel = t.responsavel_id === usuario?.id;
-            const podeAbrir = souResponsavel || souCoautor;
+            const podeAbrir = souResponsavel || souCoautor || souOrientador;
             return (
               <div
                 key={t.id}
@@ -189,7 +190,7 @@ export default async function DetalheProjeto({
                   </span>
                   {podeAbrir && (
                     <Link
-                      href={`/bolsista/projetos/${projeto.id}/testes/${t.id}`}
+                      href={`/projetos/${projeto.id}/testes/${t.id}`}
                       className="rounded border border-black/20 px-3 py-1 text-xs dark:border-white/20"
                     >
                       {souResponsavel ? "Registrar resultado" : "Ver"}

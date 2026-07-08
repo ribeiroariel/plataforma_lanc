@@ -41,7 +41,7 @@ export async function criarProjeto(
     return { erro: "Não foi possível criar o projeto: " + error.message };
   }
 
-  redirect(`/bolsista/projetos/${data}`);
+  redirect(`/projetos/${data}`);
 }
 
 export async function adicionarMembro(
@@ -79,7 +79,7 @@ export async function adicionarMembro(
     return { erro: "Não foi possível adicionar: " + error.message };
   }
 
-  revalidatePath(`/bolsista/projetos/${projetoId}`);
+  revalidatePath(`/projetos/${projetoId}`);
 }
 
 export async function designarTeste(
@@ -117,5 +117,5 @@ export async function designarTeste(
     return { erro: "Não foi possível designar: " + error.message };
   }
 
-  revalidatePath(`/bolsista/projetos/${projetoId}`);
+  revalidatePath(`/projetos/${projetoId}`);
 }

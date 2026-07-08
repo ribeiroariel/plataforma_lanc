@@ -12,13 +12,13 @@ export default async function AreaBolsista() {
       </p>
       <div className="flex gap-4">
         <Link
-          href="/bolsista/testes"
+          href="/testes"
           className="inline-block rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black"
         >
           Protocolos de testes bioquímicos
         </Link>
         <Link
-          href="/bolsista/projetos"
+          href="/projetos"
           className="inline-block rounded border border-black/20 px-4 py-2 dark:border-white/20"
         >
           Meus projetos

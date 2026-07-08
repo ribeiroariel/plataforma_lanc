@@ -13,9 +13,13 @@ Scaffold do Next.js já existe (mesma stack/versões do `plataforma-atletas`:
 Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
 `npm run build` e `npm run lint` passam limpos. Implementado até aqui:
 
-- `src/proxy.ts` — renova sessão e bloqueia `/bolsista` e `/orientador` por
-  papel (redireciona pra `/login` se não logado, ou pra `/` se o papel não
-  bate com a rota).
+- `src/proxy.ts` — renova sessão e controla acesso por rota:
+  `/bolsista` só papel `bolsista`, `/orientador` só papel `orientador`,
+  `/projetos` e `/testes` são **compartilhados** entre os dois papéis (só
+  exigem login) — a orientadora precisa ler projetos dos bolsistas, então
+  essas telas não podem ficar presas debaixo de `/bolsista`. Redireciona
+  pra `/login` se não logado, ou pra `/` se o papel não bate com a rota
+  exclusiva.
 - `src/lib/supabase/{client,server,profile}.ts` e `src/lib/actions/auth.ts`
   — login, cadastro (sempre cria papel `bolsista` — não existe formulário
   público para criar conta de `orientador`, ver seção de segurança abaixo)
@@ -24,42 +28,48 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
   o carrossel de bolsistas, direto da tabela `profiles`/`noticias`. Se as
   variáveis de ambiente do Supabase não estiverem configuradas, mostra um
   aviso em vez de quebrar a página.
-- `/login`, `/cadastro`, `/bolsista`, `/orientador` (placeholder).
-- `/bolsista/testes` — barra lateral com todos os testes bioquímicos do
-  manual, agrupados por tecido (córtex/rins, eritrócitos/plasma, fígado).
+- `/login`, `/cadastro`.
+- `/bolsista` — painel do bolsista (link pra `/testes` e `/projetos`).
+- `/orientador` — painel da orientadora: lista de bolsistas aprovados (com
+  contagem de projetos e testes pendentes/concluídos de cada um) e lista
+  de todos os projetos (com membros, testes designados e quais estão
+  pendentes) — consegue ler tudo isso porque a função `is_orientador()`
+  está somada em toda policy de leitura relevante.
+- `/testes` — barra lateral com todos os testes bioquímicos do manual,
+  agrupados por tecido (córtex/rins, eritrócitos/plasma, fígado).
   Conteúdo em `content/testes/*.md`, extraído **literalmente** (sem
   reescrita) do manual via `content/testes/_indice.json` +
   `src/lib/testes.ts` — ver script que gerou os cortes em
   `$CLAUDE_JOB_DIR` (não versionado; se precisar refatiar após o manual
   mudar, recriar o script de corte por número de linha).
-- `/bolsista/testes/lowry-cortex-rins/calculadora` — calculadora da curva
-  padrão de Lowry: bolsista digita a absorbância dos 6 tubos padrão (0,
-  10, 20, 40, 60, 80 µg de BSA, conforme o manual), a página calcula
-  regressão linear, R² e concentração das amostras na hora (client-side,
-  sem lib externa de estatística), mostra gráfico (recharts) e salva em
-  `curvas_lowry` (registro de transparência: sem update/delete pelo site).
-  Ainda só existe para o tecido córtex/rins — eritrócitos/plasma e fígado
-  têm curva idêntica (mesmos 6 pontos), replicar a mesma página quando for
-  a hora.
+- `/testes/lowry-cortex-rins/calculadora` — calculadora **solta** da curva
+  padrão de Lowry (sem vínculo com projeto/rato): bolsista digita a
+  absorbância dos 6 tubos padrão (0, 10, 20, 40, 60, 80 µg de BSA), a
+  página calcula regressão linear, R² e concentração das amostras na hora
+  (`src/lib/estatistica.ts`), mostra gráfico (recharts) e salva em
+  `curvas_lowry` (registro de transparência: sem update/delete pelo
+  site). Pra Lowry dentro de um projeto, ver família "curva" abaixo — é
+  outra tela, outra tabela.
 
-- `/bolsista/projetos`, `/bolsista/projetos/novo`, `/bolsista/projetos/[id]`
-  — sistema de projetos (TCC/estudo). Criar projeto define nome, descrição,
-  número de levas de sacrifício (só informativo por enquanto) e os grupos
-  experimentais com a quantidade de ratos de cada um (numeração sequencial
-  e global entre grupos, do jeito que o Ariel já faz fora do site). O
-  criador vira automaticamente "coautor" (função `criar_projeto`, security
-  definer, resolve o problema do "ovo e a galinha" das políticas). Coautor
-  pode adicionar membros (por e-mail, via `buscar_bolsista_por_email` —
-  não expõe a coluna `email` livremente) e designar testes do catálogo
+- `/projetos`, `/projetos/novo`, `/projetos/[id]` — sistema de projetos
+  (TCC/estudo). Criar projeto define nome, descrição, número de levas de
+  sacrifício (só informativo por enquanto) e os grupos experimentais com
+  a quantidade de ratos de cada um (numeração sequencial e global entre
+  grupos, do jeito que o Ariel já faz fora do site). O criador vira
+  automaticamente "coautor" (função `criar_projeto`, security definer,
+  resolve o problema do "ovo e a galinha" das políticas). Coautor pode
+  adicionar membros (por e-mail, via `buscar_bolsista_por_email` — não
+  expõe a coluna `email` livremente) e designar testes do catálogo
   (`src/lib/tiposTeste.ts` filtra pra só os designáveis — ver abaixo) a um
   responsável. **Regra de visibilidade:** um "ajudante" só vê as
   designações de teste onde ele é o responsável, não o projeto inteiro —
   reforçado via RLS (`eh_coautor_projeto`/`eh_responsavel_teste`), não só
-  na interface.
-- `/bolsista/projetos/[id]/testes/[testeId]` — registro de resultado, um
-  rato por vez (roster gerado por `src/lib/roster.ts` a partir dos grupos).
-  O comportamento muda por "família" de teste
-  (`src/lib/tiposTeste.ts`, `configDoTeste`):
+  na interface. A orientadora (e o Ariel, via `pode_exportar_dados()`) vê
+  tudo, em qualquer projeto.
+- `/projetos/[id]/testes/[testeId]` — registro de resultado, um rato por
+  vez (roster gerado por `src/lib/roster.ts` a partir dos grupos). O
+  comportamento muda por "família" de teste (`src/lib/tiposTeste.ts`,
+  `configDoTeste`):
   - **CAT e SOD**: cálculo automático completo (fórmula do manual é
     autocontida). Entrada cinética (11 pontos/10s pra CAT, 5 pontos/30s
     pra SOD) com regressão linear + gráfico ao vivo
@@ -75,15 +85,11 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
     proteína de um ensaio de Lowry separado), e decidi não arriscar
     inventar essa conversão. Isso está explicado na própria tela, não é
     um bug escondido.
-  - **Lowry** (família "curva"): já integrado ao sistema de projetos.
-    Curva padrão (6 pontos de BSA) é preenchida uma vez por sessão, igual
-    ao controle do SOD; cada rato só precisa da própria absorbância +
-    fator de diluição, e o valor (mg proteína/mL) sai por interpolação na
-    curva — usa `resultados_teste` como qualquer outro teste, não
-    `curvas_lowry`. A calculadora solta
-    (`/bolsista/testes/lowry-cortex-rins/calculadora`, salva em
-    `curvas_lowry`) continua existindo à parte, pra uso rápido sem vínculo
-    com projeto — a tela avisa isso e linka pra versão do projeto.
+  - **Lowry** (família "curva"): mesmo padrão do SOD — curva de BSA (6
+    pontos) preenchida uma vez por sessão, cada rato só informa a própria
+    absorbância + fator de diluição, valor final por interpolação. Usa
+    `resultados_teste` (não `curvas_lowry` — essa é só da calculadora
+    solta, ver acima).
 - `/api/exportar/[id]` — exporta o projeto pra `.xlsx`: uma aba
   "Dados_Brutos"-style por teste designado + uma aba "R_Tidy"
   (rato/grupo/teste/valor, formato longo) juntando todos os testes do
@@ -116,21 +122,21 @@ Editor do Supabase (com a chave de serviço, que ignora RLS):
 `update profiles set papel = 'orientador', aprovado = true where id = '<uuid da Débora>';`
 
 **Aprovação de cadastro:** todo cadastro novo nasce com `aprovado = false`
-e a página `/bolsista` (e tudo dentro dela, incl. `/bolsista/testes`)
-mostra "aguardando aprovação" em vez do conteúdo real até o Ariel liberar.
+e `/bolsista`, `/projetos` e `/testes` mostram "aguardando aprovação" em
+vez do conteúdo real até o Ariel liberar (cada área tem seu próprio
+`layout.tsx` com essa checagem — `src/app/bolsista/layout.tsx`,
+`src/app/projetos/layout.tsx`, `src/app/testes/layout.tsx`).
 Não há e-mail automático — o Ariel pede pelo chat ("tem cadastro
 pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/rejeita via
 `scripts/revisar-cadastros.mjs` (usa a chave de serviço).
 
-Ainda não implementado (próximas fases): integrar Lowry ao sistema de
-projetos (hoje é solto, por bolsista); fórmula automática pra
+Ainda não implementado (próximas fases): fórmula automática pra
 TBARS/Sulfidrilas/Carboniladas/Tióis-Dissulfetos/Ácido Ascórbico/H2O2
 (hoje é entrada manual do valor final — ver seção acima); import do
 formato bruto do leitor Tecano pra dentro da tela de registro (hoje o
-bolsista digita a leitura já processada); páginas `/orientador` (ainda
-placeholder — visão geral de todos os projetos/bolsistas) e cadastro de
-foto/apresentação de perfil (pro carrossel público, hoje só nome aparece
-mesmo com o campo já existindo no banco).
+bolsista digita a leitura já processada); cadastro de foto/apresentação
+de perfil (pro carrossel público, hoje só nome aparece mesmo com o campo
+já existindo no banco — próximo passo desta sessão).
 
 ## As duas frentes do site (visão do produto)
 

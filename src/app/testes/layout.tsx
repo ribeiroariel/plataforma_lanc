@@ -1,11 +1,25 @@
 import Link from "next/link";
 import { testesPorTecido, nomeTecido } from "@/lib/testes";
+import { getUsuarioAtual } from "@/lib/supabase/profile";
 
-export default function LayoutTestes({
+export default async function LayoutTestes({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const usuario = await getUsuarioAtual();
+
+  if (usuario && !usuario.aprovado) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-10">
+        <p className="text-black/70 dark:text-white/70">
+          Seu cadastro está aguardando aprovação da coordenação do
+          laboratório.
+        </p>
+      </main>
+    );
+  }
+
   const grupos = testesPorTecido();
 
   return (
@@ -21,7 +35,7 @@ export default function LayoutTestes({
                 {lista.map((teste) => (
                   <li key={teste.slug}>
                     <Link
-                      href={`/bolsista/testes/${teste.slug}`}
+                      href={`/testes/${teste.slug}`}
                       className="hover:underline"
                     >
                       {teste.titulo}

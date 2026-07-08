@@ -68,11 +68,12 @@ export default async function PaginaResultado({
   const souCoautor =
     membros?.some((m) => m.papel === "coautor" && m.profile_id === usuario?.id) ??
     false;
+  const souOrientador = usuario?.papel === "orientador";
 
-  if (!souResponsavel && !souCoautor) {
+  if (!souResponsavel && !souCoautor && !souOrientador) {
     // RLS já bloquearia a leitura de "resultados" de quem não é
     // responsável/coautor/orientadora, mas aqui é sobre a designação em
-    // si — se chegou até aqui sem ser nenhum dos dois, não deveria ver.
+    // si — se chegou até aqui sem ser nenhum dos três, não deveria ver.
     notFound();
   }
 
@@ -92,7 +93,7 @@ export default async function PaginaResultado({
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <Link
-        href={`/bolsista/projetos/${projetoId}`}
+        href={`/projetos/${projetoId}`}
         className="text-sm text-black/60 hover:underline dark:text-white/60"
       >
         ← {projeto?.nome ?? "Projeto"}

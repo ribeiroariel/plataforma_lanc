@@ -24,7 +24,7 @@ export default async function PaginaTeste({
       {ehLowry && (
         <p className="mb-4 text-sm">
           <Link
-            href="/bolsista/testes/lowry-cortex-rins/calculadora"
+            href="/testes/lowry-cortex-rins/calculadora"
             className="underline"
           >
             Abrir calculadora da curva padrão →
