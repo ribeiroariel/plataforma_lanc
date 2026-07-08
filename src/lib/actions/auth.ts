@@ -65,7 +65,10 @@ export async function cadastrar(
     return { erro: "Não foi possível criar a conta: " + error.message };
   }
 
-  redirect("/login?cadastro=ok");
+  // Com a confirmação de e-mail desligada, o signUp já cria sessão — mando
+  // direto pra área do bolsista, que mostra "aguardando aprovação". Se a
+  // confirmação estiver ligada (sem sessão), o proxy leva pro /login.
+  redirect("/bolsista");
 }
 
 export async function logout() {
