@@ -13,6 +13,7 @@ type ProjetoTeste = {
   teste_slug: string;
   status: "pendente" | "concluido";
   responsavel_id: string;
+  leva: number | null;
 };
 
 type Resultado = {
@@ -21,6 +22,8 @@ type Resultado = {
   leituras: Record<string, unknown>;
   valor_calculado: number | null;
   dentro_do_padrao: boolean | null;
+  observacoes: string | null;
+  confirmado: boolean;
 };
 
 export default async function PaginaResultado({
@@ -36,7 +39,7 @@ export default async function PaginaResultado({
     await Promise.all([
       supabase
         .from("projeto_testes")
-        .select("id, projeto_id, teste_slug, status, responsavel_id")
+        .select("id, projeto_id, teste_slug, status, responsavel_id, leva")
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
         .maybeSingle()
@@ -58,7 +61,7 @@ export default async function PaginaResultado({
         .eq("projeto_id", projetoId),
       supabase
         .from("resultados_teste")
-        .select("rato, grupo_id, leituras, valor_calculado, dentro_do_padrao")
+        .select("rato, grupo_id, leituras, valor_calculado, dentro_do_padrao, observacoes, confirmado")
         .eq("projeto_teste_id", testeId)
         .returns<Resultado[]>(),
     ]);
@@ -81,7 +84,12 @@ export default async function PaginaResultado({
     notFound();
   }
 
-  const roster = gerarRoster(grupos ?? [], projeto?.numero_levas ?? 1);
+  const rosterCompleto = gerarRoster(grupos ?? [], projeto?.numero_levas ?? 1);
+  // Se o teste foi designado para uma leva específica, o registro só mostra
+  // os ratos daquela leva. Sem leva definida, mostra todos.
+  const roster = projetoTeste.leva
+    ? rosterCompleto.filter((r) => r.leva === projetoTeste.leva)
+    : rosterCompleto;
 
   if (!config) {
     return (
@@ -110,6 +118,11 @@ export default async function PaginaResultado({
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
         {teste ? tituloCurto(teste.titulo) : projetoTeste.teste_slug}
       </h1>
+      {projetoTeste.leva && (
+        <p className="mt-1 font-mono text-xs text-ink-soft">
+          Leva {projetoTeste.leva}
+        </p>
+      )}
 
       <RegistroResultado
         projetoId={projetoId}

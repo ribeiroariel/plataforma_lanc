@@ -43,6 +43,15 @@ export async function criarProjeto(
     return { erro: "Informe ao menos um grupo experimental." };
   }
 
+  const vazio = gruposValidos.find(
+    (g) => g.ratosPorLeva.reduce((s, n) => s + n, 0) === 0
+  );
+  if (vazio) {
+    return {
+      erro: `O grupo "${vazio.nome}" não tem nenhum rato — remova-o ou informe a quantidade.`,
+    };
+  }
+
   const { data, error } = await supabase.rpc("criar_projeto", {
     p_nome: nome,
     p_descricao: descricao || null,
@@ -93,19 +102,43 @@ export async function designarTeste(
   const projetoId = String(formData.get("projetoId") ?? "");
   const testeSlug = String(formData.get("testeSlug") ?? "");
   const profileId = String(formData.get("profileId") ?? "");
+  const levaRaw = String(formData.get("leva") ?? "").trim();
+  const leva = levaRaw ? parseInt(levaRaw, 10) : null;
+  const ajudantes = formData
+    .getAll("ajudantes")
+    .map((v) => String(v))
+    .filter((v) => v && v !== profileId);
 
   if (!testeSlug || !profileId) {
     return { erro: "Escolha o teste e a pessoa responsável." };
   }
 
-  const { error } = await supabase.from("projeto_testes").insert({
-    projeto_id: projetoId,
-    teste_slug: testeSlug,
-    responsavel_id: profileId,
-  });
+  const { data: novo, error } = await supabase
+    .from("projeto_testes")
+    .insert({
+      projeto_id: projetoId,
+      teste_slug: testeSlug,
+      responsavel_id: profileId,
+      leva,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    return { erro: "Não foi possível designar: " + error.message };
+  if (error || !novo) {
+    return { erro: "Não foi possível designar: " + (error?.message ?? "") };
+  }
+
+  if (ajudantes.length > 0) {
+    const linhas = [...new Set(ajudantes)].map((id) => ({
+      projeto_teste_id: novo.id,
+      profile_id: id,
+    }));
+    const { error: erroAj } = await supabase
+      .from("projeto_teste_ajudantes")
+      .insert(linhas);
+    if (erroAj) {
+      return { erro: "Teste criado, mas erro ao adicionar ajudantes: " + erroAj.message };
+    }
   }
 
   revalidatePath(`/projetos/${projetoId}`);

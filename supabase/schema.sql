@@ -268,8 +268,24 @@ create table if not exists public.projeto_testes (
   projeto_id uuid not null references public.projetos (id) on delete cascade,
   teste_slug text not null,
   responsavel_id uuid not null references public.profiles (id),
+  -- Leva de sacrifício em que este teste é feito (null = todas). O registro
+  -- só mostra os ratos dessa leva.
+  leva integer,
   status text not null default 'pendente' check (status in ('pendente', 'concluido')),
   created_at timestamptz not null default now()
+);
+
+alter table public.projeto_testes add column if not exists leva integer;
+
+-- Ajudantes de um teste designado: além do responsável (que registra os
+-- resultados), outras pessoas que fazem o teste junto e também o veem em
+-- "Meus testes". Tabela criada aqui (bare); RLS/policies mais abaixo,
+-- depois que eh_coautor_do_teste existir.
+create table if not exists public.projeto_teste_ajudantes (
+  id uuid primary key default gen_random_uuid(),
+  projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
+  profile_id uuid not null references public.profiles (id) on delete cascade,
+  unique (projeto_teste_id, profile_id)
 );
 
 -- Funções auxiliares "security definer": rodam com o dono da função (que
@@ -429,6 +445,10 @@ create policy "Coautor, responsável e orientadora veem a designação"
   using (
     public.eh_coautor_projeto(projeto_id)
     or responsavel_id = auth.uid()
+    or exists (
+      select 1 from public.projeto_teste_ajudantes a
+      where a.projeto_teste_id = projeto_testes.id and a.profile_id = auth.uid()
+    )
     or public.is_orientador()
     or public.pode_exportar_dados()
   );
@@ -577,6 +597,47 @@ $$;
 grant execute on function public.eh_responsavel_teste(uuid) to authenticated;
 grant execute on function public.eh_coautor_do_teste(uuid) to authenticated;
 
+-- Uma pessoa (ajudante OU responsável) faz parte da execução de um teste?
+-- Usado para "Meus testes" e para a política de ver resultados.
+create or replace function public.eh_executor_teste(p_projeto_teste_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    public.eh_responsavel_teste(p_projeto_teste_id)
+    or exists (
+      select 1 from public.projeto_teste_ajudantes a
+      where a.projeto_teste_id = p_projeto_teste_id and a.profile_id = auth.uid()
+    );
+$$;
+
+grant execute on function public.eh_executor_teste(uuid) to authenticated;
+
+-- RLS + policies da tabela de ajudantes (declarada bem antes, sem policies).
+alter table public.projeto_teste_ajudantes enable row level security;
+alter table public.projeto_teste_ajudantes force row level security;
+
+drop policy if exists "Ver ajudantes do teste" on public.projeto_teste_ajudantes;
+create policy "Ver ajudantes do teste"
+  on public.projeto_teste_ajudantes
+  for select
+  using (
+    profile_id = auth.uid()
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
+
+drop policy if exists "Coautor gerencia ajudantes" on public.projeto_teste_ajudantes;
+create policy "Coautor gerencia ajudantes"
+  on public.projeto_teste_ajudantes
+  for all
+  using (public.eh_coautor_do_teste(projeto_teste_id))
+  with check (public.eh_coautor_do_teste(projeto_teste_id));
+
 create table if not exists public.resultados_teste (
   id uuid primary key default gen_random_uuid(),
   projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
@@ -585,10 +646,19 @@ create table if not exists public.resultados_teste (
   leituras jsonb not null default '{}'::jsonb,
   valor_calculado numeric,
   dentro_do_padrao boolean,
+  -- Observação do bolsista (amostra hemolisada, rato morreu no sacrifício,
+  -- leva imprevista, etc.). Editável mesmo depois de confirmar.
+  observacoes text,
+  -- Uma vez confirmado, o valor/rato não podem mais ser alterados pelo
+  -- site (só as observações). Fim de transparência.
+  confirmado boolean not null default false,
   registrado_por uuid not null references public.profiles (id),
   created_at timestamptz not null default now(),
   unique (projeto_teste_id, rato)
 );
+
+alter table public.resultados_teste add column if not exists observacoes text;
+alter table public.resultados_teste add column if not exists confirmado boolean not null default false;
 
 alter table public.resultados_teste enable row level security;
 alter table public.resultados_teste force row level security;
@@ -598,7 +668,7 @@ create policy "Responsável, coautor e orientadora veem o resultado"
   on public.resultados_teste
   for select
   using (
-    public.eh_responsavel_teste(projeto_teste_id)
+    public.eh_executor_teste(projeto_teste_id)
     or public.eh_coautor_do_teste(projeto_teste_id)
     or public.is_orientador()
     or public.pode_exportar_dados()
@@ -622,6 +692,33 @@ create policy "Responsável atualiza o próprio resultado"
 
 -- Sem policy de delete de propósito: apagar um resultado de ensaio já
 -- registrado deveria ser exceção rara, tratada manualmente se acontecer.
+
+-- Transparência: uma vez confirmado, o resultado não pode mais ter o valor,
+-- as leituras, o rato ou o grupo alterados — só as observações. Vale mesmo
+-- para o próprio responsável. E não dá pra "desconfirmar".
+create or replace function public.travar_resultado_confirmado()
+returns trigger
+language plpgsql
+as $$
+begin
+  if OLD.confirmado then
+    if NEW.leituras is distinct from OLD.leituras
+       or NEW.valor_calculado is distinct from OLD.valor_calculado
+       or NEW.dentro_do_padrao is distinct from OLD.dentro_do_padrao
+       or NEW.rato is distinct from OLD.rato
+       or NEW.grupo_id is distinct from OLD.grupo_id
+       or NEW.confirmado is distinct from OLD.confirmado then
+      raise exception 'Resultado confirmado: só as observações podem ser alteradas.';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists travar_confirmado on public.resultados_teste;
+create trigger travar_confirmado
+  before update on public.resultados_teste
+  for each row execute function public.travar_resultado_confirmado();
 
 -- ----------------------------------------------------------------------------
 -- FOTOS DE PERFIL (Storage) — pro carrossel público "quem somos"

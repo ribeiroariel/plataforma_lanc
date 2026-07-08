@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
+  Line,
+  LineChart,
   Scatter,
   Tooltip,
   XAxis,
@@ -18,7 +20,7 @@ import {
   definirStatusTeste,
   type LinhaResultado,
 } from "@/lib/actions/resultados";
-import { INPUT_SM, BOTAO_PRIMARIO } from "@/lib/estilos";
+import { INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "@/lib/estilos";
 
 const TEMPOS_CAT = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const TEMPOS_SOD = [0, 30, 60, 90, 120];
@@ -31,9 +33,11 @@ type Resultado = {
   leituras: Record<string, unknown>;
   valor_calculado: number | null;
   dentro_do_padrao: boolean | null;
+  observacoes: string | null;
+  confirmado: boolean;
 };
 
-type Coluna = { key: string; label: string };
+type Coluna = { key: string; label: string; absorbancia: boolean };
 
 type Props = {
   projetoId: string;
@@ -46,6 +50,20 @@ type Props = {
   podeAlterarStatus: boolean;
 };
 
+/**
+ * Converte o que o bolsista digita em absorbância real. Número inteiro
+ * (sem vírgula/ponto) é dividido por 1000 — o bolsista digita "100" e vira
+ * 0,100; digita "1240" e vira 1,240. Se já tiver vírgula/ponto, usa direto.
+ */
+function absReal(s: string): number {
+  if (s === "" || s == null) return NaN;
+  const t = String(s).trim().replace(",", ".");
+  if (t === "") return NaN;
+  if (t.includes(".")) return parseFloat(t);
+  const n = parseFloat(t);
+  return Number.isNaN(n) ? NaN : n / 1000;
+}
+
 function temposDaFamilia(familia: ConfigTeste["familia"]): number[] {
   if (familia === "cat") return TEMPOS_CAT;
   if (familia === "sod") return TEMPOS_SOD;
@@ -57,33 +75,35 @@ function colunasDaFamilia(config: ConfigTeste): Coluna[] {
     return temposDaFamilia(config.familia).map((t) => ({
       key: `t${t}`,
       label: `${t}s`,
+      absorbancia: true,
     }));
   }
   if (config.familia === "curva") {
     return [
-      { key: "abs", label: "Absorbância" },
-      { key: "dil", label: "Diluição" },
+      { key: "abs", label: "Absorbância", absorbancia: true },
+      { key: "dil", label: "Diluição", absorbancia: false },
     ];
   }
-  // simples
   return [
     ...(config.camposBrutos ?? []).map((c) => ({
       key: c.chave,
       label: c.rotulo,
+      absorbancia: true,
     })),
     {
       key: "valor_final",
       label: `Valor final${
         config.unidadeResultado ? ` (${config.unidadeResultado})` : ""
       }`,
+      absorbancia: false,
     },
   ];
 }
 
-/** Regressão nos tempos preenchidos de uma linha (ΔAbs/min = inclinação × 60). */
+/** slope (ΔAbs/min) a partir dos tempos de uma linha, já em absorbância real. */
 function slopeMinLinha(tempos: number[], linha: Record<string, string>) {
   const pontos = tempos
-    .map((t) => ({ x: t, y: parseFloat(linha[`t${t}`] ?? "") }))
+    .map((t) => ({ x: t, y: absReal(linha[`t${t}`] ?? "") }))
     .filter((p) => !Number.isNaN(p.y));
   if (pontos.length < 2) return null;
   return regressaoLinear(pontos).inclinacao * 60;
@@ -105,9 +125,10 @@ export default function RegistroResultado({
   podeAlterarStatus,
 }: Props) {
   const colunas = colunasDaFamilia(config);
+  const tempos = temposDaFamilia(config.familia);
   const temLevas = roster.some((r) => r.leva > 1);
+  const ehCinetico = config.familia === "cat" || config.familia === "sod";
 
-  // linhas[ratoNumero][colKey] = valor digitado
   const [linhas, setLinhas] = useState<Record<string, Record<string, string>>>(
     () => {
       const inicial: Record<string, Record<string, string>> = {};
@@ -120,8 +141,15 @@ export default function RegistroResultado({
       return inicial;
     }
   );
+  const [obs, setObs] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      resultadosExistentes.map((r) => [r.rato, r.observacoes ?? ""])
+    )
+  );
+  const [confirmados, setConfirmados] = useState<Set<string>>(
+    () => new Set(resultadosExistentes.filter((r) => r.confirmado).map((r) => r.rato))
+  );
 
-  // Controles de qualidade da sessão (compartilhados por todos os ratos).
   const [qcCat, setQcCat] = useState("");
   const [controleSod, setControleSod] = useState<Record<string, string>>({});
   const [curva, setCurva] = useState<Record<string, string>>({});
@@ -131,6 +159,8 @@ export default function RegistroResultado({
   const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
 
+  const editavel = (rato: string) => podeRegistrar && !confirmados.has(rato);
+
   function setCelula(rato: string, col: string, valor: string) {
     setLinhas((prev) => ({
       ...prev,
@@ -138,10 +168,27 @@ export default function RegistroResultado({
     }));
   }
 
-  // --- QC de sessão + regressões ---
+  // Ao sair da célula, normaliza a absorbância digitada (100 → 0.100).
+  function normalizarCelula(rato: string, col: Coluna) {
+    if (!col.absorbancia) return;
+    const bruto = linhas[rato]?.[col.key] ?? "";
+    const v = absReal(bruto);
+    if (!Number.isNaN(v)) setCelula(rato, col.key, v.toFixed(3));
+  }
+
+  function normalizarSessao(
+    mapa: Record<string, string>,
+    setMapa: (f: (p: Record<string, string>) => Record<string, string>) => void,
+    key: string
+  ) {
+    const v = absReal(mapa[key] ?? "");
+    if (!Number.isNaN(v)) setMapa((p) => ({ ...p, [key]: v.toFixed(3) }));
+  }
+
+  // --- QC de sessão ---
   const qcCatOk = useMemo(() => {
     if (config.familia !== "cat" || !config.qc) return null;
-    const v = parseFloat(qcCat);
+    const v = absReal(qcCat);
     if (Number.isNaN(v)) return null;
     return v >= config.qc.min && v <= config.qc.max;
   }, [qcCat, config]);
@@ -162,7 +209,7 @@ export default function RegistroResultado({
     if (config.familia !== "curva") return null;
     const pontos = PONTOS_CURVA_LOWRY.map((p) => ({
       x: p,
-      y: parseFloat(curva[`p${p}`] ?? ""),
+      y: absReal(curva[`p${p}`] ?? ""),
     })).filter((pt) => !Number.isNaN(pt.y));
     if (pontos.length < 2) return null;
     return regressaoLinear(pontos);
@@ -182,7 +229,6 @@ export default function RegistroResultado({
       ? qcCurvaOk
       : null;
 
-  // --- valor calculado por rato ---
   function valorDoRato(rato: string): number | null {
     const linha = linhas[rato] ?? {};
     if (config.familia === "cat") {
@@ -196,34 +242,48 @@ export default function RegistroResultado({
       return (1 - s / controleSodSlopeMin) * 100;
     }
     if (config.familia === "curva") {
-      const abs = parseFloat(linha.abs ?? "");
-      const dil = parseFloat(linha.dil ?? "") || 1;
+      const abs = absReal(linha.abs ?? "");
+      const dil = parseFloat((linha.dil ?? "").replace(",", ".")) || 1;
       if (Number.isNaN(abs) || !regressaoCurva || regressaoCurva.inclinacao === 0)
         return null;
       const ug = (abs - regressaoCurva.intercepto) / regressaoCurva.inclinacao;
       return (ug / VOLUME_AMOSTRA_LOWRY_UL) * dil;
     }
-    // simples
-    const v = parseFloat(linha.valor_final ?? "");
+    const v = parseFloat((linha.valor_final ?? "").replace(",", "."));
     return Number.isNaN(v) ? null : v;
   }
 
-  const graficoGrupos = useMemo(() => {
-    return roster
-      .map((r) => {
-        const v = valorDoRato(String(r.numero));
-        return v === null ? null : { grupo: r.grupoNome, valor: v };
-      })
-      .filter((d): d is { grupo: string; valor: number } => d !== null);
+  // Dados da curva cinética (uma linha por rato) — só CAT/SOD.
+  const dadosCinetica = useMemo(() => {
+    if (!ehCinetico) return [];
+    return tempos.map((t) => {
+      const ponto: Record<string, number | null> = { tempo: t };
+      for (const r of roster) {
+        const v = absReal(linhas[String(r.numero)]?.[`t${t}`] ?? "");
+        ponto[`r${r.numero}`] = Number.isNaN(v) ? null : v;
+      }
+      return ponto;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linhas, controleSodSlopeMin, regressaoCurva, roster]);
+  }, [linhas, ehCinetico, roster]);
 
-  async function salvar() {
+  const ratosComCurva = roster.filter((r) =>
+    tempos.some((t) => !Number.isNaN(absReal(linhas[String(r.numero)]?.[`t${t}`] ?? "")))
+  );
+
+  async function salvar(confirmar: boolean) {
+    if (confirmar) {
+      const ok = window.confirm(
+        "Confirmar trava a edição dos valores (só as observações poderão ser alteradas depois). Deseja continuar?"
+      );
+      if (!ok) return;
+    }
     setMensagem(null);
     setSalvando(true);
 
     const sessao: Record<string, unknown> = {};
-    if (config.familia === "cat") sessao.qc_h2o2 = qcCat === "" ? null : parseFloat(qcCat);
+    if (config.familia === "cat")
+      sessao.qc_h2o2 = Number.isNaN(absReal(qcCat)) ? null : absReal(qcCat);
     if (config.familia === "sod") {
       sessao.controle = controleSod;
       sessao.controle_slope_min = controleSodSlopeMin;
@@ -240,18 +300,17 @@ export default function RegistroResultado({
     for (const r of roster) {
       const rato = String(r.numero);
       const dados = linhas[rato] ?? {};
-      const temAlgum = Object.values(dados).some((v) => v !== "" && v != null);
+      const temAlgum =
+        Object.values(dados).some((v) => v !== "" && v != null) ||
+        (obs[rato] ?? "") !== "";
       if (!temAlgum) continue;
       linhasParaSalvar.push({
         rato,
         grupoId: r.grupoId,
-        leituras: {
-          tipo: config.familia,
-          colunas: dados,
-          sessao,
-        },
+        leituras: { tipo: config.familia, colunas: dados, sessao },
         valorCalculado: valorDoRato(rato),
         dentroDoPadrao: qcSessaoOk,
+        observacoes: obs[rato] ?? null,
       });
     }
 
@@ -259,12 +318,23 @@ export default function RegistroResultado({
       projetoId,
       projetoTesteId,
       linhas: linhasParaSalvar,
+      confirmar,
     });
     setSalvando(false);
+
+    if ("erro" in resultado) {
+      setMensagem(resultado.erro);
+      return;
+    }
+    if (confirmar) {
+      setConfirmados((prev) => {
+        const novo = new Set(prev);
+        for (const l of linhasParaSalvar) novo.add(l.rato);
+        return novo;
+      });
+    }
     setMensagem(
-      "erro" in resultado
-        ? resultado.erro
-        : `${linhasParaSalvar.length} resultado(s) salvo(s).`
+      `${linhasParaSalvar.length} resultado(s) salvo(s)${confirmar ? " e confirmado(s)" : ""}.`
     );
   }
 
@@ -274,6 +344,15 @@ export default function RegistroResultado({
     const r = await definirStatusTeste(projetoId, projetoTesteId, novo);
     setAlterandoStatus(false);
     if (!("erro" in r)) setStatus(novo);
+  }
+
+  if (roster.length === 0) {
+    return (
+      <div className="mt-6 rounded border border-dashed border-rule p-6 text-sm text-ink-soft">
+        Este projeto ainda não tem ratos cadastrados nos grupos. Peça a um
+        coautor para definir a quantidade de ratos por grupo/leva no projeto.
+      </div>
+    );
   }
 
   return (
@@ -298,18 +377,25 @@ export default function RegistroResultado({
             {status === "concluido" ? "Reabrir" : "Marcar como concluído"}
           </button>
         )}
+        <span className="ml-auto text-xs text-ink-soft">
+          Digite a absorbância como número inteiro — 100 vira 0,100; 1240 vira
+          1,240.
+        </span>
       </div>
 
-      {/* Controle de qualidade da sessão */}
       {config.familia === "cat" && config.qc && (
         <PainelSessao titulo="Controle de qualidade da sessão">
           <label className="flex max-w-xs flex-col gap-1 text-xs text-ink-soft">
             {config.qc.rotulo} ({config.qc.unidade})
             <input
-              type="number"
-              step="0.001"
+              type="text"
+              inputMode="decimal"
               value={qcCat}
               onChange={(e) => setQcCat(e.target.value)}
+              onBlur={() => {
+                const v = absReal(qcCat);
+                if (!Number.isNaN(v)) setQcCat(v.toFixed(3));
+              }}
               disabled={!podeRegistrar}
               className={INPUT_SM}
             />
@@ -325,12 +411,13 @@ export default function RegistroResultado({
               <label key={t} className="flex flex-col gap-1 text-xs text-ink-soft">
                 {t}s
                 <input
-                  type="number"
-                  step="0.001"
+                  type="text"
+                  inputMode="decimal"
                   value={controleSod[`t${t}`] ?? ""}
                   onChange={(e) =>
                     setControleSod((p) => ({ ...p, [`t${t}`]: e.target.value }))
                   }
+                  onBlur={() => normalizarSessao(controleSod, setControleSod, `t${t}`)}
                   disabled={!podeRegistrar}
                   className={`${INPUT_SM} w-20`}
                 />
@@ -360,12 +447,13 @@ export default function RegistroResultado({
               <label key={p} className="flex flex-col gap-1 text-xs text-ink-soft">
                 {p === 0 ? "Branco" : `${p} µg`}
                 <input
-                  type="number"
-                  step="0.001"
+                  type="text"
+                  inputMode="decimal"
                   value={curva[`p${p}`] ?? ""}
                   onChange={(e) =>
                     setCurva((prev) => ({ ...prev, [`p${p}`]: e.target.value }))
                   }
+                  onBlur={() => normalizarSessao(curva, setCurva, `p${p}`)}
                   disabled={!podeRegistrar}
                   className={`${INPUT_SM} w-20`}
                 />
@@ -386,7 +474,6 @@ export default function RegistroResultado({
         </PainelSessao>
       )}
 
-      {/* Tabela de ratos × leituras */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -399,18 +486,23 @@ export default function RegistroResultado({
                   {c.label}
                 </th>
               ))}
-              <th className="py-2 pl-2 font-normal">
+              <th className="py-2 pr-2 font-normal">
                 Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
               </th>
+              <th className="py-2 pl-2 font-normal">Observação</th>
             </tr>
           </thead>
           <tbody>
             {roster.map((r) => {
               const rato = String(r.numero);
               const valor = valorDoRato(rato);
+              const travado = confirmados.has(rato);
               return (
                 <tr key={rato} className="border-b border-rule/60">
-                  <td className="py-1.5 pr-3 font-mono text-ink">{r.numero}</td>
+                  <td className="py-1.5 pr-3 font-mono text-ink">
+                    {r.numero}
+                    {travado && <span title="confirmado"> 🔒</span>}
+                  </td>
                   {temLevas && (
                     <td className="py-1.5 pr-3 font-mono text-ink-soft">{r.leva}</td>
                   )}
@@ -420,18 +512,30 @@ export default function RegistroResultado({
                   {colunas.map((c) => (
                     <td key={c.key} className="py-1.5 pr-2">
                       <input
-                        type="number"
-                        step="0.001"
+                        type="text"
                         inputMode="decimal"
                         value={linhas[rato]?.[c.key] ?? ""}
                         onChange={(e) => setCelula(rato, c.key, e.target.value)}
-                        disabled={!podeRegistrar}
+                        onBlur={() => normalizarCelula(rato, c)}
+                        disabled={!editavel(rato)}
                         className={`${INPUT_SM} w-20`}
                       />
                     </td>
                   ))}
-                  <td className="py-1.5 pl-2 font-mono tabular-nums text-ink">
+                  <td className="py-1.5 pr-2 font-mono tabular-nums text-ink">
                     {fmt(valor, config.familia === "curva" ? 3 : 4)}
+                  </td>
+                  <td className="py-1.5 pl-2">
+                    <input
+                      type="text"
+                      value={obs[rato] ?? ""}
+                      onChange={(e) =>
+                        setObs((p) => ({ ...p, [rato]: e.target.value }))
+                      }
+                      disabled={!podeRegistrar}
+                      placeholder="—"
+                      className={`${INPUT_SM} w-40`}
+                    />
                   </td>
                 </tr>
               );
@@ -450,36 +554,51 @@ export default function RegistroResultado({
       )}
 
       {podeRegistrar && (
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={salvar}
+            onClick={() => salvar(false)}
+            disabled={salvando}
+            className={`text-sm ${BOTAO_SECUNDARIO}`}
+          >
+            {salvando ? "Salvando..." : "Salvar rascunho"}
+          </button>
+          <button
+            type="button"
+            onClick={() => salvar(true)}
             disabled={salvando}
             className={`text-sm ${BOTAO_PRIMARIO}`}
           >
-            {salvando ? "Salvando..." : "Salvar tabela"}
+            Confirmar resultados
           </button>
           {mensagem && <span className="text-sm text-ink-soft">{mensagem}</span>}
         </div>
       )}
 
-      {graficoGrupos.length >= 2 && (
+      {/* Curva cinética por rato (CAT/SOD) — pra ver o decaimento */}
+      {ehCinetico && ratosComCurva.length > 0 && (
         <div className="mt-10">
           <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-            Valores por grupo (visão geral)
+            Curva cinética por rato (absorbância × tempo)
           </p>
-          <div className="h-64 w-full rounded border border-rule bg-paper-raised p-2">
+          <p className="mb-3 text-xs text-ink-soft">
+            Cada linha é um rato. Serve para ver se a reação está{" "}
+            {config.familia === "cat" ? "decaindo" : "variando"} de forma
+            consistente — uma linha muito fora do padrão indica amostra a
+            refazer.
+          </p>
+          <div className="h-72 w-full rounded border border-rule bg-paper-raised p-2">
             <ResponsiveContainer>
-              <ComposedChart data={graficoGrupos}>
+              <LineChart data={dadosCinetica}>
                 <CartesianGrid stroke="var(--color-rule)" />
                 <XAxis
-                  dataKey="grupo"
-                  type="category"
-                  allowDuplicatedCategory={true}
+                  dataKey="tempo"
+                  type="number"
                   stroke="var(--color-ink-soft)"
                   tick={{ fontSize: 11 }}
+                  label={{ value: "segundos", position: "insideBottom", offset: -4, fontSize: 11 }}
                 />
-                <YAxis dataKey="valor" type="number" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
+                <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{
                     background: "var(--color-paper-raised)",
@@ -488,12 +607,75 @@ export default function RegistroResultado({
                     fontSize: 12,
                   }}
                 />
-                <Scatter dataKey="valor" fill="var(--color-absorbance)" />
-              </ComposedChart>
+                {ratosComCurva.map((r) => (
+                  <Line
+                    key={r.numero}
+                    type="monotone"
+                    dataKey={`r${r.numero}`}
+                    name={`Rato ${r.numero}`}
+                    stroke="var(--color-absorbance)"
+                    strokeOpacity={0.5}
+                    dot={false}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
+
+      {/* Visão geral por grupo */}
+      <GraficoGrupos roster={roster} valorDoRato={valorDoRato} />
+    </div>
+  );
+}
+
+function GraficoGrupos({
+  roster,
+  valorDoRato,
+}: {
+  roster: RatoDoRoster[];
+  valorDoRato: (rato: string) => number | null;
+}) {
+  const dados = roster
+    .map((r) => {
+      const v = valorDoRato(String(r.numero));
+      return v === null ? null : { grupo: r.grupoNome, valor: v };
+    })
+    .filter((d): d is { grupo: string; valor: number } => d !== null);
+
+  if (dados.length < 2) return null;
+
+  return (
+    <div className="mt-10">
+      <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        Valores por grupo (visão geral)
+      </p>
+      <div className="h-64 w-full rounded border border-rule bg-paper-raised p-2">
+        <ResponsiveContainer>
+          <ComposedChart data={dados}>
+            <CartesianGrid stroke="var(--color-rule)" />
+            <XAxis
+              dataKey="grupo"
+              type="category"
+              allowDuplicatedCategory={true}
+              stroke="var(--color-ink-soft)"
+              tick={{ fontSize: 11 }}
+            />
+            <YAxis dataKey="valor" type="number" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
+            <Tooltip
+              contentStyle={{
+                background: "var(--color-paper-raised)",
+                border: "1px solid var(--color-rule)",
+                borderRadius: 4,
+                fontSize: 12,
+              }}
+            />
+            <Scatter dataKey="valor" fill="var(--color-absorbance)" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

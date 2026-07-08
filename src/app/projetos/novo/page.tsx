@@ -34,10 +34,13 @@ export default function NovoProjeto() {
   }
 
   function atualizarRatos(i: number, leva: number, valor: string) {
+    // Normaliza: tira zeros à esquerda ("022" → "22"), mantém vazio.
+    const normalizado =
+      valor === "" ? "" : String(Math.max(0, parseInt(valor, 10) || 0));
     setGrupos((prev) =>
       prev.map((g, idx) =>
         idx === i
-          ? { ...g, ratos: g.ratos.map((r, l) => (l === leva ? valor : r)) }
+          ? { ...g, ratos: g.ratos.map((r, l) => (l === leva ? normalizado : r)) }
           : g
       )
     );
@@ -65,6 +68,14 @@ export default function NovoProjeto() {
     (soma, g) => soma + g.ratos.reduce((s, r) => s + (Number(r) || 0), 0),
     0
   );
+
+  const gruposVazios = grupos
+    .filter(
+      (g) =>
+        g.nome.trim() !== "" &&
+        g.ratos.reduce((s, r) => s + (Number(r) || 0), 0) === 0
+    )
+    .map((g) => g.nome.trim());
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
@@ -178,6 +189,12 @@ export default function NovoProjeto() {
               Total: {totalRatos} rato(s)
             </span>
           </div>
+          {gruposVazios.length > 0 && (
+            <p className="mt-2 text-xs text-alerta">
+              Sem ratos: {gruposVazios.join(", ")} — informe a quantidade ou
+              remova o grupo.
+            </p>
+          )}
         </div>
 
         {estado?.erro && (
@@ -188,7 +205,7 @@ export default function NovoProjeto() {
 
         <button
           type="submit"
-          disabled={pendente}
+          disabled={pendente || gruposVazios.length > 0}
           className={`self-start text-sm ${BOTAO_PRIMARIO}`}
         >
           {pendente ? "Criando..." : "Criar projeto"}

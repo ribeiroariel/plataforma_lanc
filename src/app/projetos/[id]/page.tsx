@@ -35,6 +35,7 @@ type TesteDesignado = {
   teste_slug: string;
   status: "pendente" | "concluido";
   responsavel_id: string;
+  leva: number | null;
   profiles: { nome: string } | null;
 };
 
@@ -70,7 +71,7 @@ export default async function DetalheProjeto({
         .returns<Grupo[]>(),
       supabase
         .from("projeto_testes")
-        .select("id, teste_slug, status, responsavel_id, profiles:responsavel_id(nome)")
+        .select("id, teste_slug, status, responsavel_id, leva, profiles:responsavel_id(nome)")
         .eq("projeto_id", id)
         .order("created_at", { ascending: true })
         .returns<TesteDesignado[]>(),
@@ -233,6 +234,7 @@ export default async function DetalheProjeto({
                       <span className="text-signal">{nomeTecido(teste.tecido)}</span>
                     )}
                     {teste && " · "}
+                    {t.leva && <span>Leva {t.leva} · </span>}
                     Responsável: {t.profiles?.nome ?? "?"}
                   </p>
                 </div>
@@ -264,6 +266,7 @@ export default async function DetalheProjeto({
             projetoId={projeto.id}
             testes={testesDesignaveis}
             pessoas={membrosParaDesignar}
+            numeroLevas={projeto.numero_levas ?? 1}
           />
         )}
       </section>
