@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { criarProjeto } from "@/lib/actions/projetos";
+import { INPUT, INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type LinhaGrupo = { nome: string; ratos: string };
 
@@ -24,54 +26,54 @@ export default function NovoProjeto() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-semibold">Novo projeto</h1>
+    <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+      <Link
+        href="/projetos"
+        className="text-sm text-ink-soft hover:text-absorbance"
+      >
+        ← Meus projetos
+      </Link>
+      <h1 className="mt-2 font-display text-3xl leading-tight text-ink">
+        Novo projeto
+      </h1>
 
-      <form action={formAction} className="flex flex-col gap-6">
-        <label className="flex flex-col gap-1 text-sm">
+      <form action={formAction} className="mt-8 flex flex-col gap-6">
+        <label className="flex flex-col gap-1 text-sm text-ink">
           Nome do projeto
-          <input
-            name="nome"
-            required
-            className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
-          />
+          <input name="nome" required className={INPUT} />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-sm text-ink">
           Descrição
-          <textarea
-            name="descricao"
-            rows={3}
-            className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
-          />
+          <textarea name="descricao" rows={3} className={INPUT} />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-sm text-ink">
           Quantas levas de sacrifício estão previstas? (opcional)
           <input
             type="number"
             name="numeroLevas"
             min={1}
-            className="w-32 rounded border border-black/15 px-3 py-2 dark:border-white/20"
+            className={`${INPUT} w-32`}
           />
         </label>
 
         <div>
-          <p className="mb-2 text-sm font-medium">Grupos experimentais</p>
-          <p className="mb-3 text-xs text-black/60 dark:text-white/60">
+          <p className="text-sm font-medium text-ink">Grupos experimentais</p>
+          <p className="mt-1 mb-3 text-xs leading-relaxed text-ink-soft">
             Ex.: Controle, DM1, Controle+EBH75... Os números dos ratos são
             gerados automaticamente e em sequência, na ordem dos grupos
             abaixo.
           </p>
           <div className="flex flex-col gap-2">
             {grupos.map((g, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex items-center gap-2">
                 <input
                   placeholder="Nome do grupo"
                   value={g.nome}
                   onChange={(e) => atualizarGrupo(i, "nome", e.target.value)}
                   name="grupoNome"
-                  className="flex-1 rounded border border-black/15 px-3 py-2 text-sm dark:border-white/20"
+                  className={`${INPUT_SM} flex-1`}
                 />
                 <input
                   type="number"
@@ -80,14 +82,15 @@ export default function NovoProjeto() {
                   value={g.ratos}
                   onChange={(e) => atualizarGrupo(i, "ratos", e.target.value)}
                   name="grupoRatos"
-                  className="w-32 rounded border border-black/15 px-3 py-2 text-sm dark:border-white/20"
+                  className={`${INPUT_SM} w-28`}
                 />
                 <button
                   type="button"
                   onClick={() => removerGrupo(i)}
-                  className="text-sm text-red-600 underline"
+                  className="text-sm text-ink-soft hover:text-alerta"
+                  aria-label="Remover grupo"
                 >
-                  remover
+                  ✕
                 </button>
               </div>
             ))}
@@ -95,23 +98,19 @@ export default function NovoProjeto() {
           <button
             type="button"
             onClick={adicionarGrupo}
-            className="mt-2 rounded border border-black/20 px-3 py-1 text-sm dark:border-white/20"
+            className={`mt-3 ${BOTAO_SECUNDARIO_SM}`}
           >
             + Adicionar grupo
           </button>
         </div>
 
         {estado?.erro && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-alerta" role="alert">
             {estado.erro}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={pendente}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
-        >
+        <button type="submit" disabled={pendente} className={`self-start ${BOTAO_PRIMARIO}`}>
           {pendente ? "Criando..." : "Criar projeto"}
         </button>
       </form>

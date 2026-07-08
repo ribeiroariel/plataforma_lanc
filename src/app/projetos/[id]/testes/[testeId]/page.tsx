@@ -81,8 +81,8 @@ export default async function PaginaResultado({
 
   if (!config) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-10">
-        <p className="text-sm text-black/60 dark:text-white/60">
+      <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+        <p className="text-sm text-ink-soft">
           Este teste ainda não tem uma tela de registro de resultado
           disponível.
         </p>
@@ -91,14 +91,14 @@ export default async function PaginaResultado({
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link
         href={`/projetos/${projetoId}`}
-        className="text-sm text-black/60 hover:underline dark:text-white/60"
+        className="text-sm text-ink-soft hover:text-absorbance"
       >
         ← {projeto?.nome ?? "Projeto"}
       </Link>
-      <h1 className="mt-2 text-2xl font-semibold">
+      <h1 className="mt-2 font-display text-3xl leading-tight text-ink">
         {teste?.titulo ?? projetoTeste.teste_slug}
       </h1>
 

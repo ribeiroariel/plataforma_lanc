@@ -15,6 +15,7 @@ import { regressaoLinear } from "@/lib/estatistica";
 import type { RatoDoRoster } from "@/lib/roster";
 import type { ConfigTeste } from "@/lib/tiposTeste";
 import { salvarResultado, definirStatusTeste } from "@/lib/actions/resultados";
+import { INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "@/lib/estilos";
 
 const TEMPOS_CAT = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const TEMPOS_SOD = [0, 30, 60, 90, 120];
@@ -150,8 +151,8 @@ export default function RegistroResultado({
         <span
           className={`rounded-full px-2 py-0.5 text-xs ${
             status === "concluido"
-              ? "bg-green-500/15 text-green-700 dark:text-green-400"
-              : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+              ? "bg-green-600/12 text-green-700 dark:text-green-400"
+              : "bg-reagent/12 text-reagent"
           }`}
         >
           {status === "concluido" ? "concluído" : "pendente"}
@@ -169,7 +170,7 @@ export default function RegistroResultado({
       </div>
 
       {config.familia === "cat" && config.qc && (
-        <div className="mb-6 rounded border border-black/10 p-4 dark:border-white/10">
+        <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
           <p className="mb-2 text-sm font-medium">
             Controle de qualidade da sessão
           </p>
@@ -181,7 +182,7 @@ export default function RegistroResultado({
               value={absQcCat}
               onChange={(e) => setAbsQcCat(e.target.value)}
               disabled={!podeRegistrar}
-              className="rounded border border-black/15 px-2 py-1 dark:border-white/20"
+              className={INPUT_SM}
             />
           </label>
           {qcCatOk !== null && (
@@ -189,7 +190,7 @@ export default function RegistroResultado({
               className={`mt-2 text-xs ${
                 qcCatOk
                   ? "text-green-700 dark:text-green-400"
-                  : "text-red-700 dark:text-red-400"
+                  : "text-alerta"
               }`}
             >
               {qcCatOk
@@ -201,7 +202,7 @@ export default function RegistroResultado({
       )}
 
       {config.familia === "sod" && config.qc && (
-        <div className="mb-6 rounded border border-black/10 p-4 dark:border-white/10">
+        <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
           <p className="mb-2 text-sm font-medium">
             Controle de qualidade da sessão — {config.qc.rotulo}
           </p>
@@ -219,7 +220,7 @@ export default function RegistroResultado({
                     )
                   }
                   disabled={!podeRegistrar}
-                  className="w-20 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+                  className={`${INPUT_SM} w-20`}
                 />
               </label>
             ))}
@@ -229,7 +230,7 @@ export default function RegistroResultado({
               className={`mt-2 text-xs ${
                 qcSodOk
                   ? "text-green-700 dark:text-green-400"
-                  : "text-red-700 dark:text-red-400"
+                  : "text-alerta"
               }`}
             >
               Taxa: {controleSodSlopeMin.toFixed(4)} {config.qc.unidade}
@@ -242,7 +243,7 @@ export default function RegistroResultado({
       )}
 
       {config.familia === "curva" && config.qc && (
-        <div className="mb-6 rounded border border-black/10 p-4 dark:border-white/10">
+        <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
           <p className="mb-2 text-sm font-medium">
             Curva padrão da sessão — {config.qc.rotulo}
           </p>
@@ -260,7 +261,7 @@ export default function RegistroResultado({
                     )
                   }
                   disabled={!podeRegistrar}
-                  className="w-20 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+                  className={`${INPUT_SM} w-20`}
                 />
               </label>
             ))}
@@ -270,7 +271,7 @@ export default function RegistroResultado({
               className={`mt-2 text-xs ${
                 qcCurvaOk
                   ? "text-green-700 dark:text-green-400"
-                  : "text-red-700 dark:text-red-400"
+                  : "text-alerta"
               }`}
             >
               R² = {regressaoCurvaLowry.rQuadrado.toFixed(4)}
@@ -284,7 +285,7 @@ export default function RegistroResultado({
 
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-black/60 dark:text-white/60">
+          <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
             <th className="pb-2">Nº</th>
             <th className="pb-2">Grupo</th>
             <th className="pb-2">Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}</th>
@@ -296,13 +297,13 @@ export default function RegistroResultado({
             const resultado = resultados.get(String(r.numero));
             const preenchido = resultado?.valor_calculado != null;
             return (
-              <tr key={r.numero} className="border-t border-black/5 dark:border-white/5">
+              <tr key={r.numero} className="border-t border-rule/60">
                 <td className="py-2">{r.numero}</td>
                 <td className="py-2">{r.grupoNome}</td>
                 <td className="py-2">
                   {preenchido ? formatarNumero(resultado!.valor_calculado) : "—"}
                   {resultado?.dentro_do_padrao === false && (
-                    <span className="ml-2 text-xs text-red-600">QC fora do padrão</span>
+                    <span className="ml-2 text-xs text-alerta">QC fora do padrão</span>
                   )}
                 </td>
                 <td className="py-2 text-right">
@@ -310,7 +311,7 @@ export default function RegistroResultado({
                     <button
                       type="button"
                       onClick={() => setRatoSelecionado(r.numero)}
-                      className="rounded border border-black/20 px-2 py-1 text-xs dark:border-white/20"
+                      className="rounded border border-rule px-2 py-1 text-xs text-ink transition-colors hover:border-absorbance"
                     >
                       {preenchido ? "Editar" : "Registrar"}
                     </button>
@@ -346,15 +347,35 @@ export default function RegistroResultado({
 
       {grafico.length >= 2 && (
         <div className="mt-10">
-          <p className="mb-2 text-sm font-medium">Valores por grupo (visão geral)</p>
-          <div className="h-64 w-full">
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+            Valores por grupo (visão geral)
+          </p>
+          <div className="h-64 w-full rounded border border-rule bg-paper-raised p-2">
             <ResponsiveContainer>
               <ComposedChart data={grafico}>
-                <CartesianGrid strokeOpacity={0.15} />
-                <XAxis dataKey="grupo" type="category" allowDuplicatedCategory={true} />
-                <YAxis dataKey="valor" type="number" />
-                <Tooltip />
-                <Scatter dataKey="valor" fill="#2563eb" />
+                <CartesianGrid stroke="var(--color-rule)" />
+                <XAxis
+                  dataKey="grupo"
+                  type="category"
+                  allowDuplicatedCategory={true}
+                  stroke="var(--color-ink-soft)"
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis
+                  dataKey="valor"
+                  type="number"
+                  stroke="var(--color-ink-soft)"
+                  tick={{ fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--color-paper-raised)",
+                    border: "1px solid var(--color-rule)",
+                    borderRadius: 4,
+                    fontSize: 12,
+                  }}
+                />
+                <Scatter dataKey="valor" fill="var(--color-absorbance)" />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -605,7 +626,7 @@ function FormularioRato({
   }
 
   return (
-    <div className="mt-6 rounded border border-black/15 p-4 dark:border-white/20">
+    <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
       <p className="mb-3 font-medium">
         Rato {rato.numero} — {rato.grupoNome}
       </p>
@@ -625,7 +646,7 @@ function FormularioRato({
                       prev.map((v, idx) => (idx === i ? e.target.value : v))
                     )
                   }
-                  className="w-20 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+                  className={`${INPUT_SM} w-20`}
                 />
               </label>
             ))}
@@ -638,20 +659,33 @@ function FormularioRato({
               step="0.001"
               value={proteina}
               onChange={(e) => setProteina(e.target.value)}
-              className="rounded border border-black/15 px-2 py-1 dark:border-white/20"
+              className={INPUT_SM}
             />
           </label>
 
           {regressaoAmostra && (
-            <div className="mb-3 h-48 w-full">
+            <div className="mb-3 h-48 w-full rounded border border-rule bg-paper-raised p-2">
               <ResponsiveContainer>
                 <ComposedChart data={dadosGraficoAmostra}>
-                  <CartesianGrid strokeOpacity={0.15} />
-                  <XAxis dataKey="x" type="number" label={{ value: "segundos", position: "insideBottom", offset: -5 }} />
-                  <YAxis dataKey="y" type="number" />
-                  <Tooltip />
-                  <Scatter dataKey="y" fill="#2563eb" />
-                  <Line type="linear" dataKey="yAjustado" stroke="#dc2626" dot={false} />
+                  <CartesianGrid stroke="var(--color-rule)" />
+                  <XAxis
+                    dataKey="x"
+                    type="number"
+                    stroke="var(--color-ink-soft)"
+                    tick={{ fontSize: 11 }}
+                    label={{ value: "segundos", position: "insideBottom", offset: -5, fontSize: 11 }}
+                  />
+                  <YAxis dataKey="y" type="number" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--color-paper-raised)",
+                      border: "1px solid var(--color-rule)",
+                      borderRadius: 4,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Scatter dataKey="y" fill="var(--color-absorbance)" />
+                  <Line type="linear" dataKey="yAjustado" stroke="var(--color-alerta)" dot={false} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -668,7 +702,7 @@ function FormularioRato({
               step="0.001"
               value={absorbanciaCurva}
               onChange={(e) => setAbsorbanciaCurva(e.target.value)}
-              className="w-32 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+              className={`${INPUT_SM} w-32`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
@@ -678,11 +712,11 @@ function FormularioRato({
               step="0.1"
               value={fatorDiluicaoCurva}
               onChange={(e) => setFatorDiluicaoCurva(e.target.value)}
-              className="w-32 rounded border border-black/15 px-2 py-1 dark:border-white/20"
+              className={`${INPUT_SM} w-32`}
             />
           </label>
           {!regressaoCurvaLowry && (
-            <p className="w-full text-xs text-black/50 dark:text-white/50">
+            <p className="w-full text-xs text-ink-soft">
               Preencha a curva padrão da sessão (acima da tabela) antes de
               registrar a amostra.
             </p>
@@ -702,7 +736,7 @@ function FormularioRato({
                 onChange={(e) =>
                   setCamposSimples((prev) => ({ ...prev, [campo.chave]: e.target.value }))
                 }
-                className="rounded border border-black/15 px-2 py-1 dark:border-white/20"
+                className={INPUT_SM}
               />
             </label>
           ))}
@@ -713,10 +747,10 @@ function FormularioRato({
               step="0.0001"
               value={valorFinal}
               onChange={(e) => setValorFinal(e.target.value)}
-              className="rounded border border-black/15 px-2 py-1 dark:border-white/20"
+              className={INPUT_SM}
             />
           </label>
-          <p className="text-xs text-black/50 dark:text-white/50">
+          <p className="text-xs text-ink-soft">
             Cálculo automático ainda não disponível pra esse teste — os
             valores brutos ficam registrados, e o valor final é o que você
             já calculou.
@@ -731,21 +765,21 @@ function FormularioRato({
         </p>
       )}
 
-      {erro && <p className="mb-3 text-sm text-red-600">{erro}</p>}
+      {erro && <p className="mb-3 text-sm text-alerta">{erro}</p>}
 
       <div className="flex gap-2">
         <button
           type="button"
           onClick={salvar}
           disabled={salvando}
-          className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className={`text-sm ${BOTAO_PRIMARIO}`}
         >
           {salvando ? "Salvando..." : "Salvar"}
         </button>
         <button
           type="button"
           onClick={onCancelar}
-          className="rounded border border-black/20 px-4 py-2 text-sm dark:border-white/20"
+          className={`text-sm ${BOTAO_SECUNDARIO}`}
         >
           Cancelar
         </button>

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Image from "next/image";
 import type { Profile } from "@/lib/supabase/profile";
 import { atualizarPerfil } from "@/lib/actions/perfil";
+import { INPUT, BOTAO_PRIMARIO } from "@/lib/estilos";
 
 export default function PerfilForm({ usuario }: { usuario: Profile }) {
   const [estado, formAction, pendente] = useActionState(
@@ -20,7 +21,7 @@ export default function PerfilForm({ usuario }: { usuario: Profile }) {
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <div className="flex items-center gap-4">
-        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-rule bg-rule">
           {preview && (
             <Image
               src={preview}
@@ -32,19 +33,19 @@ export default function PerfilForm({ usuario }: { usuario: Profile }) {
             />
           )}
         </div>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-sm text-ink">
           Foto (JPEG, PNG ou WebP, até 5 MB)
           <input
             type="file"
             name="foto"
             accept="image/jpeg,image/png,image/webp"
             onChange={aoEscolherFoto}
-            className="text-sm"
+            className="text-sm text-ink-soft file:mr-3 file:rounded file:border file:border-rule file:bg-paper-raised file:px-3 file:py-1 file:text-sm file:text-ink"
           />
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1 text-sm text-ink">
         Apresentação breve
         <textarea
           name="apresentacao"
@@ -52,12 +53,12 @@ export default function PerfilForm({ usuario }: { usuario: Profile }) {
           maxLength={300}
           defaultValue={usuario.apresentacao ?? ""}
           placeholder="Ex.: bolsista de iniciação científica, atua com estresse oxidativo em modelos de diabetes experimental."
-          className="rounded border border-black/15 px-3 py-2 dark:border-white/20"
+          className={INPUT}
         />
       </label>
 
       {estado && "erro" in estado && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-alerta" role="alert">
           {estado.erro}
         </p>
       )}
@@ -67,11 +68,7 @@ export default function PerfilForm({ usuario }: { usuario: Profile }) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pendente}
-        className="self-start rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
-      >
+      <button type="submit" disabled={pendente} className={`self-start text-sm ${BOTAO_PRIMARIO}`}>
         {pendente ? "Salvando..." : "Salvar"}
       </button>
     </form>

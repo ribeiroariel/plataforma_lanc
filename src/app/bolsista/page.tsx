@@ -1,28 +1,57 @@
 import Link from "next/link";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 
+const ATALHOS = [
+  {
+    href: "/testes",
+    titulo: "Protocolos de ensaios",
+    descricao:
+      "Manual de técnicas do laboratório — princípio, reagentes, procedimento e controle de qualidade de cada teste bioquímico.",
+  },
+  {
+    href: "/projetos",
+    titulo: "Meus projetos",
+    descricao:
+      "Crie projetos, defina grupos experimentais, designe testes à equipe e registre os resultados dos ensaios.",
+  },
+  {
+    href: "/perfil",
+    titulo: "Meu perfil",
+    descricao:
+      "Foto e apresentação que aparecem no carrossel público do laboratório na página inicial.",
+  },
+];
+
 export default async function AreaBolsista() {
   const usuario = await getUsuarioAtual();
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Olá, {usuario?.nome}</h1>
-      <p className="mt-2 mb-6 text-black/70 dark:text-white/70">
-        Escolha o que você quer fazer:
+    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+        Área do bolsista
       </p>
-      <div className="flex gap-4">
-        <Link
-          href="/testes"
-          className="inline-block rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black"
-        >
-          Protocolos de testes bioquímicos
-        </Link>
-        <Link
-          href="/projetos"
-          className="inline-block rounded border border-black/20 px-4 py-2 dark:border-white/20"
-        >
-          Meus projetos
-        </Link>
+      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
+        Olá, {usuario?.nome}
+      </h1>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        {ATALHOS.map((atalho) => (
+          <Link
+            key={atalho.href}
+            href={atalho.href}
+            className="group flex flex-col rounded border border-rule bg-paper-raised p-5 transition-colors hover:border-absorbance"
+          >
+            <span className="font-display text-lg text-ink">
+              {atalho.titulo}
+            </span>
+            <span className="mt-2 text-sm leading-relaxed text-ink-soft">
+              {atalho.descricao}
+            </span>
+            <span className="mt-4 font-mono text-xs text-absorbance">
+              Acessar →
+            </span>
+          </Link>
+        ))}
       </div>
     </main>
   );

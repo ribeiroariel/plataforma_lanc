@@ -11,8 +11,8 @@ export default async function LayoutTestes({
 
   if (usuario && !usuario.aprovado) {
     return (
-      <main className="mx-auto max-w-4xl px-4 py-10">
-        <p className="text-black/70 dark:text-white/70">
+      <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+        <p className="text-ink-soft">
           Seu cadastro está aguardando aprovação da coordenação do
           laboratório.
         </p>
@@ -23,20 +23,20 @@ export default async function LayoutTestes({
   const grupos = testesPorTecido();
 
   return (
-    <div className="mx-auto flex max-w-5xl gap-8 px-4 py-10">
-      <aside className="w-64 shrink-0">
-        <nav className="flex flex-col gap-6 text-sm">
+    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
+      <aside className="shrink-0 lg:w-64">
+        <nav className="flex flex-col gap-6 border-b border-rule pb-6 text-sm lg:border-b-0 lg:border-r lg:pr-6 lg:pb-0">
           {Array.from(grupos.entries()).map(([tecido, lista]) => (
             <div key={tecido}>
-              <p className="mb-2 font-semibold text-black/60 dark:text-white/60">
+              <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft">
                 {nomeTecido(tecido)}
               </p>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-1.5">
                 {lista.map((teste) => (
                   <li key={teste.slug}>
                     <Link
                       href={`/testes/${teste.slug}`}
-                      className="hover:underline"
+                      className="text-ink-soft transition-colors hover:text-absorbance"
                     >
                       {teste.titulo}
                     </Link>

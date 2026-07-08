@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
+import { BOTAO_PRIMARIO } from "@/lib/estilos";
 
 type ProjetoResumo = {
   id: string;
@@ -21,39 +22,41 @@ export default async function ListaProjetos() {
     .returns<ProjetoResumo[]>();
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
-          {souOrientador ? "Todos os projetos" : "Meus projetos"}
-        </h1>
+    <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+            {souOrientador ? "Acompanhamento" : "Pesquisa"}
+          </p>
+          <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
+            {souOrientador ? "Todos os projetos" : "Meus projetos"}
+          </h1>
+        </div>
         {!souOrientador && (
-          <Link
-            href="/projetos/novo"
-            className="rounded bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
-          >
+          <Link href="/projetos/novo" className={`shrink-0 text-sm ${BOTAO_PRIMARIO}`}>
             + Novo projeto
           </Link>
         )}
       </div>
 
       {(!projetos || projetos.length === 0) && (
-        <p className="text-black/60 dark:text-white/60">
+        <p className="mt-8 text-sm text-ink-soft">
           {souOrientador
             ? "Nenhum projeto criado ainda."
             : "Você ainda não participa de nenhum projeto."}
         </p>
       )}
 
-      <ul className="flex flex-col gap-3">
+      <ul className="mt-8 flex flex-col gap-3">
         {projetos?.map((projeto) => (
           <li key={projeto.id}>
             <Link
               href={`/projetos/${projeto.id}`}
-              className="block rounded border border-black/10 p-4 hover:bg-black/[0.03] dark:border-white/10 dark:hover:bg-white/[0.03]"
+              className="block rounded border border-rule bg-paper-raised p-5 transition-colors hover:border-absorbance"
             >
-              <p className="font-medium">{projeto.nome}</p>
+              <p className="font-display text-lg text-ink">{projeto.nome}</p>
               {projeto.descricao && (
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+                <p className="mt-1 text-sm leading-relaxed text-ink-soft">
                   {projeto.descricao}
                 </p>
               )}

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { testes, conteudoTeste } from "@/lib/testes";
+import { testes, conteudoTeste, nomeTecido } from "@/lib/testes";
+import { ProtocoloTeste } from "@/components/ProtocoloTeste";
 
 export function generateStaticParams() {
   return testes.map((teste) => ({ slug: teste.slug }));
@@ -20,19 +21,24 @@ export default async function PaginaTeste({
 
   return (
     <article>
-      <h1 className="mb-1 text-2xl font-semibold">{teste.titulo}</h1>
+      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+        {nomeTecido(teste.tecido)}
+      </p>
+      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
+        {teste.titulo}
+      </h1>
+
       {ehLowry && (
-        <p className="mb-4 text-sm">
-          <Link
-            href="/testes/lowry-cortex-rins/calculadora"
-            className="underline"
-          >
-            Abrir calculadora da curva padrão →
-          </Link>
-        </p>
+        <Link
+          href="/testes/lowry-cortex-rins/calculadora"
+          className="mt-3 inline-block border-b border-absorbance text-sm text-absorbance hover:border-ink hover:text-ink"
+        >
+          Abrir calculadora da curva padrão →
+        </Link>
       )}
-      <div className="whitespace-pre-wrap text-sm leading-relaxed text-black/80 dark:text-white/80">
-        {conteudo}
+
+      <div className="mt-6">
+        <ProtocoloTeste conteudo={conteudo} />
       </div>
     </article>
   );

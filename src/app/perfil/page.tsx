@@ -8,9 +8,14 @@ export default async function PaginaPerfil() {
   if (!usuario) redirect("/login");
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-10">
-      <h1 className="mb-1 text-2xl font-semibold">Meu perfil</h1>
-      <p className="mb-6 text-sm text-black/60 dark:text-white/60">
+    <main className="mx-auto max-w-lg px-4 py-10 sm:px-6">
+      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+        Perfil
+      </p>
+      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
+        Meu perfil
+      </h1>
+      <p className="mt-2 mb-8 text-sm leading-relaxed text-ink-soft">
         Foto e apresentação aparecem no carrossel público &quot;Quem
         somos&quot; da página inicial
         {!usuario.aprovado && " assim que seu cadastro for aprovado"}.

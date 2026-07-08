@@ -84,66 +84,70 @@ export default async function DetalheProjeto({
   const totalRatos = grupos?.reduce((soma, g) => soma + g.numero_ratos, 0) ?? 0;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link
         href={souOrientador ? "/orientador" : "/projetos"}
-        className="text-sm text-black/60 hover:underline dark:text-white/60"
+        className="text-sm text-ink-soft hover:text-absorbance"
       >
         {souOrientador ? "← Painel da orientadora" : "← Meus projetos"}
       </Link>
 
       <div className="mt-2 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{projeto.nome}</h1>
+          <h1 className="font-display text-3xl leading-tight text-ink">
+            {projeto.nome}
+          </h1>
           {projeto.descricao && (
-            <p className="mt-1 text-black/70 dark:text-white/70">
-              {projeto.descricao}
-            </p>
+            <p className="mt-1 text-ink-soft">{projeto.descricao}</p>
           )}
         </div>
         {usuario?.pode_exportar_dados && (
           <a
             href={`/api/exportar/${projeto.id}`}
-            className="shrink-0 rounded bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
+            className="shrink-0 rounded bg-absorbance px-4 py-2 text-sm text-paper transition-colors hover:bg-ink"
           >
-            ⬇ Exportar para o R
+            ↓ Exportar para o R
           </a>
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-black/60 dark:text-white/60">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">
         <span>{totalRatos} rato(s) no total</span>
-        {projeto.numero_levas && <span>{projeto.numero_levas} leva(s) previstas</span>}
+        {projeto.numero_levas && <span>· {projeto.numero_levas} leva(s) previstas</span>}
       </div>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Grupos experimentais</h2>
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          Grupos experimentais
+        </h2>
         <div className="flex flex-wrap gap-2">
           {grupos?.map((g) => (
             <span
               key={g.id}
-              className="rounded-full border border-black/15 px-3 py-1 text-sm dark:border-white/20"
+              className="rounded-full border border-rule px-3 py-1 text-sm text-ink"
             >
-              {g.nome} · {g.numero_ratos} rato(s)
+              {g.nome} <span className="text-ink-soft">· {g.numero_ratos} rato(s)</span>
             </span>
           ))}
         </div>
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Membros</h2>
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          Membros
+        </h2>
         <div className="flex flex-col gap-2">
           {membros?.map((m, i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded border border-black/10 px-3 py-2 text-sm dark:border-white/10"
+              className="flex items-center justify-between rounded border border-rule bg-paper-raised px-3 py-2 text-sm"
             >
-              <span>{m.profiles?.nome}</span>
+              <span className="text-ink">{m.profiles?.nome}</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-xs ${
+                className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
                   m.papel === "coautor"
-                    ? "bg-blue-500/15 text-blue-700 dark:text-blue-400"
-                    : "bg-black/10 text-black/60 dark:bg-white/10 dark:text-white/60"
+                    ? "bg-absorbance/12 text-absorbance"
+                    : "bg-ink/5 text-ink-soft"
                 }`}
               >
                 {m.papel === "coautor" ? "coautor" : "ajudante"}
@@ -155,9 +159,11 @@ export default async function DetalheProjeto({
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Testes designados</h2>
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          Testes designados
+        </h2>
         {(!testesDesignados || testesDesignados.length === 0) && (
-          <p className="text-sm text-black/60 dark:text-white/60">
+          <p className="text-sm text-ink-soft">
             Nenhum teste designado ainda
             {!souCoautor && !souOrientador && " (ou você não é responsável por nenhum aqui)"}.
           </p>
@@ -170,20 +176,22 @@ export default async function DetalheProjeto({
             return (
               <div
                 key={t.id}
-                className="flex items-center justify-between gap-3 rounded border border-black/10 px-3 py-2 text-sm dark:border-white/10"
+                className="flex items-center justify-between gap-3 rounded border border-rule bg-paper-raised px-3 py-2 text-sm"
               >
                 <div>
-                  <p className="font-medium">{teste?.titulo ?? t.teste_slug}</p>
-                  <p className="text-black/60 dark:text-white/60">
+                  <p className="font-medium text-ink">
+                    {teste?.titulo ?? t.teste_slug}
+                  </p>
+                  <p className="text-ink-soft">
                     Responsável: {t.profiles?.nome ?? "?"}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
+                    className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
                       t.status === "concluido"
-                        ? "bg-green-500/15 text-green-700 dark:text-green-400"
-                        : "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400"
+                        ? "bg-green-600/12 text-green-700 dark:text-green-400"
+                        : "bg-reagent/12 text-reagent"
                     }`}
                   >
                     {t.status === "concluido" ? "concluído" : "pendente"}
@@ -191,7 +199,7 @@ export default async function DetalheProjeto({
                   {podeAbrir && (
                     <Link
                       href={`/projetos/${projeto.id}/testes/${t.id}`}
-                      className="rounded border border-black/20 px-3 py-1 text-xs dark:border-white/20"
+                      className="rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-absorbance"
                     >
                       {souResponsavel ? "Registrar resultado" : "Ver"}
                     </Link>

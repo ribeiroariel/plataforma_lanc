@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { designarTeste } from "@/lib/actions/projetos";
 import type { TesteResumo } from "@/lib/testes";
+import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 export default function FormularioTeste({
   projetoId,
@@ -17,15 +18,14 @@ export default function FormularioTeste({
   );
 
   return (
-    <form action={formAction} className="mt-3 flex flex-wrap items-end gap-2">
+    <form
+      action={formAction}
+      className="mt-4 flex flex-wrap items-end gap-2 rounded border border-dashed border-rule p-3"
+    >
       <input type="hidden" name="projetoId" value={projetoId} />
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-1 text-xs text-ink-soft">
         Teste
-        <select
-          name="testeSlug"
-          required
-          className="rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
-        >
+        <select name="testeSlug" required className={INPUT_SM}>
           <option value="">Selecione...</option>
           {testes.map((t) => (
             <option key={t.slug} value={t.slug}>
@@ -34,24 +34,15 @@ export default function FormularioTeste({
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-xs">
+      <label className="flex flex-col gap-1 text-xs text-ink-soft">
         E-mail do responsável
-        <input
-          type="email"
-          name="email"
-          required
-          className="rounded border border-black/15 px-2 py-1 text-sm dark:border-white/20"
-        />
+        <input type="email" name="email" required className={INPUT_SM} />
       </label>
-      <button
-        type="submit"
-        disabled={pendente}
-        className="rounded border border-black/20 px-3 py-1 text-sm disabled:opacity-50 dark:border-white/20"
-      >
+      <button type="submit" disabled={pendente} className={BOTAO_SECUNDARIO_SM}>
         {pendente ? "Designando..." : "Designar"}
       </button>
       {estado?.erro && (
-        <p className="w-full text-sm text-red-600">{estado.erro}</p>
+        <p className="w-full text-sm text-alerta">{estado.erro}</p>
       )}
     </form>
   );
