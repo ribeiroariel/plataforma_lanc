@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { testes, conteudoTeste, nomeTecido, tituloCurto } from "@/lib/testes";
+import { testes, nomeTecido, tituloCurto } from "@/lib/testes";
+import { conteudoProtocolo } from "@/lib/protocolo";
 import { ProtocoloTeste } from "@/components/ProtocoloTeste";
 
 export function generateStaticParams() {
@@ -16,7 +17,7 @@ export default async function PaginaTeste({
   const teste = testes.find((t) => t.slug === slug);
   if (!teste) notFound();
 
-  const conteudo = conteudoTeste(slug);
+  const conteudo = conteudoProtocolo(slug);
   const ehLowry = slug.startsWith("lowry-");
 
   return (
