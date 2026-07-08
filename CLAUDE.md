@@ -15,11 +15,11 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
 
 - `src/proxy.ts` — renova sessão e controla acesso por rota:
   `/bolsista` só papel `bolsista`, `/orientador` só papel `orientador`,
-  `/projetos` e `/testes` são **compartilhados** entre os dois papéis (só
-  exigem login) — a orientadora precisa ler projetos dos bolsistas, então
-  essas telas não podem ficar presas debaixo de `/bolsista`. Redireciona
-  pra `/login` se não logado, ou pra `/` se o papel não bate com a rota
-  exclusiva.
+  `/projetos`, `/testes` e `/perfil` são **compartilhados** entre os dois
+  papéis (só exigem login) — a orientadora precisa ler projetos dos
+  bolsistas e editar o próprio perfil, então essas telas não podem ficar
+  presas debaixo de `/bolsista`. Redireciona pra `/login` se não logado,
+  ou pra `/` se o papel não bate com a rota exclusiva.
 - `src/lib/supabase/{client,server,profile}.ts` e `src/lib/actions/auth.ts`
   — login, cadastro (sempre cria papel `bolsista` — não existe formulário
   público para criar conta de `orientador`, ver seção de segurança abaixo)
@@ -130,13 +130,20 @@ Não há e-mail automático — o Ariel pede pelo chat ("tem cadastro
 pendente?") e a skill `revisar-cadastros-lanc` lista/aprova/rejeita via
 `scripts/revisar-cadastros.mjs` (usa a chave de serviço).
 
+- `/perfil` — qualquer pessoa logada (bolsista ou orientadora) edita a
+  própria foto e apresentação breve, usadas no carrossel público da
+  página inicial. Foto vai pro bucket `avatars` do Supabase Storage
+  (público, mas só o dono escreve na própria pasta `{id}/foto.<ext>` —
+  policies em `storage.objects`, ver fim do `schema.sql`), caminho
+  `{id}/foto.<ext>` fixo (upsert sempre sobrescreve, sem acumular lixo).
+  `src/lib/actions/perfil.ts` valida tipo (JPEG/PNG/WebP) e tamanho
+  (5 MB).
+
 Ainda não implementado (próximas fases): fórmula automática pra
 TBARS/Sulfidrilas/Carboniladas/Tióis-Dissulfetos/Ácido Ascórbico/H2O2
 (hoje é entrada manual do valor final — ver seção acima); import do
 formato bruto do leitor Tecano pra dentro da tela de registro (hoje o
-bolsista digita a leitura já processada); cadastro de foto/apresentação
-de perfil (pro carrossel público, hoje só nome aparece mesmo com o campo
-já existindo no banco — próximo passo desta sessão).
+bolsista digita a leitura já processada).
 
 ## As duas frentes do site (visão do produto)
 

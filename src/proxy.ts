@@ -37,10 +37,13 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/cadastro");
   const isBolsistaRoute = path.startsWith("/bolsista");
   const isOrientadorRoute = path.startsWith("/orientador");
-  // /projetos e /testes são compartilhados pelos dois papéis (a
-  // orientadora acompanha os projetos dos bolsistas) — só exige login,
-  // sem checar papel específico.
-  const isCompartilhadaRoute = path.startsWith("/projetos") || path.startsWith("/testes");
+  // /projetos, /testes e /perfil são compartilhados pelos dois papéis (a
+  // orientadora acompanha os projetos dos bolsistas, e qualquer um edita
+  // o próprio perfil) — só exige login, sem checar papel específico.
+  const isCompartilhadaRoute =
+    path.startsWith("/projetos") ||
+    path.startsWith("/testes") ||
+    path.startsWith("/perfil");
   const isRotaLogada = isBolsistaRoute || isOrientadorRoute || isCompartilhadaRoute;
 
   if (!user && isRotaLogada) {

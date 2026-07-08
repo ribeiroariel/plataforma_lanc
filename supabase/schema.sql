@@ -604,3 +604,42 @@ create policy "Responsável atualiza o próprio resultado"
 
 -- Sem policy de delete de propósito: apagar um resultado de ensaio já
 -- registrado deveria ser exceção rara, tratada manualmente se acontecer.
+
+-- ----------------------------------------------------------------------------
+-- FOTOS DE PERFIL (Storage) — pro carrossel público "quem somos"
+-- ----------------------------------------------------------------------------
+-- Bucket público (qualquer um com a URL vê a foto, sem precisar de login —
+-- é o mesmo espírito do carrossel público de bolsistas). Caminho do
+-- arquivo é sempre "{id da pessoa}/foto.<ext>", então cada pessoa só pode
+-- escrever dentro da própria pasta.
+
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Dono sobe a própria foto" on storage.objects;
+create policy "Dono sobe a própria foto"
+  on storage.objects
+  for insert
+  with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "Dono atualiza a própria foto" on storage.objects;
+create policy "Dono atualiza a própria foto"
+  on storage.objects
+  for update
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "Dono apaga a própria foto" on storage.objects;
+create policy "Dono apaga a própria foto"
+  on storage.objects
+  for delete
+  using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );

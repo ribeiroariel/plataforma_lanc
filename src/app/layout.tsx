@@ -60,6 +60,7 @@ export default async function RootLayout({
                   <Link href="/testes">Protocolos</Link>
                 </>
               )}
+              {usuario && <Link href="/perfil">Meu perfil</Link>}
               {usuario && (
                 <form action={logout}>
                   <button type="submit" className="underline">
