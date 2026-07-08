@@ -9,8 +9,14 @@ description: Transforma conteúdo bruto que o Ariel fornece (um artigo publicado
 
 Sempre que o Ariel fornecer conteúdo que deva virar uma notícia/post no
 hall público do site do LANC: (a) um artigo científico recém-publicado
-pela Dra. Débora ou pelo grupo, ou (b) uma atualização de atividade do
-laboratório (o que o grupo está fazendo, um marco do projeto, etc.).
+pela Dra. Débora ou pelo grupo, (b) uma atualização de atividade do
+laboratório (o que o grupo está fazendo, um marco do projeto, verba
+conquistada, etc.), ou (c) um post do Instagram do laboratório
+(@lancfurb — https://www.instagram.com/lancfurb/) que o Ariel quer
+reaproveitar no site. **Atenção Instagram:** raspagem automatizada do
+Instagram não funciona (bloqueia scraping mesmo via ferramenta de
+navegador, testado nesta sessão) — peça ao Ariel para colar a legenda e
+anexar as imagens do post diretamente, não tente acessar o perfil sozinho.
 
 ## Passo a passo
 
@@ -29,10 +35,19 @@ laboratório (o que o grupo está fazendo, um marco do projeto, etc.).
    - `tipo`: `publicacao` ou `atividade`
    - `resumo`: 1-2 frases para o card na listagem
    - `corpo`: 1-3 parágrafos em linguagem acessível (o público do hall é
-     leigo/divulgação, não um resumo técnico de artigo)
+     leigo/divulgação, não um resumo técnico de artigo). Para `publicacao`:
+     tom profissional e ponderado, respeitando o estágio/grau de evidência
+     — não extrapole resultado de modelo animal como se aplicasse a
+     humanos, marque estudo transversal/correlacional como associação (não
+     causa), e não esconda resultado misto ou negativo do próprio estudo.
    - `link_artigo`: se houver (DOI ou link do periódico)
    - `imagem`: caminho para print do artigo ou foto da atividade — se o
-     Ariel não anexou, pergunte se ele tem uma imagem antes de finalizar
+     Ariel não anexou, pergunte se ele tem uma imagem antes de finalizar.
+     **Nunca extraia figura/gráfico/tabela de dentro do artigo** mesmo com
+     acesso via CAPES — acesso institucional de leitura não dá direito de
+     reprodução pública; a maioria dos periódicos (Elsevier, Wiley, etc.)
+     não é acesso aberto. Só reaproveitar figura de artigo explicitamente
+     CC-BY/acesso aberto, e mesmo assim confirmar com o Ariel antes.
    - `data`: data de publicação/do evento (não a data de hoje, a menos que
      coincidam)
 
@@ -41,13 +56,13 @@ laboratório (o que o grupo está fazendo, um marco do projeto, etc.).
    de nunca persistir conteúdo sensível/público sem OK explícito.
 
 4. **Salve o rascunho aprovado** como Markdown com frontmatter em
-   `content/noticias/{AAAA-MM-DD}-{slug}.md` (slug curto derivado do
-   título). Esse é o estágio atual do pipeline: como o site ainda não tem
-   Supabase no ar, o arquivo Markdown é a fonte de verdade temporária.
-   Quando o schema de `news` existir no Supabase (ver subagente
-   `dev-plataforma-lanc`), este passo passa a ser um upsert na tabela em
-   vez de (ou além de) salvar o Markdown — atualize esta skill nesse
-   momento.
+   `content/noticias/{AAAA-MM-DD}-{slug}.md`. A tabela `noticias` já existe
+   no Supabase (ver `supabase/schema.sql`) — depois que o Ariel aprovar o
+   rascunho salvo aqui, o passo de publicar de verdade é inserir uma linha
+   nessa tabela com `publicado = true` (via chave de serviço, script local
+   — não existe ainda um script pronto pra isso, criar um
+   `scripts/publicar-noticia.mjs` na primeira vez que for necessário,
+   seguindo o padrão de `scripts/revisar-cadastros.mjs`).
 
 ## Formato do arquivo salvo
 

@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/*
+  Paleta com nome próprio, derivada da química real dos ensaios do LANC —
+  não é uma paleta "de laboratório" genérica:
+  - absorbance: azul do complexo biureto (reação de Lowry, 650 nm)
+  - reagent:    âmbar da hidrazona do DNPH (proteínas carboniladas, 370 nm)
+  - pyrogallol: violeta da autooxidação do pirogalol (SOD, 420 nm)
+  ink/paper simulam papel de periódico científico, não branco puro.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-ink: #1a1712;
+  --color-ink-soft: #5c564a;
+  --color-paper: #f7f4ec;
+  --color-paper-raised: #ffffff;
+  --color-rule: #ded6c2;
+  --color-absorbance: #24427a;
+  --color-reagent: #a8721b;
+  --color-pyrogallol: #5b3b82;
+  --color-alerta: #a8402f;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root[data-theme="dark"] {
+  --color-ink: #f0ece1;
+  --color-ink-soft: #b3ac9b;
+  --color-paper: #15130f;
+  --color-paper-raised: #1d1a14;
+  --color-rule: #35301f;
+  --color-absorbance: #7fa0e0;
+  --color-reagent: #e0ac52;
+  --color-pyrogallol: #b593de;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --color-ink: #f0ece1;
+    --color-ink-soft: #b3ac9b;
+    --color-paper: #15130f;
+    --color-paper-raised: #1d1a14;
+    --color-rule: #35301f;
+    --color-absorbance: #7fa0e0;
+    --color-reagent: #e0ac52;
+    --color-pyrogallol: #b593de;
+    --color-alerta: #d97862;
+
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
   }
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-paper: var(--color-paper);
+  --color-paper-raised: var(--color-paper-raised);
+  --color-rule: var(--color-rule);
+  --color-absorbance: var(--color-absorbance);
+  --color-reagent: var(--color-reagent);
+  --color-pyrogallol: var(--color-pyrogallol);
+  --color-alerta: var(--color-alerta);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-display: var(--font-newsreader);
+  --font-sans: var(--font-public-sans);
+  --font-mono: var(--font-plex-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--color-absorbance);
+  color: var(--color-paper);
 }

@@ -37,11 +37,19 @@ export async function cadastrar(
   const supabase = await createClient();
 
   const email = String(formData.get("email") ?? "");
+  const confirmarEmail = String(formData.get("confirmar_email") ?? "");
   const senha = String(formData.get("senha") ?? "");
+  const confirmarSenha = String(formData.get("confirmar_senha") ?? "");
   const nome = String(formData.get("nome") ?? "");
 
   if (!nome.trim()) {
     return { erro: "Informe seu nome." };
+  }
+  if (email !== confirmarEmail) {
+    return { erro: "Os e-mails não coincidem." };
+  }
+  if (senha !== confirmarSenha) {
+    return { erro: "As senhas não coincidem." };
   }
 
   const { error } = await supabase.auth.signUp({

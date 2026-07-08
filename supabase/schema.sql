@@ -643,3 +643,21 @@ create policy "Dono apaga a própria foto"
     bucket_id = 'avatars'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ----------------------------------------------------------------------------
+-- CONTAGEM PÚBLICA DE PROJETOS
+-- ----------------------------------------------------------------------------
+-- Só o número, nunca os dados — usado na página inicial pública (barra
+-- lateral) pra mostrar "X projetos de pesquisa em andamento" sem expor
+-- nome/membros de nenhum projeto a quem não tem permissão de lê-los.
+create or replace function public.contagem_projetos_ativos()
+returns integer
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select count(*)::integer from public.projetos;
+$$;
+
+grant execute on function public.contagem_projetos_ativos() to anon, authenticated;
