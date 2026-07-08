@@ -14,6 +14,11 @@
   --color-paper: #f7f4ec;
   --color-paper-raised: #ffffff;
   --color-rule: #ded6c2;
+  /* signal: vermelho-tijolo editorial (estilo NEJM), harmoniza com o bege
+     da logo do laboratório. É o acento das superfícies públicas/editoriais
+     (eyebrows, réguas, chamadas). "absorbance" (azul) fica reservado para
+     dados científicos: gráficos, links dentro da área logada. */
+  --color-signal: #9c2b23;
   --color-absorbance: #24427a;
   --color-reagent: #a8721b;
   --color-pyrogallol: #5b3b82;
@@ -29,9 +34,11 @@
   --color-paper: #15130f;
   --color-paper-raised: #1d1a14;
   --color-rule: #35301f;
+  --color-signal: #d98177;
   --color-absorbance: #7fa0e0;
   --color-reagent: #e0ac52;
   --color-pyrogallol: #b593de;
+  --color-alerta: #d97862;
 
   --background: var(--color-paper);
   --foreground: var(--color-ink);
@@ -44,6 +51,7 @@
     --color-paper: #15130f;
     --color-paper-raised: #1d1a14;
     --color-rule: #35301f;
+    --color-signal: #d98177;
     --color-absorbance: #7fa0e0;
     --color-reagent: #e0ac52;
     --color-pyrogallol: #b593de;
@@ -60,6 +68,7 @@
   --color-paper: var(--color-paper);
   --color-paper-raised: var(--color-paper-raised);
   --color-rule: var(--color-rule);
+  --color-signal: var(--color-signal);
   --color-absorbance: var(--color-absorbance);
   --color-reagent: var(--color-reagent);
   --color-pyrogallol: var(--color-pyrogallol);
