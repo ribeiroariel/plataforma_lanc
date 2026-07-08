@@ -6,13 +6,22 @@ import { testes as catalogoTestes, nomeTecido, tituloCurto } from "@/lib/testes"
 import { ehTesteDesignavel } from "@/lib/tiposTeste";
 import FormularioMembro from "./FormularioMembro";
 import FormularioTeste from "./FormularioTeste";
+import FinalizarBotao from "./FinalizarBotao";
 
 type Projeto = {
   id: string;
   nome: string;
   descricao: string | null;
   numero_levas: number | null;
+  finalizado: boolean;
   created_at: string;
+};
+
+type Versao = {
+  id: string;
+  nota: string | null;
+  created_at: string;
+  profiles: { nome: string } | null;
 };
 
 type Membro = {
@@ -50,11 +59,11 @@ export default async function DetalheProjeto({
   const supabase = await createClient();
   const usuario = await getUsuarioAtual();
 
-  const [{ data: projeto }, { data: membros }, { data: grupos }, { data: testesDesignados }, { data: bolsistas }] =
+  const [{ data: projeto }, { data: membros }, { data: grupos }, { data: testesDesignados }, { data: bolsistas }, { data: versoes }] =
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, descricao, numero_levas, created_at")
+        .select("id, nome, descricao, numero_levas, finalizado, created_at")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -82,6 +91,12 @@ export default async function DetalheProjeto({
         .eq("aprovado", true)
         .order("nome")
         .returns<PessoaAprovada[]>(),
+      supabase
+        .from("projeto_versoes")
+        .select("id, nota, created_at, profiles:criado_por(nome)")
+        .eq("projeto_id", id)
+        .order("created_at", { ascending: false })
+        .returns<Versao[]>(),
     ]);
 
   if (!projeto) notFound();
@@ -132,10 +147,27 @@ export default async function DetalheProjeto({
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">
         <span>{totalRatos} rato(s) no total</span>
         {projeto.numero_levas && <span>· {projeto.numero_levas} leva(s)</span>}
+        {projeto.finalizado && (
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 uppercase tracking-wide text-ink-soft">
+            finalizado
+          </span>
+        )}
       </div>
+
+      {souCoautor && !projeto.finalizado && (
+        <div className="mt-4 flex items-center gap-4">
+          <Link
+            href={`/projetos/${projeto.id}/editar`}
+            className="text-xs text-signal hover:text-ink"
+          >
+            Editar grupos e levas
+          </Link>
+          <FinalizarBotao projetoId={projeto.id} />
+        </div>
+      )}
 
       <section className="mt-10">
         <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
@@ -261,7 +293,7 @@ export default async function DetalheProjeto({
             );
           })}
         </div>
-        {souCoautor && (
+        {souCoautor && !projeto.finalizado && (
           <FormularioTeste
             projetoId={projeto.id}
             testes={testesDesignaveis}
@@ -270,6 +302,31 @@ export default async function DetalheProjeto({
           />
         )}
       </section>
+
+      {versoes && versoes.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+            Histórico de alterações
+          </h2>
+          <ul className="flex flex-col gap-2 text-sm">
+            {versoes.map((v) => (
+              <li key={v.id} className="flex flex-wrap gap-x-3 text-ink-soft">
+                <span className="font-mono text-xs">
+                  {new Date(v.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span className="text-ink">{v.nota ?? "Edição"}</span>
+                <span className="text-ink-soft">— {v.profiles?.nome ?? "?"}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

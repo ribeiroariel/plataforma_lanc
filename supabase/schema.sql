@@ -228,11 +228,29 @@ create table if not exists public.projetos (
   -- registrar o resultado, numa etapa futura) — só ajuda a orientadora a
   -- ver o tamanho do projeto de cara.
   numero_levas integer,
+  -- Projeto finalizado: vira somente-leitura (não dá mais pra editar
+  -- grupos/levas). Como um resultado confirmado, mas no nível do projeto.
+  finalizado boolean not null default false,
+  finalizado_em timestamptz,
   criado_por uuid not null references public.profiles (id),
   created_at timestamptz not null default now()
 );
 
 alter table public.projetos add column if not exists numero_levas integer;
+alter table public.projetos add column if not exists finalizado boolean not null default false;
+alter table public.projetos add column if not exists finalizado_em timestamptz;
+
+-- Histórico de versões do projeto (cada edição grava um "retrato" do estado
+-- em jsonb). Registro de transparência de como o desenho experimental mudou
+-- ao longo do tempo (levas imprevistas, ratos perdidos).
+create table if not exists public.projeto_versoes (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  retrato jsonb not null,
+  nota text,
+  criado_por uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
 
 create table if not exists public.projeto_membros (
   id uuid primary key default gen_random_uuid(),
@@ -431,6 +449,25 @@ create policy "Coautor gerencia grupos"
   on public.projeto_grupos
   for all
   using (public.eh_coautor_projeto(projeto_id))
+  with check (public.eh_coautor_projeto(projeto_id));
+
+alter table public.projeto_versoes enable row level security;
+alter table public.projeto_versoes force row level security;
+
+drop policy if exists "Membros e orientadora veem versões" on public.projeto_versoes;
+create policy "Membros e orientadora veem versões"
+  on public.projeto_versoes
+  for select
+  using (
+    public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
+
+drop policy if exists "Coautor grava versão" on public.projeto_versoes;
+create policy "Coautor grava versão"
+  on public.projeto_versoes
+  for insert
   with check (public.eh_coautor_projeto(projeto_id));
 
 alter table public.projeto_testes enable row level security;
