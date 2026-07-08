@@ -3,16 +3,22 @@ import { getUsuarioAtual } from "@/lib/supabase/profile";
 
 const ATALHOS = [
   {
-    href: "/testes",
-    titulo: "Protocolos de ensaios",
+    href: "/meus-testes",
+    titulo: "Meus testes",
     descricao:
-      "Manual de técnicas do laboratório — princípio, reagentes, procedimento e controle de qualidade de cada teste bioquímico.",
+      "Os testes designados a você — como responsável ou ajudante — em todos os projetos, com o andamento de cada um.",
   },
   {
     href: "/projetos",
     titulo: "Meus projetos",
     descricao:
       "Crie projetos, defina grupos experimentais, designe testes à equipe e registre os resultados dos ensaios.",
+  },
+  {
+    href: "/testes",
+    titulo: "Protocolos de ensaios",
+    descricao:
+      "Manual de técnicas do laboratório — princípio, reagentes, procedimento e controle de qualidade de cada teste bioquímico.",
   },
   {
     href: "/perfil",
@@ -34,7 +40,7 @@ export default async function AreaBolsista() {
         Olá, {usuario?.nome}
       </h1>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {ATALHOS.map((atalho) => (
           <Link
             key={atalho.href}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import PerfilForm from "./PerfilForm";
+import TrocarSenha from "./TrocarSenha";
 
 export default async function PaginaPerfil() {
   const usuario = await getUsuarioAtual();
@@ -22,6 +23,13 @@ export default async function PaginaPerfil() {
       </p>
 
       <PerfilForm usuario={usuario} />
+
+      <section className="mt-12 border-t border-rule pt-8">
+        <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          Segurança
+        </h2>
+        <TrocarSenha />
+      </section>
     </main>
   );
 }

@@ -8,6 +8,30 @@ export type ResultadoPerfil = { erro: string } | { sucesso: true } | undefined;
 const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024; // 5 MB
 const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"];
 
+// Troca de senha estando logado (na página de perfil).
+export async function alterarSenha(
+  _estadoAnterior: ResultadoPerfil,
+  formData: FormData
+): Promise<ResultadoPerfil> {
+  const supabase = await createClient();
+
+  const senha = String(formData.get("senha") ?? "");
+  const confirmar = String(formData.get("confirmar_senha") ?? "");
+
+  if (senha.length < 6) {
+    return { erro: "A senha precisa ter ao menos 6 caracteres." };
+  }
+  if (senha !== confirmar) {
+    return { erro: "As senhas não coincidem." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: senha });
+  if (error) {
+    return { erro: "Não foi possível trocar a senha: " + error.message };
+  }
+  return { sucesso: true };
+}
+
 export async function atualizarPerfil(
   _estadoAnterior: ResultadoPerfil,
   formData: FormData

@@ -48,9 +48,9 @@ export default async function RootLayout({
   ];
   if (usuario?.papel === "bolsista") {
     navPrincipal.push(
-      { href: "/testes", rotulo: "Protocolos" },
+      { href: "/meus-testes", rotulo: "Meus testes" },
       { href: "/projetos", rotulo: "Projetos" },
-      { href: "/bolsista", rotulo: "Minha área" }
+      { href: "/testes", rotulo: "Protocolos" }
     );
   } else if (usuario?.papel === "orientador") {
     navPrincipal.push(
@@ -127,7 +127,7 @@ export default async function RootLayout({
                 <span className="block font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl">
                   LANC
                 </span>
-                <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft sm:text-[11px]">
+                <span className="mt-0.5 block font-display text-sm italic text-ink-soft">
                   Laboratório de Neurociências e Comportamento
                 </span>
               </span>
@@ -173,6 +173,14 @@ export default async function RootLayout({
                   Contato
                 </p>
                 <ul className="mt-2 flex flex-col gap-1 text-sm">
+                  <li>
+                    <a
+                      href="mailto:lancfurb@outlook.com"
+                      className="text-ink hover:text-signal"
+                    >
+                      lancfurb@outlook.com
+                    </a>
+                  </li>
                   <li>
                     <a
                       href="https://www.instagram.com/lancfurb/"

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Papel } from "@/lib/supabase/profile";
 import { IlustracaoRedox, varianteNoticia } from "@/components/IlustracaoRedox";
+import { Avatar } from "@/components/Avatar";
 
 type Noticia = {
   id: string;
@@ -307,17 +308,7 @@ function NumeroItem({
 function PessoaLinha({ pessoa }: { pessoa: Pessoa }) {
   return (
     <div className="flex gap-3">
-      <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-rule bg-rule">
-        {pessoa.foto_url && (
-          <Image
-            src={pessoa.foto_url}
-            alt={pessoa.nome}
-            width={44}
-            height={44}
-            className="h-full w-full object-cover"
-          />
-        )}
-      </div>
+      <Avatar fotoUrl={pessoa.foto_url} nome={pessoa.nome} tamanho={44} />
       <div className="min-w-0">
         <p className="text-sm font-medium text-ink">{pessoa.nome}</p>
         <p className="font-mono text-[11px] uppercase tracking-wide text-signal">

@@ -43,6 +43,7 @@ export async function proxy(request: NextRequest) {
   const isCompartilhadaRoute =
     path.startsWith("/projetos") ||
     path.startsWith("/testes") ||
+    path.startsWith("/meus-testes") ||
     path.startsWith("/perfil");
   const isRotaLogada = isBolsistaRoute || isOrientadorRoute || isCompartilhadaRoute;
 

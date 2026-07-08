@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -158,6 +158,7 @@ export default function RegistroResultado({
   const [salvando, setSalvando] = useState(false);
   const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const [autoSalvo, setAutoSalvo] = useState<string | null>(null);
 
   const editavel = (rato: string) => podeRegistrar && !confirmados.has(rato);
 
@@ -271,16 +272,7 @@ export default function RegistroResultado({
     tempos.some((t) => !Number.isNaN(absReal(linhas[String(r.numero)]?.[`t${t}`] ?? "")))
   );
 
-  async function salvar(confirmar: boolean) {
-    if (confirmar) {
-      const ok = window.confirm(
-        "Confirmar trava a edição dos valores (só as observações poderão ser alteradas depois). Deseja continuar?"
-      );
-      if (!ok) return;
-    }
-    setMensagem(null);
-    setSalvando(true);
-
+  function montarSessao(): Record<string, unknown> {
     const sessao: Record<string, unknown> = {};
     if (config.familia === "cat")
       sessao.qc_h2o2 = Number.isNaN(absReal(qcCat)) ? null : absReal(qcCat);
@@ -295,8 +287,12 @@ export default function RegistroResultado({
       sessao.curva_inclinacao = regressaoCurva?.inclinacao ?? null;
       sessao.curva_intercepto = regressaoCurva?.intercepto ?? null;
     }
+    return sessao;
+  }
 
-    const linhasParaSalvar: LinhaResultado[] = [];
+  function montarLinhas(): LinhaResultado[] {
+    const sessao = montarSessao();
+    const out: LinhaResultado[] = [];
     for (const r of roster) {
       const rato = String(r.numero);
       const dados = linhas[rato] ?? {};
@@ -304,7 +300,7 @@ export default function RegistroResultado({
         Object.values(dados).some((v) => v !== "" && v != null) ||
         (obs[rato] ?? "") !== "";
       if (!temAlgum) continue;
-      linhasParaSalvar.push({
+      out.push({
         rato,
         grupoId: r.grupoId,
         leituras: { tipo: config.familia, colunas: dados, sessao },
@@ -313,7 +309,20 @@ export default function RegistroResultado({
         observacoes: obs[rato] ?? null,
       });
     }
+    return out;
+  }
 
+  async function salvar(confirmar: boolean) {
+    if (confirmar) {
+      const ok = window.confirm(
+        "Confirmar trava a edição dos valores (só as observações poderão ser alteradas depois). Deseja continuar?"
+      );
+      if (!ok) return;
+    }
+    setMensagem(null);
+    setSalvando(true);
+
+    const linhasParaSalvar = montarLinhas();
     const resultado = await salvarResultadosLote({
       projetoId,
       projetoTesteId,
@@ -337,6 +346,38 @@ export default function RegistroResultado({
       `${linhasParaSalvar.length} resultado(s) salvo(s)${confirmar ? " e confirmado(s)" : ""}.`
     );
   }
+
+  // Salvamento automático (rascunho): 2,5s após a última mudança, salva
+  // silenciosamente — protege contra queda de internet / fechar o site.
+  const primeiroRender = useRef(true);
+  const snapshot = JSON.stringify({ linhas, obs, qcCat, controleSod, curva });
+  useEffect(() => {
+    if (!podeRegistrar) return;
+    if (primeiroRender.current) {
+      primeiroRender.current = false;
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const linhasParaSalvar = montarLinhas();
+      if (linhasParaSalvar.length === 0) return;
+      const r = await salvarResultadosLote({
+        projetoId,
+        projetoTesteId,
+        linhas: linhasParaSalvar,
+        confirmar: false,
+      });
+      if (!("erro" in r)) {
+        setAutoSalvo(
+          new Date().toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        );
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot]);
 
   async function alternarStatus() {
     const novo = status === "concluido" ? "pendente" : "concluido";
@@ -572,6 +613,11 @@ export default function RegistroResultado({
             Confirmar resultados
           </button>
           {mensagem && <span className="text-sm text-ink-soft">{mensagem}</span>}
+          {!mensagem && autoSalvo && (
+            <span className="text-xs text-ink-soft">
+              Salvo automaticamente às {autoSalvo}
+            </span>
+          )}
         </div>
       )}
 
