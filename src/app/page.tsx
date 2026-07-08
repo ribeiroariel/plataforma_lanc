@@ -146,8 +146,14 @@ export default async function Home() {
             <article className="border-b border-rule pb-8">
               <ImagemNoticia
                 noticia={destaque}
-                className="mb-4 h-72 w-full rounded sm:h-96"
+                className="h-72 w-full rounded sm:h-96"
               />
+              {destaque.imagem_url && (
+                <p className="mt-1.5 mb-4 font-mono text-[10px] text-ink-soft/70">
+                  Imagem: figura do artigo original.
+                </p>
+              )}
+              {!destaque.imagem_url && <div className="mb-4" />}
               <Eyebrow tipo={destaque.tipo} />
               <h1 className="mt-2 font-display text-3xl leading-tight text-ink hover:text-signal sm:text-4xl">
                 {destaque.link_artigo ? (

@@ -3,7 +3,7 @@ titulo: "Extrato de Myrcia pubipetala reduz marcadores de dano oxidativo em mode
 tipo: publicacao
 resumo: "Estudo publicado na Brain Research mostra que o extrato de uma planta nativa reduziu peroxidação lipídica no córtex e restaurou defesa antioxidante no hipocampo de camundongos submetidos a um modelo de depressão."
 link_artigo: "https://doi.org/10.1016/j.brainres.2021.147725"
-imagem:
+imagem: /noticias/myrcia-pubipetala-depressao.png
 data: 2022-01-01
 ---
 

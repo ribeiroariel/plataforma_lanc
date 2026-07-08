@@ -3,7 +3,7 @@ titulo: "Myrcia tijucensis mostra efeito antioxidante em modelo animal de depres
 tipo: publicacao
 resumo: "Estudo publicado no Brazilian Journal of Biological Sciences (acesso aberto) avalia o extrato de Myrcia tijucensis num modelo de depressão induzida por corticosterona."
 link_artigo: "https://doi.org/10.21472/bjbs.v12n27-010"
-imagem:
+imagem: /noticias/myrcia-tijucensis-depressao.jpg
 data: 2025-01-01
 ---
 

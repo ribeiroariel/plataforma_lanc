@@ -3,7 +3,7 @@ titulo: "Compostos fenólicos inéditos de planta nativa mostram potencial antid
 tipo: publicacao
 resumo: "Estudo em Chemistry & Biodiversity identifica pela primeira vez ácidos fenólicos no gênero Myrcia e mostra efeito antioxidante e hipoglicemiante do extrato de Myrcia tijucensis em ratos diabéticos."
 link_artigo: "https://doi.org/10.1002/cbdv.202502111"
-imagem:
+imagem: /noticias/myrcia-tijucensis-diabetes.jpg
 data: 2025-06-01
 ---
 

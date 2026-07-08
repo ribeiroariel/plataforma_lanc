@@ -53,11 +53,20 @@ export async function cadastrar(
     return { erro: "As senhas não coincidem." };
   }
 
+  const cabecalhos = await headers();
+  const origem =
+    cabecalhos.get("origin") ?? `https://${cabecalhos.get("host") ?? ""}`;
+
   const { error } = await supabase.auth.signUp({
     email,
     password: senha,
     options: {
       data: { nome, papel: "bolsista" },
+      // Com a confirmação de e-mail ligada, o link do e-mail passa por
+      // /auth/confirmar (que troca o token por sessão e leva pra área do
+      // bolsista). Lembre de cadastrar essa URL nos Redirect URLs do
+      // Supabase, senão o link não funciona.
+      emailRedirectTo: `${origem}/auth/confirmar?next=/bolsista`,
     },
   });
 
@@ -65,10 +74,7 @@ export async function cadastrar(
     return { erro: "Não foi possível criar a conta: " + error.message };
   }
 
-  // Com a confirmação de e-mail desligada, o signUp já cria sessão — mando
-  // direto pra área do bolsista, que mostra "aguardando aprovação". Se a
-  // confirmação estiver ligada (sem sessão), o proxy leva pro /login.
-  redirect("/bolsista");
+  redirect("/login?cadastro=ok");
 }
 
 export async function logout() {
