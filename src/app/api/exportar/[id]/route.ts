@@ -3,9 +3,9 @@ import type { NextRequest } from "next/server";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
 import { testes as catalogoTestes } from "@/lib/testes";
+import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 
 type ProjetoTeste = { id: string; teste_slug: string };
-type Grupo = { id: string; nome: string };
 type Resultado = {
   projeto_teste_id: string;
   rato: string;
@@ -41,12 +41,17 @@ export async function GET(
 
   const [{ data: projeto }, { data: grupos }, { data: projetoTestes }] =
     await Promise.all([
-      supabase.from("projetos").select("nome").eq("id", projetoId).maybeSingle(),
+      supabase
+        .from("projetos")
+        .select("nome, numero_levas")
+        .eq("id", projetoId)
+        .maybeSingle(),
       supabase
         .from("projeto_grupos")
-        .select("id, nome")
+        .select("id, nome, numero_ratos, ratos_por_leva")
         .eq("projeto_id", projetoId)
-        .returns<Grupo[]>(),
+        .order("created_at", { ascending: true })
+        .returns<GrupoComContagem[]>(),
       supabase
         .from("projeto_testes")
         .select("id, teste_slug")
@@ -71,6 +76,10 @@ export async function GET(
     .returns<Resultado[]>();
 
   const nomeGrupo = new Map((grupos ?? []).map((g) => [g.id, g.nome]));
+  // Reconstrói o roster para mapear cada rato à sua leva (o resultado
+  // guarda o número do rato, e a leva vem da ordem do roster).
+  const roster = gerarRoster(grupos ?? [], projeto.numero_levas ?? 1);
+  const levaDoRato = new Map(roster.map((r) => [String(r.numero), r.leva]));
   const tituloTeste = (slug: string) =>
     catalogoTestes.find((t) => t.slug === slug)?.titulo ?? slug;
 
@@ -82,12 +91,18 @@ export async function GET(
     const linhas = (resultados ?? [])
       .filter((r) => r.projeto_teste_id === pt.id)
       .sort((a, b) => Number(a.rato) - Number(b.rato))
-      .map((r) => ({
-        rato: r.rato,
-        grupo: nomeGrupo.get(r.grupo_id) ?? "",
-        ...r.leituras,
-        valor_calculado: r.valor_calculado,
-      }));
+      .map((r) => {
+        // leituras = { tipo, colunas: {t0, t10, ...}, sessao }. Achata as
+        // colunas (as absorbâncias brutas) direto na linha da planilha.
+        const colunas = (r.leituras?.colunas ?? {}) as Record<string, unknown>;
+        return {
+          rato: r.rato,
+          grupo: nomeGrupo.get(r.grupo_id) ?? "",
+          leva: levaDoRato.get(r.rato) ?? "",
+          ...colunas,
+          valor_calculado: r.valor_calculado,
+        };
+      });
 
     if (linhas.length === 0) continue;
 
@@ -105,6 +120,7 @@ export async function GET(
       return {
         rato: r.rato,
         grupo: nomeGrupo.get(r.grupo_id) ?? "",
+        leva: levaDoRato.get(r.rato) ?? "",
         teste: teste ? tituloTeste(teste.teste_slug) : "",
         valor: r.valor_calculado,
       };

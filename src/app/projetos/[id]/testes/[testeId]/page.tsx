@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { testes as catalogoTestes } from "@/lib/testes";
+import { testes as catalogoTestes, nomeTecido, tituloCurto } from "@/lib/testes";
 import { configDoTeste } from "@/lib/tiposTeste";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 import RegistroResultado from "./RegistroResultado";
@@ -41,10 +41,14 @@ export default async function PaginaResultado({
         .eq("projeto_id", projetoId)
         .maybeSingle()
         .returns<ProjetoTeste>(),
-      supabase.from("projetos").select("nome").eq("id", projetoId).maybeSingle(),
+      supabase
+        .from("projetos")
+        .select("nome, numero_levas")
+        .eq("id", projetoId)
+        .maybeSingle(),
       supabase
         .from("projeto_grupos")
-        .select("id, nome, numero_ratos")
+        .select("id, nome, numero_ratos, ratos_por_leva")
         .eq("projeto_id", projetoId)
         .order("created_at", { ascending: true })
         .returns<GrupoComContagem[]>(),
@@ -77,7 +81,7 @@ export default async function PaginaResultado({
     notFound();
   }
 
-  const roster = gerarRoster(grupos ?? []);
+  const roster = gerarRoster(grupos ?? [], projeto?.numero_levas ?? 1);
 
   if (!config) {
     return (
@@ -98,8 +102,13 @@ export default async function PaginaResultado({
       >
         ← {projeto?.nome ?? "Projeto"}
       </Link>
-      <h1 className="mt-2 font-display text-3xl leading-tight text-ink">
-        {teste?.titulo ?? projetoTeste.teste_slug}
+      {teste && (
+        <p className="mt-2 font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
+          {nomeTecido(teste.tecido)}
+        </p>
+      )}
+      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
+        {teste ? tituloCurto(teste.titulo) : projetoTeste.teste_slug}
       </h1>
 
       <RegistroResultado

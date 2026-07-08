@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { testes as catalogoTestes } from "@/lib/testes";
+import { testes as catalogoTestes, nomeTecido, tituloCurto } from "@/lib/testes";
 import { ehTesteDesignavel } from "@/lib/tiposTeste";
 import FormularioMembro from "./FormularioMembro";
 import FormularioTeste from "./FormularioTeste";
@@ -25,7 +25,10 @@ type Grupo = {
   id: string;
   nome: string;
   numero_ratos: number;
+  ratos_por_leva: number[] | null;
 };
+
+type PessoaAprovada = { id: string; nome: string };
 
 type TesteDesignado = {
   id: string;
@@ -46,7 +49,7 @@ export default async function DetalheProjeto({
   const supabase = await createClient();
   const usuario = await getUsuarioAtual();
 
-  const [{ data: projeto }, { data: membros }, { data: grupos }, { data: testesDesignados }] =
+  const [{ data: projeto }, { data: membros }, { data: grupos }, { data: testesDesignados }, { data: bolsistas }] =
     await Promise.all([
       supabase
         .from("projetos")
@@ -61,7 +64,7 @@ export default async function DetalheProjeto({
         .returns<Membro[]>(),
       supabase
         .from("projeto_grupos")
-        .select("id, nome, numero_ratos")
+        .select("id, nome, numero_ratos, ratos_por_leva")
         .eq("projeto_id", id)
         .order("created_at", { ascending: true })
         .returns<Grupo[]>(),
@@ -71,6 +74,13 @@ export default async function DetalheProjeto({
         .eq("projeto_id", id)
         .order("created_at", { ascending: true })
         .returns<TesteDesignado[]>(),
+      supabase
+        .from("profiles")
+        .select("id, nome")
+        .eq("papel", "bolsista")
+        .eq("aprovado", true)
+        .order("nome")
+        .returns<PessoaAprovada[]>(),
     ]);
 
   if (!projeto) notFound();
@@ -82,6 +92,16 @@ export default async function DetalheProjeto({
   const souOrientador = usuario?.papel === "orientador";
 
   const totalRatos = grupos?.reduce((soma, g) => soma + g.numero_ratos, 0) ?? 0;
+
+  // Pessoas que ainda não são membros (para o dropdown de adicionar membro).
+  const idsMembros = new Set((membros ?? []).map((m) => m.profile_id));
+  const naoMembros = (bolsistas ?? []).filter((b) => !idsMembros.has(b.id));
+
+  // Membros do projeto (para o dropdown de designar teste).
+  const membrosParaDesignar = (membros ?? []).map((m) => ({
+    id: m.profile_id,
+    nome: m.profiles?.nome ?? "?",
+  }));
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -113,22 +133,46 @@ export default async function DetalheProjeto({
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">
         <span>{totalRatos} rato(s) no total</span>
-        {projeto.numero_levas && <span>· {projeto.numero_levas} leva(s) previstas</span>}
+        {projeto.numero_levas && <span>· {projeto.numero_levas} leva(s)</span>}
       </div>
 
       <section className="mt-10">
         <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
           Grupos experimentais
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {grupos?.map((g) => (
-            <span
-              key={g.id}
-              className="rounded-full border border-rule px-3 py-1 text-sm text-ink"
-            >
-              {g.nome} <span className="text-ink-soft">· {g.numero_ratos} rato(s)</span>
-            </span>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="text-sm">
+            <thead>
+              <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                <th className="pb-2 pr-4 font-normal">Grupo</th>
+                {Array.from(
+                  { length: projeto.numero_levas ?? 1 },
+                  (_, l) => (
+                    <th key={l} className="pb-2 pr-4 font-normal">
+                      Leva {l + 1}
+                    </th>
+                  )
+                )}
+                <th className="pb-2 font-normal">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {grupos?.map((g) => (
+                <tr key={g.id} className="border-t border-rule/60">
+                  <td className="py-1.5 pr-4 text-ink">{g.nome}</td>
+                  {Array.from(
+                    { length: projeto.numero_levas ?? 1 },
+                    (_, l) => (
+                      <td key={l} className="py-1.5 pr-4 font-mono text-ink-soft">
+                        {g.ratos_por_leva?.[l] ?? "—"}
+                      </td>
+                    )
+                  )}
+                  <td className="py-1.5 font-mono text-ink">{g.numero_ratos}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -155,7 +199,9 @@ export default async function DetalheProjeto({
             </div>
           ))}
         </div>
-        {souCoautor && <FormularioMembro projetoId={projeto.id} />}
+        {souCoautor && (
+          <FormularioMembro projetoId={projeto.id} pessoas={naoMembros} />
+        )}
       </section>
 
       <section className="mt-10">
@@ -180,9 +226,13 @@ export default async function DetalheProjeto({
               >
                 <div>
                   <p className="font-medium text-ink">
-                    {teste?.titulo ?? t.teste_slug}
+                    {teste ? tituloCurto(teste.titulo) : t.teste_slug}
                   </p>
                   <p className="text-ink-soft">
+                    {teste && (
+                      <span className="text-signal">{nomeTecido(teste.tecido)}</span>
+                    )}
+                    {teste && " · "}
                     Responsável: {t.profiles?.nome ?? "?"}
                   </p>
                 </div>
@@ -210,7 +260,11 @@ export default async function DetalheProjeto({
           })}
         </div>
         {souCoautor && (
-          <FormularioTeste projetoId={projeto.id} testes={testesDesignaveis} />
+          <FormularioTeste
+            projetoId={projeto.id}
+            testes={testesDesignaveis}
+            pessoas={membrosParaDesignar}
+          />
         )}
       </section>
     </main>

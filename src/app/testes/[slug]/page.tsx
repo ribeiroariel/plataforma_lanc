@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { testes, conteudoTeste, nomeTecido } from "@/lib/testes";
+import { testes, conteudoTeste, nomeTecido, tituloCurto } from "@/lib/testes";
 import { ProtocoloTeste } from "@/components/ProtocoloTeste";
 
 export function generateStaticParams() {
@@ -21,11 +21,11 @@ export default async function PaginaTeste({
 
   return (
     <article>
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
         {nomeTecido(teste.tecido)}
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-        {teste.titulo}
+        {tituloCurto(teste.titulo)}
       </h1>
 
       {ehLowry && (

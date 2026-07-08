@@ -247,16 +247,21 @@ create table if not exists public.projeto_grupos (
   id uuid primary key default gen_random_uuid(),
   projeto_id uuid not null references public.projetos (id) on delete cascade,
   nome text not null,
-  -- Quantos ratos esse grupo tem. Numeração dos ratos é sequencial e
-  -- global no projeto (rato 1..N cruzando todos os grupos, igual ao
-  -- exemplo real em "Para análise estatísica" — grupo Controle = ratos
-  -- 1-3, DM1 = 4-5 etc.), calculada a partir da ordem dos grupos.
+  -- Total de ratos do grupo (soma de todas as levas). Mantido por
+  -- compatibilidade e para leitura rápida.
   numero_ratos integer not null default 0,
+  -- Quantos ratos o grupo tem em CADA leva de sacrifício, na ordem das
+  -- levas: ratos_por_leva[1] = leva 1, [2] = leva 2, etc. O mesmo grupo
+  -- pode ter quantidades diferentes por leva (ex.: Controle com 3 ratos na
+  -- leva 1 e 2 na leva 2). A numeração dos ratos é sequencial e global,
+  -- ordenada por leva e depois por grupo.
+  ratos_por_leva integer[] not null default '{}',
   created_at timestamptz not null default now(),
   unique (projeto_id, nome)
 );
 
 alter table public.projeto_grupos add column if not exists numero_ratos integer not null default 0;
+alter table public.projeto_grupos add column if not exists ratos_por_leva integer[] not null default '{}';
 
 create table if not exists public.projeto_testes (
   id uuid primary key default gen_random_uuid(),
@@ -450,12 +455,18 @@ create policy "Coautor remove designação"
 -- Cria o projeto, já com o criador como primeiro coautor e os grupos
 -- experimentais informados, numa transação só (evita o problema do "ovo e
 -- a galinha" das políticas de projeto_membros/projeto_grupos).
+--
+-- p_grupos é um jsonb: [{"nome": "Controle", "ratosPorLeva": [3, 2]}, ...]
+-- onde ratosPorLeva tem uma entrada por leva (tamanho = p_numero_levas).
+--
+-- Remove a assinatura antiga (text[], integer[]) antes de recriar.
+drop function if exists public.criar_projeto(text, text, integer, text[], integer[]);
+
 create or replace function public.criar_projeto(
   p_nome text,
   p_descricao text,
   p_numero_levas integer,
-  p_grupos_nomes text[],
-  p_grupos_ratos integer[]
+  p_grupos jsonb
 )
 returns uuid
 language plpgsql
@@ -464,7 +475,10 @@ set search_path = public
 as $$
 declare
   v_projeto_id uuid;
-  v_indice integer;
+  v_grupo jsonb;
+  v_nome text;
+  v_ratos integer[];
+  v_total integer;
 begin
   if not exists (
     select 1 from public.profiles
@@ -473,8 +487,8 @@ begin
     raise exception 'Só bolsistas aprovados podem criar projetos.';
   end if;
 
-  if array_length(p_grupos_nomes, 1) <> array_length(p_grupos_ratos, 1) then
-    raise exception 'Cada grupo precisa de uma quantidade de ratos correspondente.';
+  if p_numero_levas is null or p_numero_levas < 1 then
+    raise exception 'Informe o número de levas de sacrifício (mínimo 1).';
   end if;
 
   insert into public.projetos (nome, descricao, numero_levas, criado_por)
@@ -484,14 +498,18 @@ begin
   insert into public.projeto_membros (projeto_id, profile_id, papel)
   values (v_projeto_id, auth.uid(), 'coautor');
 
-  for v_indice in 1 .. array_length(p_grupos_nomes, 1) loop
-    if trim(p_grupos_nomes[v_indice]) <> '' then
-      insert into public.projeto_grupos (projeto_id, nome, numero_ratos)
-      values (
-        v_projeto_id,
-        trim(p_grupos_nomes[v_indice]),
-        coalesce(p_grupos_ratos[v_indice], 0)
-      );
+  for v_grupo in select * from jsonb_array_elements(p_grupos) loop
+    v_nome := trim(v_grupo ->> 'nome');
+    if v_nome <> '' then
+      -- converte o array json "ratosPorLeva" em integer[]
+      select array_agg(coalesce((x)::integer, 0))
+        into v_ratos
+        from jsonb_array_elements_text(v_grupo -> 'ratosPorLeva') as x;
+      v_ratos := coalesce(v_ratos, '{}');
+      select coalesce(sum(n), 0) into v_total from unnest(v_ratos) as n;
+
+      insert into public.projeto_grupos (projeto_id, nome, numero_ratos, ratos_por_leva)
+      values (v_projeto_id, v_nome, v_total, v_ratos);
     end if;
   end loop;
 
@@ -518,7 +536,7 @@ grant execute on function public.is_orientador() to authenticated, anon;
 grant execute on function public.pode_exportar_dados() to authenticated;
 grant execute on function public.eh_membro_projeto(uuid) to authenticated;
 grant execute on function public.eh_coautor_projeto(uuid) to authenticated;
-grant execute on function public.criar_projeto(text, text, integer, text[], integer[]) to authenticated;
+grant execute on function public.criar_projeto(text, text, integer, jsonb) to authenticated;
 grant execute on function public.buscar_bolsista_por_email(text) to authenticated;
 
 -- ----------------------------------------------------------------------------

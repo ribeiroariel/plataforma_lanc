@@ -9,11 +9,11 @@
   ink/paper simulam papel de periódico científico, não branco puro.
 */
 :root {
-  --color-ink: #1a1712;
-  --color-ink-soft: #5c564a;
-  --color-paper: #f7f4ec;
-  --color-paper-raised: #ffffff;
-  --color-rule: #ded6c2;
+  --color-ink: #1c1a15;
+  --color-ink-soft: #6b6558;
+  --color-paper: #ffffff;
+  --color-paper-raised: #faf9f6;
+  --color-rule: #e7e2d8;
   /* signal: vermelho-tijolo editorial (estilo NEJM), harmoniza com o bege
      da logo do laboratório. É o acento das superfícies públicas/editoriais
      (eyebrows, réguas, chamadas). "absorbance" (azul) fica reservado para

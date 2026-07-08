@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ResultadoAcao = { erro: string } | void;
 
+type GrupoEntrada = { nome: string; ratosPorLeva: number[] };
+
 export async function criarProjeto(
   _estadoAnterior: ResultadoAcao,
   formData: FormData
@@ -14,18 +16,30 @@ export async function criarProjeto(
 
   const nome = String(formData.get("nome") ?? "").trim();
   const descricao = String(formData.get("descricao") ?? "").trim();
-  const numeroLevasRaw = String(formData.get("numeroLevas") ?? "").trim();
-  const numeroLevas = numeroLevasRaw ? parseInt(numeroLevasRaw, 10) : null;
-
-  const gruposNomes = formData.getAll("grupoNome").map((v) => String(v).trim());
-  const gruposRatos = formData
-    .getAll("grupoRatos")
-    .map((v) => parseInt(String(v), 10) || 0);
+  const numeroLevas = parseInt(String(formData.get("numeroLevas") ?? ""), 10);
 
   if (!nome) {
     return { erro: "Dê um nome ao projeto." };
   }
-  if (gruposNomes.every((g) => !g)) {
+  if (!Number.isFinite(numeroLevas) || numeroLevas < 1) {
+    return { erro: "Informe o número de levas de sacrifício (mínimo 1)." };
+  }
+
+  let grupos: GrupoEntrada[] = [];
+  try {
+    grupos = JSON.parse(String(formData.get("gruposJson") ?? "[]"));
+  } catch {
+    return { erro: "Erro ao ler os grupos." };
+  }
+
+  const gruposValidos = grupos
+    .filter((g) => g.nome.trim() !== "")
+    .map((g) => ({
+      nome: g.nome.trim(),
+      ratosPorLeva: g.ratosPorLeva.map((n) => Number(n) || 0),
+    }));
+
+  if (gruposValidos.length === 0) {
     return { erro: "Informe ao menos um grupo experimental." };
   }
 
@@ -33,8 +47,7 @@ export async function criarProjeto(
     p_nome: nome,
     p_descricao: descricao || null,
     p_numero_levas: numeroLevas,
-    p_grupos_nomes: gruposNomes,
-    p_grupos_ratos: gruposRatos,
+    p_grupos: gruposValidos,
   });
 
   if (error) {
@@ -51,27 +64,16 @@ export async function adicionarMembro(
   const supabase = await createClient();
 
   const projetoId = String(formData.get("projetoId") ?? "");
-  const email = String(formData.get("email") ?? "").trim();
+  const profileId = String(formData.get("profileId") ?? "");
   const papel = String(formData.get("papel") ?? "ajudante");
 
-  if (!email) {
-    return { erro: "Informe o e-mail do bolsista." };
-  }
-
-  const { data: encontrado, error: erroBusca } = await supabase
-    .rpc("buscar_bolsista_por_email", { p_email: email })
-    .returns<{ id: string; nome: string; papel: string }[]>()
-    .maybeSingle();
-
-  if (erroBusca || !encontrado) {
-    return {
-      erro: "Nenhum bolsista aprovado encontrado com esse e-mail.",
-    };
+  if (!profileId) {
+    return { erro: "Escolha uma pessoa." };
   }
 
   const { error } = await supabase.from("projeto_membros").insert({
     projeto_id: projetoId,
-    profile_id: encontrado.id,
+    profile_id: profileId,
     papel: papel === "coautor" ? "coautor" : "ajudante",
   });
 
@@ -90,27 +92,16 @@ export async function designarTeste(
 
   const projetoId = String(formData.get("projetoId") ?? "");
   const testeSlug = String(formData.get("testeSlug") ?? "");
-  const email = String(formData.get("email") ?? "").trim();
+  const profileId = String(formData.get("profileId") ?? "");
 
-  if (!testeSlug || !email) {
-    return { erro: "Escolha o teste e informe o e-mail do responsável." };
-  }
-
-  const { data: encontrado, error: erroBusca } = await supabase
-    .rpc("buscar_bolsista_por_email", { p_email: email })
-    .returns<{ id: string; nome: string; papel: string }[]>()
-    .maybeSingle();
-
-  if (erroBusca || !encontrado) {
-    return {
-      erro: "Nenhum bolsista aprovado encontrado com esse e-mail.",
-    };
+  if (!testeSlug || !profileId) {
+    return { erro: "Escolha o teste e a pessoa responsável." };
   }
 
   const { error } = await supabase.from("projeto_testes").insert({
     projeto_id: projetoId,
     teste_slug: testeSlug,
-    responsavel_id: encontrado.id,
+    responsavel_id: profileId,
   });
 
   if (error) {

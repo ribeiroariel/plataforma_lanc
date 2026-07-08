@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Papel } from "@/lib/supabase/profile";
 import { IlustracaoRedox, varianteNoticia } from "@/components/IlustracaoRedox";
@@ -156,13 +157,7 @@ export default async function Home() {
               {!destaque.imagem_url && <div className="mb-4" />}
               <Eyebrow tipo={destaque.tipo} />
               <h1 className="mt-2 font-display text-3xl leading-tight text-ink hover:text-signal sm:text-4xl">
-                {destaque.link_artigo ? (
-                  <a href={destaque.link_artigo} target="_blank" rel="noreferrer">
-                    {destaque.titulo}
-                  </a>
-                ) : (
-                  destaque.titulo
-                )}
+                <Link href={`/noticias/${destaque.id}`}>{destaque.titulo}</Link>
               </h1>
               <p className="mt-1 font-mono text-xs text-ink-soft">
                 {formatarData(destaque.data)}
@@ -170,16 +165,24 @@ export default async function Home() {
               <p className="mt-3 max-w-2xl leading-relaxed text-ink-soft">
                 {destaque.resumo}
               </p>
-              {destaque.link_artigo && (
-                <a
-                  href={destaque.link_artigo}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-block font-mono text-xs uppercase tracking-wide text-signal hover:text-ink"
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs uppercase tracking-wide">
+                <Link
+                  href={`/noticias/${destaque.id}`}
+                  className="text-signal hover:text-ink"
                 >
-                  Ler o artigo →
-                </a>
-              )}
+                  Ler a notícia →
+                </Link>
+                {destaque.link_artigo && (
+                  <a
+                    href={destaque.link_artigo}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-ink-soft hover:text-ink"
+                  >
+                    Artigo (DOI) →
+                  </a>
+                )}
+              </div>
             </article>
           )}
 

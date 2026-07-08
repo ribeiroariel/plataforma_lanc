@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { testesPorTecido, nomeTecido } from "@/lib/testes";
+import { testesPorTecido, nomeTecido, tituloCurto } from "@/lib/testes";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 
 export default async function LayoutTestes({
@@ -36,9 +36,9 @@ export default async function LayoutTestes({
                   <li key={teste.slug}>
                     <Link
                       href={`/testes/${teste.slug}`}
-                      className="text-ink-soft transition-colors hover:text-absorbance"
+                      className="text-ink-soft transition-colors hover:text-signal"
                     >
-                      {teste.titulo}
+                      {tituloCurto(teste.titulo)}
                     </Link>
                   </li>
                 ))}

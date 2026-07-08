@@ -49,7 +49,9 @@ const CONFIG_POR_FAMILIA: Record<Familia, Omit<ConfigTeste, "familia">> = {
     },
   },
   cat: {
-    unidadeResultado: "µmol H₂O₂·min⁻¹·mg proteína⁻¹",
+    // Registro só de absorbância: a plataforma computa a taxa de decaimento
+    // (ΔAbs/min). A normalização por proteína fica pra análise no R.
+    unidadeResultado: "ΔAbs/min (240 nm)",
     calculoAutomatico: true,
     qc: {
       rotulo: "Absorbância do meio de reação (H₂O₂), sem amostra",
@@ -60,7 +62,9 @@ const CONFIG_POR_FAMILIA: Record<Familia, Omit<ConfigTeste, "familia">> = {
     },
   },
   sod: {
-    unidadeResultado: "U·mg proteína⁻¹",
+    // Registro só de absorbância: a plataforma computa a % de inibição em
+    // relação ao controle sem amostra. U/mg proteína fica pro R.
+    unidadeResultado: "% inibição",
     calculoAutomatico: true,
     qc: {
       rotulo: "Taxa de autooxidação do controle (sem amostra)",

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
-  Line,
   Scatter,
   Tooltip,
   XAxis,
@@ -14,17 +13,17 @@ import {
 import { regressaoLinear } from "@/lib/estatistica";
 import type { RatoDoRoster } from "@/lib/roster";
 import type { ConfigTeste } from "@/lib/tiposTeste";
-import { salvarResultado, definirStatusTeste } from "@/lib/actions/resultados";
-import { INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "@/lib/estilos";
+import {
+  salvarResultadosLote,
+  definirStatusTeste,
+  type LinhaResultado,
+} from "@/lib/actions/resultados";
+import { INPUT_SM, BOTAO_PRIMARIO } from "@/lib/estilos";
 
 const TEMPOS_CAT = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const TEMPOS_SOD = [0, 30, 60, 90, 120];
 const PONTOS_CURVA_LOWRY = [0, 10, 20, 40, 60, 80];
 const VOLUME_AMOSTRA_LOWRY_UL = 10;
-
-const VOLUME_TOTAL_CAT_ML = 0.25;
-const VOLUME_AMOSTRA_CAT_ML = 0.01;
-const EPSILON_CAT = 43.6;
 
 type Resultado = {
   rato: string;
@@ -33,6 +32,8 @@ type Resultado = {
   valor_calculado: number | null;
   dentro_do_padrao: boolean | null;
 };
+
+type Coluna = { key: string; label: string };
 
 type Props = {
   projetoId: string;
@@ -45,15 +46,52 @@ type Props = {
   podeAlterarStatus: boolean;
 };
 
-function formatarNumero(v: number | null, casas = 3) {
-  if (v === null || Number.isNaN(v)) return "—";
-  return v.toFixed(casas);
+function temposDaFamilia(familia: ConfigTeste["familia"]): number[] {
+  if (familia === "cat") return TEMPOS_CAT;
+  if (familia === "sod") return TEMPOS_SOD;
+  return [];
 }
 
-function usarPontosValidos(tempos: number[], valores: string[]) {
-  return tempos
-    .map((t, i) => ({ x: t, y: parseFloat(valores[i]) }))
+function colunasDaFamilia(config: ConfigTeste): Coluna[] {
+  if (config.familia === "cat" || config.familia === "sod") {
+    return temposDaFamilia(config.familia).map((t) => ({
+      key: `t${t}`,
+      label: `${t}s`,
+    }));
+  }
+  if (config.familia === "curva") {
+    return [
+      { key: "abs", label: "Absorbância" },
+      { key: "dil", label: "Diluição" },
+    ];
+  }
+  // simples
+  return [
+    ...(config.camposBrutos ?? []).map((c) => ({
+      key: c.chave,
+      label: c.rotulo,
+    })),
+    {
+      key: "valor_final",
+      label: `Valor final${
+        config.unidadeResultado ? ` (${config.unidadeResultado})` : ""
+      }`,
+    },
+  ];
+}
+
+/** Regressão nos tempos preenchidos de uma linha (ΔAbs/min = inclinação × 60). */
+function slopeMinLinha(tempos: number[], linha: Record<string, string>) {
+  const pontos = tempos
+    .map((t) => ({ x: t, y: parseFloat(linha[`t${t}`] ?? "") }))
     .filter((p) => !Number.isNaN(p.y));
+  if (pontos.length < 2) return null;
+  return regressaoLinear(pontos).inclinacao * 60;
+}
+
+function fmt(v: number | null, casas = 4) {
+  if (v === null || Number.isNaN(v)) return "—";
+  return v.toFixed(casas);
 }
 
 export default function RegistroResultado({
@@ -66,71 +104,169 @@ export default function RegistroResultado({
   podeRegistrar,
   podeAlterarStatus,
 }: Props) {
-  const [resultados, setResultados] = useState<Map<string, Resultado>>(
-    () => new Map(resultadosExistentes.map((r) => [r.rato, r]))
+  const colunas = colunasDaFamilia(config);
+  const temLevas = roster.some((r) => r.leva > 1);
+
+  // linhas[ratoNumero][colKey] = valor digitado
+  const [linhas, setLinhas] = useState<Record<string, Record<string, string>>>(
+    () => {
+      const inicial: Record<string, Record<string, string>> = {};
+      for (const r of resultadosExistentes) {
+        const salvas = (r.leituras?.colunas ?? {}) as Record<string, unknown>;
+        inicial[r.rato] = Object.fromEntries(
+          Object.entries(salvas).map(([k, v]) => [k, v == null ? "" : String(v)])
+        );
+      }
+      return inicial;
+    }
   );
-  const [ratoSelecionado, setRatoSelecionado] = useState<number | null>(null);
+
+  // Controles de qualidade da sessão (compartilhados por todos os ratos).
+  const [qcCat, setQcCat] = useState("");
+  const [controleSod, setControleSod] = useState<Record<string, string>>({});
+  const [curva, setCurva] = useState<Record<string, string>>({});
+
   const [status, setStatus] = useState(statusAtual);
+  const [salvando, setSalvando] = useState(false);
   const [alterandoStatus, setAlterandoStatus] = useState(false);
+  const [mensagem, setMensagem] = useState<string | null>(null);
 
-  // QC de sessão (compartilhado por todos os ratos desta rodada de leitura).
-  const [absQcCat, setAbsQcCat] = useState("");
-  const [controleSod, setControleSod] = useState<string[]>(
-    TEMPOS_SOD.map(() => "")
-  );
-  const [curvaLowry, setCurvaLowry] = useState<string[]>(
-    PONTOS_CURVA_LOWRY.map(() => "")
-  );
+  function setCelula(rato: string, col: string, valor: string) {
+    setLinhas((prev) => ({
+      ...prev,
+      [rato]: { ...(prev[rato] ?? {}), [col]: valor },
+    }));
+  }
 
+  // --- QC de sessão + regressões ---
   const qcCatOk = useMemo(() => {
-    if (!config.qc || config.familia !== "cat") return null;
-    const v = parseFloat(absQcCat);
+    if (config.familia !== "cat" || !config.qc) return null;
+    const v = parseFloat(qcCat);
     if (Number.isNaN(v)) return null;
     return v >= config.qc.min && v <= config.qc.max;
-  }, [absQcCat, config]);
+  }, [qcCat, config]);
 
-  const regressaoControleSod = useMemo(() => {
+  const controleSodSlopeMin = useMemo(() => {
     if (config.familia !== "sod") return null;
-    const pontos = usarPontosValidos(TEMPOS_SOD, controleSod);
-    if (pontos.length < 2) return null;
-    return regressaoLinear(pontos);
+    return slopeMinLinha(TEMPOS_SOD, controleSod);
   }, [controleSod, config.familia]);
-
-  const controleSodSlopeMin = regressaoControleSod
-    ? regressaoControleSod.inclinacao * 60
-    : null;
 
   const qcSodOk = useMemo(() => {
     if (!config.qc || controleSodSlopeMin === null) return null;
-    return controleSodSlopeMin >= config.qc.min && controleSodSlopeMin <= config.qc.max;
+    return (
+      controleSodSlopeMin >= config.qc.min && controleSodSlopeMin <= config.qc.max
+    );
   }, [controleSodSlopeMin, config.qc]);
 
-  const regressaoCurvaLowry = useMemo(() => {
+  const regressaoCurva = useMemo(() => {
     if (config.familia !== "curva") return null;
-    const pontos = usarPontosValidos(PONTOS_CURVA_LOWRY, curvaLowry);
+    const pontos = PONTOS_CURVA_LOWRY.map((p) => ({
+      x: p,
+      y: parseFloat(curva[`p${p}`] ?? ""),
+    })).filter((pt) => !Number.isNaN(pt.y));
     if (pontos.length < 2) return null;
     return regressaoLinear(pontos);
-  }, [curvaLowry, config.familia]);
+  }, [curva, config.familia]);
 
   const qcCurvaOk = useMemo(() => {
-    if (!config.qc || !regressaoCurvaLowry) return null;
-    return (
-      regressaoCurvaLowry.rQuadrado >= config.qc.min &&
-      regressaoCurvaLowry.rQuadrado <= config.qc.max
-    );
-  }, [regressaoCurvaLowry, config.qc]);
+    if (!config.qc || !regressaoCurva) return null;
+    return regressaoCurva.rQuadrado >= config.qc.min;
+  }, [regressaoCurva, config.qc]);
 
-  const grafico = useMemo(() => {
-    const dados = roster
+  const qcSessaoOk =
+    config.familia === "cat"
+      ? qcCatOk
+      : config.familia === "sod"
+      ? qcSodOk
+      : config.familia === "curva"
+      ? qcCurvaOk
+      : null;
+
+  // --- valor calculado por rato ---
+  function valorDoRato(rato: string): number | null {
+    const linha = linhas[rato] ?? {};
+    if (config.familia === "cat") {
+      const s = slopeMinLinha(TEMPOS_CAT, linha);
+      return s === null ? null : Math.abs(s);
+    }
+    if (config.familia === "sod") {
+      const s = slopeMinLinha(TEMPOS_SOD, linha);
+      if (s === null || !controleSodSlopeMin || controleSodSlopeMin <= 0)
+        return null;
+      return (1 - s / controleSodSlopeMin) * 100;
+    }
+    if (config.familia === "curva") {
+      const abs = parseFloat(linha.abs ?? "");
+      const dil = parseFloat(linha.dil ?? "") || 1;
+      if (Number.isNaN(abs) || !regressaoCurva || regressaoCurva.inclinacao === 0)
+        return null;
+      const ug = (abs - regressaoCurva.intercepto) / regressaoCurva.inclinacao;
+      return (ug / VOLUME_AMOSTRA_LOWRY_UL) * dil;
+    }
+    // simples
+    const v = parseFloat(linha.valor_final ?? "");
+    return Number.isNaN(v) ? null : v;
+  }
+
+  const graficoGrupos = useMemo(() => {
+    return roster
       .map((r) => {
-        const resultado = resultados.get(String(r.numero));
-        return resultado?.valor_calculado != null
-          ? { grupo: r.grupoNome, valor: resultado.valor_calculado }
-          : null;
+        const v = valorDoRato(String(r.numero));
+        return v === null ? null : { grupo: r.grupoNome, valor: v };
       })
       .filter((d): d is { grupo: string; valor: number } => d !== null);
-    return dados;
-  }, [roster, resultados]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linhas, controleSodSlopeMin, regressaoCurva, roster]);
+
+  async function salvar() {
+    setMensagem(null);
+    setSalvando(true);
+
+    const sessao: Record<string, unknown> = {};
+    if (config.familia === "cat") sessao.qc_h2o2 = qcCat === "" ? null : parseFloat(qcCat);
+    if (config.familia === "sod") {
+      sessao.controle = controleSod;
+      sessao.controle_slope_min = controleSodSlopeMin;
+    }
+    if (config.familia === "curva") {
+      sessao.curva_pontos = PONTOS_CURVA_LOWRY;
+      sessao.curva = curva;
+      sessao.curva_r2 = regressaoCurva?.rQuadrado ?? null;
+      sessao.curva_inclinacao = regressaoCurva?.inclinacao ?? null;
+      sessao.curva_intercepto = regressaoCurva?.intercepto ?? null;
+    }
+
+    const linhasParaSalvar: LinhaResultado[] = [];
+    for (const r of roster) {
+      const rato = String(r.numero);
+      const dados = linhas[rato] ?? {};
+      const temAlgum = Object.values(dados).some((v) => v !== "" && v != null);
+      if (!temAlgum) continue;
+      linhasParaSalvar.push({
+        rato,
+        grupoId: r.grupoId,
+        leituras: {
+          tipo: config.familia,
+          colunas: dados,
+          sessao,
+        },
+        valorCalculado: valorDoRato(rato),
+        dentroDoPadrao: qcSessaoOk,
+      });
+    }
+
+    const resultado = await salvarResultadosLote({
+      projetoId,
+      projetoTesteId,
+      linhas: linhasParaSalvar,
+    });
+    setSalvando(false);
+    setMensagem(
+      "erro" in resultado
+        ? resultado.erro
+        : `${linhasParaSalvar.length} resultado(s) salvo(s).`
+    );
+  }
 
   async function alternarStatus() {
     const novo = status === "concluido" ? "pendente" : "concluido";
@@ -140,16 +276,11 @@ export default function RegistroResultado({
     if (!("erro" in r)) setStatus(novo);
   }
 
-  function aoSalvar(rato: string, resultado: Resultado) {
-    setResultados((prev) => new Map(prev).set(rato, resultado));
-    setRatoSelecionado(null);
-  }
-
   return (
     <div className="mt-6">
       <div className="mb-6 flex items-center gap-3">
         <span
-          className={`rounded-full px-2 py-0.5 text-xs ${
+          className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
             status === "concluido"
               ? "bg-green-600/12 text-green-700 dark:text-green-400"
               : "bg-reagent/12 text-reagent"
@@ -162,62 +293,43 @@ export default function RegistroResultado({
             type="button"
             onClick={alternarStatus}
             disabled={alterandoStatus}
-            className="text-xs underline disabled:opacity-50"
+            className="text-xs text-signal underline-offset-4 hover:underline disabled:opacity-50"
           >
             {status === "concluido" ? "Reabrir" : "Marcar como concluído"}
           </button>
         )}
       </div>
 
+      {/* Controle de qualidade da sessão */}
       {config.familia === "cat" && config.qc && (
-        <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
-          <p className="mb-2 text-sm font-medium">
-            Controle de qualidade da sessão
-          </p>
-          <label className="flex max-w-xs flex-col gap-1 text-xs">
+        <PainelSessao titulo="Controle de qualidade da sessão">
+          <label className="flex max-w-xs flex-col gap-1 text-xs text-ink-soft">
             {config.qc.rotulo} ({config.qc.unidade})
             <input
               type="number"
               step="0.001"
-              value={absQcCat}
-              onChange={(e) => setAbsQcCat(e.target.value)}
+              value={qcCat}
+              onChange={(e) => setQcCat(e.target.value)}
               disabled={!podeRegistrar}
               className={INPUT_SM}
             />
           </label>
-          {qcCatOk !== null && (
-            <p
-              className={`mt-2 text-xs ${
-                qcCatOk
-                  ? "text-green-700 dark:text-green-400"
-                  : "text-alerta"
-              }`}
-            >
-              {qcCatOk
-                ? "Dentro do padrão do manual."
-                : `Fora do padrão (esperado ${config.qc.min}–${config.qc.max}). ${config.qc.dica}`}
-            </p>
-          )}
-        </div>
+          {qcCatOk !== null && <AvisoQC ok={qcCatOk} config={config} />}
+        </PainelSessao>
       )}
 
       {config.familia === "sod" && config.qc && (
-        <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
-          <p className="mb-2 text-sm font-medium">
-            Controle de qualidade da sessão — {config.qc.rotulo}
-          </p>
+        <PainelSessao titulo={`Controle da sessão — ${config.qc.rotulo}`}>
           <div className="flex flex-wrap gap-2">
-            {TEMPOS_SOD.map((t, i) => (
-              <label key={t} className="flex flex-col gap-1 text-xs">
+            {TEMPOS_SOD.map((t) => (
+              <label key={t} className="flex flex-col gap-1 text-xs text-ink-soft">
                 {t}s
                 <input
                   type="number"
                   step="0.001"
-                  value={controleSod[i]}
+                  value={controleSod[`t${t}`] ?? ""}
                   onChange={(e) =>
-                    setControleSod((prev) =>
-                      prev.map((v, idx) => (idx === i ? e.target.value : v))
-                    )
+                    setControleSod((p) => ({ ...p, [`t${t}`]: e.target.value }))
                   }
                   disabled={!podeRegistrar}
                   className={`${INPUT_SM} w-20`}
@@ -226,39 +338,33 @@ export default function RegistroResultado({
             ))}
           </div>
           {controleSodSlopeMin !== null && (
-            <p
-              className={`mt-2 text-xs ${
-                qcSodOk
-                  ? "text-green-700 dark:text-green-400"
-                  : "text-alerta"
-              }`}
-            >
-              Taxa: {controleSodSlopeMin.toFixed(4)} {config.qc.unidade}
-              {qcSodOk === false &&
-                ` — fora do padrão (esperado ${config.qc.min}–${config.qc.max}). ${config.qc.dica}`}
-              {qcSodOk === true && " — dentro do padrão do manual."}
+            <p className="mt-2 text-xs">
+              Taxa do controle:{" "}
+              <span className="font-mono">{fmt(controleSodSlopeMin)}</span>{" "}
+              {config.qc.unidade}
+              {qcSodOk === false && (
+                <span className="text-alerta"> — fora do padrão. {config.qc.dica}</span>
+              )}
+              {qcSodOk === true && (
+                <span className="text-green-700 dark:text-green-400"> — dentro do padrão.</span>
+              )}
             </p>
           )}
-        </div>
+        </PainelSessao>
       )}
 
       {config.familia === "curva" && config.qc && (
-        <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
-          <p className="mb-2 text-sm font-medium">
-            Curva padrão da sessão — {config.qc.rotulo}
-          </p>
+        <PainelSessao titulo="Curva padrão da sessão (BSA)">
           <div className="flex flex-wrap gap-2">
-            {PONTOS_CURVA_LOWRY.map((p, i) => (
-              <label key={p} className="flex flex-col gap-1 text-xs">
+            {PONTOS_CURVA_LOWRY.map((p) => (
+              <label key={p} className="flex flex-col gap-1 text-xs text-ink-soft">
                 {p === 0 ? "Branco" : `${p} µg`}
                 <input
                   type="number"
                   step="0.001"
-                  value={curvaLowry[i]}
+                  value={curva[`p${p}`] ?? ""}
                   onChange={(e) =>
-                    setCurvaLowry((prev) =>
-                      prev.map((v, idx) => (idx === i ? e.target.value : v))
-                    )
+                    setCurva((prev) => ({ ...prev, [`p${p}`]: e.target.value }))
                   }
                   disabled={!podeRegistrar}
                   className={`${INPUT_SM} w-20`}
@@ -266,93 +372,105 @@ export default function RegistroResultado({
               </label>
             ))}
           </div>
-          {regressaoCurvaLowry && (
-            <p
-              className={`mt-2 text-xs ${
-                qcCurvaOk
-                  ? "text-green-700 dark:text-green-400"
-                  : "text-alerta"
-              }`}
-            >
-              R² = {regressaoCurvaLowry.rQuadrado.toFixed(4)}
-              {qcCurvaOk === false &&
-                ` — abaixo do exigido pelo manual (≥ ${config.qc.min}). ${config.qc.dica}`}
-              {qcCurvaOk === true && " — dentro do padrão do manual."}
+          {regressaoCurva && (
+            <p className="mt-2 text-xs">
+              R² = <span className="font-mono">{regressaoCurva.rQuadrado.toFixed(4)}</span>
+              {qcCurvaOk === false && (
+                <span className="text-alerta"> — abaixo de 0,99. {config.qc.dica}</span>
+              )}
+              {qcCurvaOk === true && (
+                <span className="text-green-700 dark:text-green-400"> — dentro do padrão.</span>
+              )}
             </p>
           )}
+        </PainelSessao>
+      )}
+
+      {/* Tabela de ratos × leituras */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <th className="py-2 pr-3 font-normal">Nº</th>
+              {temLevas && <th className="py-2 pr-3 font-normal">Leva</th>}
+              <th className="py-2 pr-3 font-normal">Grupo</th>
+              {colunas.map((c) => (
+                <th key={c.key} className="py-2 pr-2 font-normal">
+                  {c.label}
+                </th>
+              ))}
+              <th className="py-2 pl-2 font-normal">
+                Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {roster.map((r) => {
+              const rato = String(r.numero);
+              const valor = valorDoRato(rato);
+              return (
+                <tr key={rato} className="border-b border-rule/60">
+                  <td className="py-1.5 pr-3 font-mono text-ink">{r.numero}</td>
+                  {temLevas && (
+                    <td className="py-1.5 pr-3 font-mono text-ink-soft">{r.leva}</td>
+                  )}
+                  <td className="py-1.5 pr-3 whitespace-nowrap text-ink-soft">
+                    {r.grupoNome}
+                  </td>
+                  {colunas.map((c) => (
+                    <td key={c.key} className="py-1.5 pr-2">
+                      <input
+                        type="number"
+                        step="0.001"
+                        inputMode="decimal"
+                        value={linhas[rato]?.[c.key] ?? ""}
+                        onChange={(e) => setCelula(rato, c.key, e.target.value)}
+                        disabled={!podeRegistrar}
+                        className={`${INPUT_SM} w-20`}
+                      />
+                    </td>
+                  ))}
+                  <td className="py-1.5 pl-2 font-mono tabular-nums text-ink">
+                    {fmt(valor, config.familia === "curva" ? 3 : 4)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {config.familia === "simples" && (
+        <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
+          Cálculo automático não disponível para este teste (a fórmula do
+          manual depende de diluição e da concentração de proteína, feita na
+          análise). Registre as absorbâncias brutas e informe o valor final
+          que você calculou.
+        </p>
+      )}
+
+      {podeRegistrar && (
+        <div className="mt-6 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={salvar}
+            disabled={salvando}
+            className={`text-sm ${BOTAO_PRIMARIO}`}
+          >
+            {salvando ? "Salvando..." : "Salvar tabela"}
+          </button>
+          {mensagem && <span className="text-sm text-ink-soft">{mensagem}</span>}
         </div>
       )}
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
-            <th className="pb-2">Nº</th>
-            <th className="pb-2">Grupo</th>
-            <th className="pb-2">Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}</th>
-            <th className="pb-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {roster.map((r) => {
-            const resultado = resultados.get(String(r.numero));
-            const preenchido = resultado?.valor_calculado != null;
-            return (
-              <tr key={r.numero} className="border-t border-rule/60">
-                <td className="py-2">{r.numero}</td>
-                <td className="py-2">{r.grupoNome}</td>
-                <td className="py-2">
-                  {preenchido ? formatarNumero(resultado!.valor_calculado) : "—"}
-                  {resultado?.dentro_do_padrao === false && (
-                    <span className="ml-2 text-xs text-alerta">QC fora do padrão</span>
-                  )}
-                </td>
-                <td className="py-2 text-right">
-                  {podeRegistrar ? (
-                    <button
-                      type="button"
-                      onClick={() => setRatoSelecionado(r.numero)}
-                      className="rounded border border-rule px-2 py-1 text-xs text-ink transition-colors hover:border-absorbance"
-                    >
-                      {preenchido ? "Editar" : "Registrar"}
-                    </button>
-                  ) : (
-                    preenchido ? "" : "pendente"
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {ratoSelecionado !== null && podeRegistrar && (
-        <FormularioRato
-          rato={roster.find((r) => r.numero === ratoSelecionado)!}
-          config={config}
-          projetoId={projetoId}
-          projetoTesteId={projetoTesteId}
-          resultadoExistente={resultados.get(String(ratoSelecionado)) ?? null}
-          qcSessaoCat={absQcCat}
-          qcSessaoCatOk={qcCatOk}
-          controleSodSlopeMin={controleSodSlopeMin}
-          qcSessaoSodOk={qcSodOk}
-          controleSodBruto={controleSod}
-          regressaoCurvaLowry={regressaoCurvaLowry}
-          curvaLowryBruta={curvaLowry}
-          qcSessaoCurvaOk={qcCurvaOk}
-          onCancelar={() => setRatoSelecionado(null)}
-          onSalvar={aoSalvar}
-        />
-      )}
-
-      {grafico.length >= 2 && (
+      {graficoGrupos.length >= 2 && (
         <div className="mt-10">
           <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
             Valores por grupo (visão geral)
           </p>
           <div className="h-64 w-full rounded border border-rule bg-paper-raised p-2">
             <ResponsiveContainer>
-              <ComposedChart data={grafico}>
+              <ComposedChart data={graficoGrupos}>
                 <CartesianGrid stroke="var(--color-rule)" />
                 <XAxis
                   dataKey="grupo"
@@ -361,12 +479,7 @@ export default function RegistroResultado({
                   stroke="var(--color-ink-soft)"
                   tick={{ fontSize: 11 }}
                 />
-                <YAxis
-                  dataKey="valor"
-                  type="number"
-                  stroke="var(--color-ink-soft)"
-                  tick={{ fontSize: 11 }}
-                />
+                <YAxis dataKey="valor" type="number" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{
                     background: "var(--color-paper-raised)",
@@ -385,405 +498,34 @@ export default function RegistroResultado({
   );
 }
 
-function FormularioRato({
-  rato,
-  config,
-  projetoId,
-  projetoTesteId,
-  resultadoExistente,
-  qcSessaoCat,
-  qcSessaoCatOk,
-  controleSodSlopeMin,
-  qcSessaoSodOk,
-  controleSodBruto,
-  regressaoCurvaLowry,
-  curvaLowryBruta,
-  qcSessaoCurvaOk,
-  onCancelar,
-  onSalvar,
+function PainelSessao({
+  titulo,
+  children,
 }: {
-  rato: RatoDoRoster;
-  config: ConfigTeste;
-  projetoId: string;
-  projetoTesteId: string;
-  resultadoExistente: Resultado | null;
-  qcSessaoCat: string;
-  qcSessaoCatOk: boolean | null;
-  controleSodSlopeMin: number | null;
-  qcSessaoSodOk: boolean | null;
-  controleSodBruto: string[];
-  regressaoCurvaLowry: ReturnType<typeof regressaoLinear> | null;
-  curvaLowryBruta: string[];
-  qcSessaoCurvaOk: boolean | null;
-  onCancelar: () => void;
-  onSalvar: (rato: string, resultado: Resultado) => void;
+  titulo: string;
+  children: React.ReactNode;
 }) {
-  const leiturasExistentes = resultadoExistente?.leituras ?? {};
-
-  const [absorbancias, setAbsorbancias] = useState<string[]>(() => {
-    const tempos = config.familia === "cat" ? TEMPOS_CAT : TEMPOS_SOD;
-    const salvas = leiturasExistentes.absorbancias as number[] | undefined;
-    return tempos.map((_, i) => (salvas?.[i] != null ? String(salvas[i]) : ""));
-  });
-  const [proteina, setProteina] = useState(
-    leiturasExistentes.proteina_mg_ml != null
-      ? String(leiturasExistentes.proteina_mg_ml)
-      : ""
-  );
-  const [camposSimples, setCamposSimples] = useState<Record<string, string>>(
-    () => {
-      const inicial: Record<string, string> = {};
-      for (const campo of config.camposBrutos ?? []) {
-        inicial[campo.chave] =
-          leiturasExistentes[campo.chave] != null
-            ? String(leiturasExistentes[campo.chave])
-            : "";
-      }
-      return inicial;
-    }
-  );
-  const [valorFinal, setValorFinal] = useState(
-    resultadoExistente?.valor_calculado != null
-      ? String(resultadoExistente.valor_calculado)
-      : ""
-  );
-  const [absorbanciaCurva, setAbsorbanciaCurva] = useState(
-    leiturasExistentes.abs_amostra != null
-      ? String(leiturasExistentes.abs_amostra)
-      : ""
-  );
-  const [fatorDiluicaoCurva, setFatorDiluicaoCurva] = useState(
-    leiturasExistentes.fator_diluicao != null
-      ? String(leiturasExistentes.fator_diluicao)
-      : "1"
-  );
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-
-  const tempos = config.familia === "cat" ? TEMPOS_CAT : TEMPOS_SOD;
-
-  const regressaoAmostra = useMemo(() => {
-    if (config.familia !== "cat" && config.familia !== "sod") return null;
-    const pontos = usarPontosValidos(tempos, absorbancias);
-    if (pontos.length < 2) return null;
-    return regressaoLinear(pontos);
-  }, [absorbancias, tempos, config.familia]);
-
-  const proteinaNum = parseFloat(proteina);
-
-  const valorCalculadoCat = useMemo(() => {
-    if (config.familia !== "cat" || !regressaoAmostra || !(proteinaNum > 0)) {
-      return null;
-    }
-    const deltaAbsMin = Math.abs(regressaoAmostra.inclinacao) * 60;
-    return (
-      (deltaAbsMin * VOLUME_TOTAL_CAT_ML) /
-      (EPSILON_CAT * VOLUME_AMOSTRA_CAT_ML * proteinaNum) *
-      1000
-    );
-  }, [config.familia, regressaoAmostra, proteinaNum]);
-
-  const valorCalculadoSod = useMemo(() => {
-    if (
-      config.familia !== "sod" ||
-      !regressaoAmostra ||
-      !controleSodSlopeMin ||
-      controleSodSlopeMin <= 0 ||
-      !(proteinaNum > 0)
-    ) {
-      return null;
-    }
-    const amostraSlopeMin = regressaoAmostra.inclinacao * 60;
-    const percentInibicao = (1 - amostraSlopeMin / controleSodSlopeMin) * 100;
-    const unidades = percentInibicao / 50;
-    return unidades / proteinaNum;
-  }, [config.familia, regressaoAmostra, controleSodSlopeMin, proteinaNum]);
-
-  const valorCalculadoCurva = useMemo(() => {
-    if (config.familia !== "curva" || !regressaoCurvaLowry) return null;
-    const abs = parseFloat(absorbanciaCurva);
-    const fator = parseFloat(fatorDiluicaoCurva) || 1;
-    if (Number.isNaN(abs) || regressaoCurvaLowry.inclinacao === 0) return null;
-    const microgramas = (abs - regressaoCurvaLowry.intercepto) / regressaoCurvaLowry.inclinacao;
-    return (microgramas / VOLUME_AMOSTRA_LOWRY_UL) * fator;
-  }, [config.familia, regressaoCurvaLowry, absorbanciaCurva, fatorDiluicaoCurva]);
-
-  const valorCalculadoAtual =
-    config.familia === "cat"
-      ? valorCalculadoCat
-      : config.familia === "sod"
-      ? valorCalculadoSod
-      : config.familia === "curva"
-      ? valorCalculadoCurva
-      : parseFloat(valorFinal);
-
-  const dadosGraficoAmostra = tempos.map((t, i) => {
-    const y = parseFloat(absorbancias[i]);
-    return {
-      x: t,
-      y: Number.isNaN(y) ? null : y,
-      yAjustado: regressaoAmostra
-        ? regressaoAmostra.inclinacao * t + regressaoAmostra.intercepto
-        : null,
-    };
-  });
-
-  async function salvar() {
-    setErro(null);
-
-    let leituras: Record<string, unknown> = {};
-    let valor: number | null = null;
-    let dentroDoPadrao: boolean | null = null;
-
-    if (config.familia === "cat") {
-      if (valorCalculadoCat === null) {
-        setErro("Preencha ao menos 2 leituras e a concentração de proteína.");
-        return;
-      }
-      leituras = {
-        tipo: "cat",
-        tempos,
-        absorbancias: absorbancias.map((v) => (v === "" ? null : parseFloat(v))),
-        proteina_mg_ml: proteinaNum,
-        qc_h2o2: qcSessaoCat === "" ? null : parseFloat(qcSessaoCat),
-      };
-      valor = valorCalculadoCat;
-      dentroDoPadrao = qcSessaoCatOk;
-    } else if (config.familia === "sod") {
-      if (valorCalculadoSod === null) {
-        setErro(
-          "Preencha o controle da sessão, ao menos 2 leituras da amostra e a proteína."
-        );
-        return;
-      }
-      leituras = {
-        tipo: "sod",
-        tempos,
-        absorbancias: absorbancias.map((v) => (v === "" ? null : parseFloat(v))),
-        proteina_mg_ml: proteinaNum,
-        controle_absorbancias: controleSodBruto.map((v) =>
-          v === "" ? null : parseFloat(v)
-        ),
-        controle_slope_min: controleSodSlopeMin,
-      };
-      valor = valorCalculadoSod;
-      dentroDoPadrao = qcSessaoSodOk;
-    } else if (config.familia === "curva") {
-      if (valorCalculadoCurva === null) {
-        setErro("Preencha a curva padrão da sessão e a absorbância da amostra.");
-        return;
-      }
-      leituras = {
-        tipo: "curva",
-        abs_amostra: parseFloat(absorbanciaCurva),
-        fator_diluicao: parseFloat(fatorDiluicaoCurva) || 1,
-        curva_pontos: PONTOS_CURVA_LOWRY,
-        curva_absorbancias: curvaLowryBruta.map((v) => (v === "" ? null : parseFloat(v))),
-        curva_inclinacao: regressaoCurvaLowry?.inclinacao ?? null,
-        curva_intercepto: regressaoCurvaLowry?.intercepto ?? null,
-        curva_r2: regressaoCurvaLowry?.rQuadrado ?? null,
-      };
-      valor = valorCalculadoCurva;
-      dentroDoPadrao = qcSessaoCurvaOk;
-    } else {
-      if (valorFinal === "" || Number.isNaN(parseFloat(valorFinal))) {
-        setErro("Informe o valor final calculado.");
-        return;
-      }
-      leituras = Object.fromEntries(
-        Object.entries(camposSimples).map(([k, v]) => [
-          k,
-          v === "" ? null : parseFloat(v),
-        ])
-      );
-      valor = parseFloat(valorFinal);
-    }
-
-    setSalvando(true);
-    const resultado = await salvarResultado({
-      projetoId,
-      projetoTesteId,
-      rato: String(rato.numero),
-      grupoId: rato.grupoId,
-      leituras,
-      valorCalculado: valor,
-      dentroDoPadrao,
-    });
-    setSalvando(false);
-
-    if ("erro" in resultado) {
-      setErro(resultado.erro);
-      return;
-    }
-
-    onSalvar(String(rato.numero), {
-      rato: String(rato.numero),
-      grupo_id: rato.grupoId,
-      leituras,
-      valor_calculado: valor,
-      dentro_do_padrao: dentroDoPadrao,
-    });
-  }
-
   return (
-    <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-3 font-medium">
-        Rato {rato.numero} — {rato.grupoNome}
+    <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
+      <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        {titulo}
       </p>
-
-      {(config.familia === "cat" || config.familia === "sod") && (
-        <>
-          <div className="mb-3 flex flex-wrap gap-2">
-            {tempos.map((t, i) => (
-              <label key={t} className="flex flex-col gap-1 text-xs">
-                {t}s
-                <input
-                  type="number"
-                  step="0.001"
-                  value={absorbancias[i]}
-                  onChange={(e) =>
-                    setAbsorbancias((prev) =>
-                      prev.map((v, idx) => (idx === i ? e.target.value : v))
-                    )
-                  }
-                  className={`${INPUT_SM} w-20`}
-                />
-              </label>
-            ))}
-          </div>
-
-          <label className="mb-3 flex max-w-xs flex-col gap-1 text-xs">
-            Concentração de proteína da amostra (mg/mL — do ensaio de Lowry)
-            <input
-              type="number"
-              step="0.001"
-              value={proteina}
-              onChange={(e) => setProteina(e.target.value)}
-              className={INPUT_SM}
-            />
-          </label>
-
-          {regressaoAmostra && (
-            <div className="mb-3 h-48 w-full rounded border border-rule bg-paper-raised p-2">
-              <ResponsiveContainer>
-                <ComposedChart data={dadosGraficoAmostra}>
-                  <CartesianGrid stroke="var(--color-rule)" />
-                  <XAxis
-                    dataKey="x"
-                    type="number"
-                    stroke="var(--color-ink-soft)"
-                    tick={{ fontSize: 11 }}
-                    label={{ value: "segundos", position: "insideBottom", offset: -5, fontSize: 11 }}
-                  />
-                  <YAxis dataKey="y" type="number" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--color-paper-raised)",
-                      border: "1px solid var(--color-rule)",
-                      borderRadius: 4,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Scatter dataKey="y" fill="var(--color-absorbance)" />
-                  <Line type="linear" dataKey="yAjustado" stroke="var(--color-alerta)" dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </>
-      )}
-
-      {config.familia === "curva" && (
-        <div className="mb-3 flex flex-wrap gap-3">
-          <label className="flex flex-col gap-1 text-xs">
-            Absorbância da amostra
-            <input
-              type="number"
-              step="0.001"
-              value={absorbanciaCurva}
-              onChange={(e) => setAbsorbanciaCurva(e.target.value)}
-              className={`${INPUT_SM} w-32`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            Fator de diluição
-            <input
-              type="number"
-              step="0.1"
-              value={fatorDiluicaoCurva}
-              onChange={(e) => setFatorDiluicaoCurva(e.target.value)}
-              className={`${INPUT_SM} w-32`}
-            />
-          </label>
-          {!regressaoCurvaLowry && (
-            <p className="w-full text-xs text-ink-soft">
-              Preencha a curva padrão da sessão (acima da tabela) antes de
-              registrar a amostra.
-            </p>
-          )}
-        </div>
-      )}
-
-      {config.familia === "simples" && (
-        <div className="mb-3 flex flex-col gap-3">
-          {config.camposBrutos?.map((campo) => (
-            <label key={campo.chave} className="flex max-w-sm flex-col gap-1 text-xs">
-              {campo.rotulo}
-              <input
-                type="number"
-                step="0.001"
-                value={camposSimples[campo.chave] ?? ""}
-                onChange={(e) =>
-                  setCamposSimples((prev) => ({ ...prev, [campo.chave]: e.target.value }))
-                }
-                className={INPUT_SM}
-              />
-            </label>
-          ))}
-          <label className="flex max-w-sm flex-col gap-1 text-xs">
-            Valor final já calculado{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
-            <input
-              type="number"
-              step="0.0001"
-              value={valorFinal}
-              onChange={(e) => setValorFinal(e.target.value)}
-              className={INPUT_SM}
-            />
-          </label>
-          <p className="text-xs text-ink-soft">
-            Cálculo automático ainda não disponível pra esse teste — os
-            valores brutos ficam registrados, e o valor final é o que você
-            já calculou.
-          </p>
-        </div>
-      )}
-
-      {valorCalculadoAtual !== null && !Number.isNaN(valorCalculadoAtual) && (
-        <p className="mb-3 text-sm font-medium">
-          Valor calculado: {formatarNumero(valorCalculadoAtual)}{" "}
-          {config.unidadeResultado}
-        </p>
-      )}
-
-      {erro && <p className="mb-3 text-sm text-alerta">{erro}</p>}
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={salvar}
-          disabled={salvando}
-          className={`text-sm ${BOTAO_PRIMARIO}`}
-        >
-          {salvando ? "Salvando..." : "Salvar"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancelar}
-          className={`text-sm ${BOTAO_SECUNDARIO}`}
-        >
-          Cancelar
-        </button>
-      </div>
+      {children}
     </div>
+  );
+}
+
+function AvisoQC({ ok, config }: { ok: boolean; config: ConfigTeste }) {
+  if (!config.qc) return null;
+  return (
+    <p
+      className={`mt-2 text-xs ${
+        ok ? "text-green-700 dark:text-green-400" : "text-alerta"
+      }`}
+    >
+      {ok
+        ? "Dentro do padrão do manual."
+        : `Fora do padrão (esperado ${config.qc.min}–${config.qc.max}). ${config.qc.dica}`}
+    </p>
   );
 }

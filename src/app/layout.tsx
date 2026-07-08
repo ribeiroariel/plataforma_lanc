@@ -5,6 +5,7 @@ import Image from "next/image";
 import "./globals.css";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { logout } from "@/lib/actions/auth";
+import { NavPrincipal } from "@/components/NavPrincipal";
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
@@ -65,22 +66,22 @@ export default async function RootLayout({
       className={`${newsreader.variable} ${publicSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
-        <header className="sticky top-0 z-50 bg-paper-raised shadow-[0_1px_0_var(--color-rule)]">
+        <header className="sticky top-0 z-50 bg-paper shadow-[0_1px_0_var(--color-rule)]">
           {/* Barra utilitária */}
-          <div className="border-b border-rule bg-ink text-paper">
+          <div className="border-b border-rule bg-paper-raised">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 sm:px-6">
-              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-paper/70">
+              <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft sm:block">
                 Universidade Regional de Blumenau · FURB
               </span>
               <div className="flex items-center gap-4 text-xs">
                 {!usuario && (
                   <>
-                    <Link href="/login" className="text-paper/80 hover:text-paper">
+                    <Link href="/login" className="text-ink-soft hover:text-ink">
                       Entrar
                     </Link>
                     <Link
                       href="/cadastro"
-                      className="rounded-sm bg-signal px-2.5 py-1 font-medium text-paper hover:brightness-110"
+                      className="rounded-sm bg-signal px-2.5 py-1 font-medium text-white hover:brightness-110"
                     >
                       Cadastro de bolsista
                     </Link>
@@ -88,13 +89,19 @@ export default async function RootLayout({
                 )}
                 {usuario && (
                   <>
-                    <Link href="/perfil" className="text-paper/80 hover:text-paper">
-                      {usuario.nome}
+                    <Link
+                      href="/perfil"
+                      className="flex items-center gap-1.5 text-ink-soft hover:text-ink"
+                    >
+                      <span className="font-medium text-ink">{usuario.nome}</span>
+                      <span className="rounded-sm bg-signal/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+                        {usuario.papel === "orientador" ? "Orientadora" : "Bolsista"}
+                      </span>
                     </Link>
                     <form action={logout}>
                       <button
                         type="submit"
-                        className="text-paper/80 hover:text-paper"
+                        className="text-ink-soft hover:text-ink"
                       >
                         Sair
                       </button>
@@ -111,8 +118,8 @@ export default async function RootLayout({
               <Image
                 src="/logo-lanc.jpg"
                 alt="Logo do LANC"
-                width={52}
-                height={52}
+                width={56}
+                height={56}
                 className="h-12 w-12 shrink-0 rounded-full border border-rule object-cover sm:h-14 sm:w-14"
                 priority
               />
@@ -127,20 +134,7 @@ export default async function RootLayout({
             </Link>
           </div>
 
-          {/* Barra de navegação */}
-          <nav className="border-t border-rule">
-            <div className="mx-auto flex max-w-6xl items-center gap-1 overflow-x-auto px-4 sm:px-6">
-              {navPrincipal.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="border-b-2 border-transparent px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-soft transition-colors hover:border-signal hover:text-ink"
-                >
-                  {item.rotulo}
-                </Link>
-              ))}
-            </div>
-          </nav>
+          <NavPrincipal itens={navPrincipal} />
         </header>
 
         <div className="flex-1">{children}</div>
