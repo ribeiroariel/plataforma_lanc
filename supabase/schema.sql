@@ -797,6 +797,93 @@ create policy "Dono apaga a própria foto"
   );
 
 -- ----------------------------------------------------------------------------
+-- FOTOS DO CADERNO DE BANCADA (transparência) — opcional, por ensaio
+-- ----------------------------------------------------------------------------
+-- Registro fotográfico da tabela feita à mão no caderno, ligado ao ensaio
+-- (projeto_teste), não ao rato. Não é fonte de dado — a absorbância válida é a
+-- digitada em resultados_teste; a foto é só a fonte auditável. Ao contrário do
+-- bucket "avatars" (público), este é PRIVADO: só quem vê o resultado vê a
+-- foto, via signed URL. Caminho no bucket: "{projeto_teste_id}/{uuid}.<ext>",
+-- então o 1º nível do caminho é o ensaio, o que as policies de storage usam.
+
+create table if not exists public.fotos_caderno (
+  id uuid primary key default gen_random_uuid(),
+  projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
+  caminho text not null,
+  enviado_por uuid not null references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.fotos_caderno enable row level security;
+alter table public.fotos_caderno force row level security;
+
+drop policy if exists "Membros e orientadora veem fotos do caderno" on public.fotos_caderno;
+create policy "Membros e orientadora veem fotos do caderno"
+  on public.fotos_caderno
+  for select
+  using (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
+
+drop policy if exists "Responsável anexa foto do caderno" on public.fotos_caderno;
+create policy "Responsável anexa foto do caderno"
+  on public.fotos_caderno
+  for insert
+  with check (
+    enviado_por = auth.uid()
+    and public.eh_responsavel_teste(projeto_teste_id)
+  );
+
+drop policy if exists "Responsável remove a própria foto do caderno" on public.fotos_caderno;
+create policy "Responsável remove a própria foto do caderno"
+  on public.fotos_caderno
+  for delete
+  using (
+    enviado_por = auth.uid()
+    and public.eh_responsavel_teste(projeto_teste_id)
+  );
+
+-- Bucket PRIVADO (público = false), servido por signed URL.
+insert into storage.buckets (id, name, public)
+values ('cadernos', 'cadernos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "Ver foto de caderno do próprio teste" on storage.objects;
+create policy "Ver foto de caderno do próprio teste"
+  on storage.objects
+  for select
+  using (
+    bucket_id = 'cadernos'
+    and (
+      public.eh_executor_teste(((storage.foldername(name))[1])::uuid)
+      or public.eh_coautor_do_teste(((storage.foldername(name))[1])::uuid)
+      or public.is_orientador()
+      or public.pode_exportar_dados()
+    )
+  );
+
+drop policy if exists "Responsável sobe foto de caderno" on storage.objects;
+create policy "Responsável sobe foto de caderno"
+  on storage.objects
+  for insert
+  with check (
+    bucket_id = 'cadernos'
+    and public.eh_responsavel_teste(((storage.foldername(name))[1])::uuid)
+  );
+
+drop policy if exists "Responsável apaga foto de caderno" on storage.objects;
+create policy "Responsável apaga foto de caderno"
+  on storage.objects
+  for delete
+  using (
+    bucket_id = 'cadernos'
+    and public.eh_responsavel_teste(((storage.foldername(name))[1])::uuid)
+  );
+
+-- ----------------------------------------------------------------------------
 -- CONTAGEM PÚBLICA DE PROJETOS
 -- ----------------------------------------------------------------------------
 -- Só o número, nunca os dados — usado na página inicial pública (barra
