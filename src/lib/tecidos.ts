@@ -25,12 +25,27 @@ export function nomeTecido(tecido: Tecido) {
 }
 
 /**
- * Título sem o sufixo de tecido ("Catalase (CAT) — eritrócitos" →
- * "Catalase (CAT)"). O tecido é mostrado separadamente, de forma
- * consistente, para não repetir e padronizar a apresentação.
+ * Só o nome do ensaio, sem o sufixo de matriz ("Catalase (CAT) — eritrócitos"
+ * → "Catalase (CAT)"). Usado em contextos que já mostram o tecido/matriz
+ * separadamente.
  */
 export function tituloCurto(titulo: string) {
   return titulo.split(" — ")[0].trim();
+}
+
+/**
+ * Rótulo para listas que já vêm agrupadas por tecido: mostra a matriz
+ * específica apenas quando ela distingue itens do mesmo grupo. Só o grupo
+ * "eritrócitos e plasma" tem matrizes diferentes (eritrócitos vs plasma) —
+ * nos demais o cabeçalho do grupo já diz o tecido, então o sufixo é
+ * redundante e é removido.
+ */
+export function tituloSemTecido(titulo: string, tecido: Tecido) {
+  const partes = titulo.split(" — ");
+  const ensaio = partes[0].trim();
+  const matriz = partes[1]?.trim();
+  if (!matriz) return ensaio;
+  return tecido === "eritrocitos-plasma" ? `${ensaio} — ${matriz}` : ensaio;
 }
 
 export function testesPorTecido(): Map<Tecido, TesteResumo[]> {

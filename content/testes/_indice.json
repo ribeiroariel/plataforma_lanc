@@ -1,62 +1,62 @@
 [
   {
     "slug": "preparo-amostras-cortex-rins",
-    "titulo": "Preparo das amostras (tecido)",
+    "titulo": "Preparo das amostras — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "cat-cortex-rins",
-    "titulo": "Catalase (CAT)",
+    "titulo": "Catalase (CAT) — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "sod-cortex-rins",
-    "titulo": "Superóxido dismutase (SOD)",
+    "titulo": "Superóxido dismutase (SOD) — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "tbars-cortex-rins",
-    "titulo": "TBARS — peroxidação lipídica",
+    "titulo": "Peroxidação lipídica (TBARS) — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "sulfidrilas-cortex-rins",
-    "titulo": "Sulfidrilas totais e não-proteicas",
+    "titulo": "Sulfidrilas totais e não-proteicas — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "carboniladas-cortex-rins",
-    "titulo": "Proteínas carboniladas",
+    "titulo": "Proteínas carboniladas — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "lowry-cortex-rins",
-    "titulo": "Dosagem de proteínas — método de Lowry",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "tiois-dissulfetos-cortex-rins",
-    "titulo": "Tióis e dissulfetos",
+    "titulo": "Tióis e dissulfetos — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "acido-ascorbico-cortex-rins",
-    "titulo": "Ácido ascórbico (vitamina C)",
+    "titulo": "Ácido ascórbico (vitamina C) — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "h2o2-cortex-rins",
-    "titulo": "Conteúdo de peróxido de hidrogênio (H2O2)",
+    "titulo": "Peróxido de hidrogênio (H₂O₂) — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "valores-referencia-cortex-rins",
-    "titulo": "Valores de referência — controles",
+    "titulo": "Valores de referência — córtex e rins",
     "tecido": "cortex-rins"
   },
   {
     "slug": "preparo-amostras-eritrocitos-plasma",
-    "titulo": "Preparo das amostras",
+    "titulo": "Preparo das amostras — eritrócitos e plasma",
     "tecido": "eritrocitos-plasma"
   },
   {
@@ -66,12 +66,12 @@
   },
   {
     "slug": "sod-eritrocitos",
-    "titulo": "SOD — eritrócitos",
+    "titulo": "Superóxido dismutase (SOD) — eritrócitos",
     "tecido": "eritrocitos-plasma"
   },
   {
     "slug": "tbars-eritrocitos",
-    "titulo": "TBARS — eritrócitos",
+    "titulo": "Peroxidação lipídica (TBARS) — eritrócitos",
     "tecido": "eritrocitos-plasma"
   },
   {
@@ -81,12 +81,12 @@
   },
   {
     "slug": "tbars-plasma",
-    "titulo": "TBARS — plasma",
+    "titulo": "Peroxidação lipídica (TBARS) — plasma",
     "tecido": "eritrocitos-plasma"
   },
   {
     "slug": "sulfidrilas-eritrocitos-plasma",
-    "titulo": "Sulfidrilas — eritrócitos/plasma",
+    "titulo": "Sulfidrilas totais e não-proteicas — eritrócitos e plasma",
     "tecido": "eritrocitos-plasma"
   },
   {
@@ -96,17 +96,17 @@
   },
   {
     "slug": "acido-ascorbico-plasma",
-    "titulo": "Ácido ascórbico — plasma",
+    "titulo": "Ácido ascórbico (vitamina C) — plasma",
     "tecido": "eritrocitos-plasma"
   },
   {
     "slug": "lowry-eritrocitos-plasma",
-    "titulo": "Dosagem de proteínas (Lowry) — eritrócitos/plasma",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — eritrócitos e plasma",
     "tecido": "eritrocitos-plasma"
   },
   {
     "slug": "valores-referencia-eritrocitos-plasma",
-    "titulo": "Valores de referência — controles",
+    "titulo": "Valores de referência — eritrócitos e plasma",
     "tecido": "eritrocitos-plasma"
   },
   {
@@ -121,17 +121,17 @@
   },
   {
     "slug": "sod-figado",
-    "titulo": "SOD — fígado",
+    "titulo": "Superóxido dismutase (SOD) — fígado",
     "tecido": "figado"
   },
   {
     "slug": "tbars-figado",
-    "titulo": "TBARS — fígado",
+    "titulo": "Peroxidação lipídica (TBARS) — fígado",
     "tecido": "figado"
   },
   {
     "slug": "sulfidrilas-figado",
-    "titulo": "Sulfidrilas — fígado",
+    "titulo": "Sulfidrilas totais e não-proteicas — fígado",
     "tecido": "figado"
   },
   {
@@ -146,17 +146,17 @@
   },
   {
     "slug": "acido-ascorbico-figado",
-    "titulo": "Ácido ascórbico — fígado",
+    "titulo": "Ácido ascórbico (vitamina C) — fígado",
     "tecido": "figado"
   },
   {
     "slug": "lowry-figado",
-    "titulo": "Dosagem de proteínas (Lowry) — fígado",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — fígado",
     "tecido": "figado"
   },
   {
     "slug": "valores-referencia-figado",
-    "titulo": "Valores de referência — controles",
+    "titulo": "Valores de referência — fígado",
     "tecido": "figado"
   },
   {

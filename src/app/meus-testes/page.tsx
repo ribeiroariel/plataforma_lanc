@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { testes as catalogoTestes, nomeTecido, tituloCurto } from "@/lib/testes";
+import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
 
 type TesteRow = {
   id: string;
@@ -55,7 +55,7 @@ export default async function MeusTestes() {
 
   function tituloDe(slug: string) {
     const t = catalogoTestes.find((c) => c.slug === slug);
-    return t ? tituloCurto(t.titulo) : slug;
+    return t ? tituloSemTecido(t.titulo, t.tecido) : slug;
   }
   function tecidoDe(slug: string) {
     const t = catalogoTestes.find((c) => c.slug === slug);

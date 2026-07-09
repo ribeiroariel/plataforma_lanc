@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { testes, nomeTecido, tituloCurto } from "@/lib/testes";
+import { testes, nomeTecido, tituloSemTecido } from "@/lib/testes";
 import { conteudoProtocolo } from "@/lib/protocolo";
 import { ProtocoloTeste } from "@/components/ProtocoloTeste";
 
@@ -26,7 +26,7 @@ export default async function PaginaTeste({
         {nomeTecido(teste.tecido)}
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-        {tituloCurto(teste.titulo)}
+        {tituloSemTecido(teste.titulo, teste.tecido)}
       </h1>
 
       {ehLowry && (

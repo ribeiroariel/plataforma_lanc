@@ -9,7 +9,7 @@ export const INPUT_SM =
   "rounded border border-rule bg-paper-raised px-2 py-1 text-sm text-ink focus:border-absorbance focus:outline-none";
 
 export const BOTAO_PRIMARIO =
-  "rounded bg-absorbance px-4 py-2 text-paper transition-colors hover:bg-ink disabled:opacity-50";
+  "rounded bg-signal px-4 py-2 font-medium text-white transition hover:brightness-110 disabled:opacity-50";
 
 export const BOTAO_SECUNDARIO =
   "rounded border border-rule px-4 py-2 text-ink transition-colors hover:border-absorbance disabled:opacity-50";

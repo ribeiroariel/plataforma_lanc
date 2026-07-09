@@ -112,26 +112,28 @@ export default async function RootLayout({
             </div>
           </div>
 
-          {/* Cabeçalho principal com logo + wordmark */}
-          <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/logo-lanc.jpg"
-                alt="Logo do LANC"
-                width={56}
-                height={56}
-                className="h-12 w-12 shrink-0 rounded-full border border-rule object-cover sm:h-14 sm:w-14"
-                priority
-              />
-              <span className="leading-none">
-                <span className="block font-display text-2xl font-medium tracking-tight text-ink sm:text-3xl">
-                  LANC
+          {/* Cabeçalho principal com logo + wordmark (banda tijolo editorial) */}
+          <div className="bg-signal text-white">
+            <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
+              <Link href="/" className="flex items-center gap-3">
+                <Image
+                  src="/logo-lanc.jpg"
+                  alt="Logo do LANC"
+                  width={56}
+                  height={56}
+                  className="h-12 w-12 shrink-0 rounded-full border border-white/40 object-cover sm:h-14 sm:w-14"
+                  priority
+                />
+                <span className="leading-none">
+                  <span className="block font-display text-2xl font-medium tracking-tight text-white sm:text-3xl">
+                    LANC
+                  </span>
+                  <span className="mt-0.5 block font-display text-sm italic text-white/80">
+                    Laboratório de Neurociências e Comportamento
+                  </span>
                 </span>
-                <span className="mt-0.5 block font-display text-sm italic text-ink-soft">
-                  Laboratório de Neurociências e Comportamento
-                </span>
-              </span>
-            </Link>
+              </Link>
+            </div>
           </div>
 
           <NavPrincipal itens={navPrincipal} />

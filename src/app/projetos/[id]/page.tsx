@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { testes as catalogoTestes, nomeTecido, tituloCurto } from "@/lib/testes";
+import { testes as catalogoTestes } from "@/lib/testes";
 import { ehTesteDesignavel } from "@/lib/tiposTeste";
 import FormularioMembro from "./FormularioMembro";
 import FormularioTeste from "./FormularioTeste";
@@ -259,13 +259,9 @@ export default async function DetalheProjeto({
               >
                 <div>
                   <p className="font-medium text-ink">
-                    {teste ? tituloCurto(teste.titulo) : t.teste_slug}
+                    {teste ? teste.titulo : t.teste_slug}
                   </p>
                   <p className="text-ink-soft">
-                    {teste && (
-                      <span className="text-signal">{nomeTecido(teste.tecido)}</span>
-                    )}
-                    {teste && " · "}
                     {t.leva && <span>Leva {t.leva} · </span>}
                     Responsável: {t.profiles?.nome ?? "?"}
                   </p>

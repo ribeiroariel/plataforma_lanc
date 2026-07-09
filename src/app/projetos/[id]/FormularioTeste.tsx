@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { designarTeste } from "@/lib/actions/projetos";
-import { nomeTecido, tituloCurto, type TesteResumo } from "@/lib/tecidos";
+import { type TesteResumo } from "@/lib/tecidos";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 import type { Pessoa } from "./FormularioMembro";
 
@@ -48,7 +48,7 @@ export default function FormularioTeste({
             </option>
             {testes.map((t) => (
               <option key={t.slug} value={t.slug}>
-                {tituloCurto(t.titulo)} — {nomeTecido(t.tecido)}
+                {t.titulo}
               </option>
             ))}
           </select>

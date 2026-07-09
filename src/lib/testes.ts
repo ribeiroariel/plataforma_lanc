@@ -7,6 +7,7 @@ export {
   testes,
   nomeTecido,
   tituloCurto,
+  tituloSemTecido,
   testesPorTecido,
   type Tecido,
   type TesteResumo,

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { testes as catalogoTestes, nomeTecido, tituloCurto } from "@/lib/testes";
+import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
 import { configDoTeste } from "@/lib/tiposTeste";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 import RegistroResultado from "./RegistroResultado";
@@ -116,7 +116,7 @@ export default async function PaginaResultado({
         </p>
       )}
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-        {teste ? tituloCurto(teste.titulo) : projetoTeste.teste_slug}
+        {teste ? tituloSemTecido(teste.titulo, teste.tecido) : projetoTeste.teste_slug}
       </h1>
       {projetoTeste.leva && (
         <p className="mt-1 font-mono text-xs text-ink-soft">

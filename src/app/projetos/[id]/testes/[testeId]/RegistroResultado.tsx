@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -20,7 +20,8 @@ import {
   definirStatusTeste,
   type LinhaResultado,
 } from "@/lib/actions/resultados";
-import { INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from "@/lib/estilos";
+import { INPUT_SM } from "@/lib/estilos";
+import ImportarTecan from "./ImportarTecan";
 
 const TEMPOS_CAT = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const TEMPOS_SOD = [0, 30, 60, 90, 120];
@@ -155,12 +156,28 @@ export default function RegistroResultado({
   const [curva, setCurva] = useState<Record<string, string>>({});
 
   const [status, setStatus] = useState(statusAtual);
-  const [salvando, setSalvando] = useState(false);
+  const [salvandoRato, setSalvandoRato] = useState<string | null>(null);
   const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
-  const [autoSalvo, setAutoSalvo] = useState<string | null>(null);
+  const [erroRato, setErroRato] = useState<Record<string, string>>({});
 
   const editavel = (rato: string) => podeRegistrar && !confirmados.has(rato);
+
+  // Mescla o que a planilha do Tecan preencheu na tabela, sem tocar em ratos
+  // já confirmados (esses estão travados). O bolsista ainda confere e confirma.
+  function aplicarImportacaoTecan(
+    preenchimento: Record<string, Record<string, string>>
+  ) {
+    setLinhas((prev) => {
+      const novo = { ...prev };
+      for (const [rato, cols] of Object.entries(preenchimento)) {
+        if (confirmados.has(rato)) continue;
+        novo[rato] = { ...(novo[rato] ?? {}), ...cols };
+      }
+      return novo;
+    });
+    setMensagem(null);
+  }
 
   function setCelula(rato: string, col: string, valor: string) {
     setLinhas((prev) => ({
@@ -290,94 +307,57 @@ export default function RegistroResultado({
     return sessao;
   }
 
-  function montarLinhas(): LinhaResultado[] {
-    const sessao = montarSessao();
-    const out: LinhaResultado[] = [];
-    for (const r of roster) {
-      const rato = String(r.numero);
-      const dados = linhas[rato] ?? {};
-      const temAlgum =
-        Object.values(dados).some((v) => v !== "" && v != null) ||
-        (obs[rato] ?? "") !== "";
-      if (!temAlgum) continue;
-      out.push({
-        rato,
-        grupoId: r.grupoId,
-        leituras: { tipo: config.familia, colunas: dados, sessao },
-        valorCalculado: valorDoRato(rato),
-        dentroDoPadrao: qcSessaoOk,
-        observacoes: obs[rato] ?? null,
-      });
-    }
-    return out;
+  // Monta a linha de UM rato para salvar. Retorna null se ainda não há dado
+  // suficiente (nenhuma leitura preenchida) para confirmar.
+  function montarLinhaRato(rato: string): LinhaResultado | null {
+    const r = roster.find((x) => String(x.numero) === rato);
+    if (!r) return null;
+    const dados = linhas[rato] ?? {};
+    const temLeitura = Object.values(dados).some((v) => v !== "" && v != null);
+    if (!temLeitura) return null;
+    return {
+      rato,
+      grupoId: r.grupoId,
+      leituras: { tipo: config.familia, colunas: dados, sessao: montarSessao() },
+      valorCalculado: valorDoRato(rato),
+      dentroDoPadrao: qcSessaoOk,
+      observacoes: obs[rato] ?? null,
+    };
   }
 
-  async function salvar(confirmar: boolean) {
-    if (confirmar) {
-      const ok = window.confirm(
-        "Confirmar trava a edição dos valores (só as observações poderão ser alteradas depois). Deseja continuar?"
-      );
-      if (!ok) return;
-    }
+  // Confirma um rato por vez: salva imediatamente no banco e trava a linha.
+  // Não há rascunho nem autosave — só o que é confirmado fica persistido, e
+  // um resultado confirmado não pode mais ter o valor alterado (trigger no
+  // banco garante isso mesmo fora do site).
+  async function confirmarRato(rato: string) {
+    setErroRato((p) => ({ ...p, [rato]: "" }));
     setMensagem(null);
-    setSalvando(true);
-
-    const linhasParaSalvar = montarLinhas();
-    const resultado = await salvarResultadosLote({
+    const linha = montarLinhaRato(rato);
+    if (!linha) {
+      setErroRato((p) => ({ ...p, [rato]: "Preencha as leituras antes de confirmar." }));
+      return;
+    }
+    if (linha.valorCalculado === null && config.familia !== "simples") {
+      setErroRato((p) => ({
+        ...p,
+        [rato]: "Faltam dados da sessão (curva/controle) para calcular o valor.",
+      }));
+      return;
+    }
+    setSalvandoRato(rato);
+    const r = await salvarResultadosLote({
       projetoId,
       projetoTesteId,
-      linhas: linhasParaSalvar,
-      confirmar,
+      linhas: [linha],
+      confirmar: true,
     });
-    setSalvando(false);
-
-    if ("erro" in resultado) {
-      setMensagem(resultado.erro);
+    setSalvandoRato(null);
+    if ("erro" in r) {
+      setErroRato((p) => ({ ...p, [rato]: r.erro }));
       return;
     }
-    if (confirmar) {
-      setConfirmados((prev) => {
-        const novo = new Set(prev);
-        for (const l of linhasParaSalvar) novo.add(l.rato);
-        return novo;
-      });
-    }
-    setMensagem(
-      `${linhasParaSalvar.length} resultado(s) salvo(s)${confirmar ? " e confirmado(s)" : ""}.`
-    );
+    setConfirmados((prev) => new Set(prev).add(rato));
   }
-
-  // Salvamento automático (rascunho): 2,5s após a última mudança, salva
-  // silenciosamente — protege contra queda de internet / fechar o site.
-  const primeiroRender = useRef(true);
-  const snapshot = JSON.stringify({ linhas, obs, qcCat, controleSod, curva });
-  useEffect(() => {
-    if (!podeRegistrar) return;
-    if (primeiroRender.current) {
-      primeiroRender.current = false;
-      return;
-    }
-    const timer = setTimeout(async () => {
-      const linhasParaSalvar = montarLinhas();
-      if (linhasParaSalvar.length === 0) return;
-      const r = await salvarResultadosLote({
-        projetoId,
-        projetoTesteId,
-        linhas: linhasParaSalvar,
-        confirmar: false,
-      });
-      if (!("erro" in r)) {
-        setAutoSalvo(
-          new Date().toLocaleTimeString("pt-BR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        );
-      }
-    }, 2500);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot]);
 
   async function alternarStatus() {
     const novo = status === "concluido" ? "pendente" : "concluido";
@@ -423,6 +403,16 @@ export default function RegistroResultado({
           1,240.
         </span>
       </div>
+
+      {podeRegistrar && (
+        <ImportarTecan
+          familia={config.familia}
+          tempos={tempos}
+          camposBrutos={config.camposBrutos ?? []}
+          roster={roster}
+          onAplicar={aplicarImportacaoTecan}
+        />
+      )}
 
       {config.familia === "cat" && config.qc && (
         <PainelSessao titulo="Controle de qualidade da sessão">
@@ -531,6 +521,7 @@ export default function RegistroResultado({
                 Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
               </th>
               <th className="py-2 pl-2 font-normal">Observação</th>
+              {podeRegistrar && <th className="py-2 pl-2 font-normal">Confirmar</th>}
             </tr>
           </thead>
           <tbody>
@@ -573,11 +564,36 @@ export default function RegistroResultado({
                       onChange={(e) =>
                         setObs((p) => ({ ...p, [rato]: e.target.value }))
                       }
-                      disabled={!podeRegistrar}
+                      disabled={!editavel(rato)}
                       placeholder="—"
                       className={`${INPUT_SM} w-40`}
                     />
                   </td>
+                  {podeRegistrar && (
+                    <td className="py-1.5 pl-2">
+                      {travado ? (
+                        <span className="font-mono text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400">
+                          🔒 confirmado
+                        </span>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => confirmarRato(rato)}
+                            disabled={salvandoRato === rato}
+                            className="rounded bg-signal px-3 py-1 text-xs font-medium text-white transition hover:brightness-110 disabled:opacity-50"
+                          >
+                            {salvandoRato === rato ? "Salvando..." : "Confirmar"}
+                          </button>
+                          {erroRato[rato] && (
+                            <span className="max-w-[10rem] text-[11px] leading-tight text-alerta">
+                              {erroRato[rato]}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -595,29 +611,14 @@ export default function RegistroResultado({
       )}
 
       {podeRegistrar && (
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => salvar(false)}
-            disabled={salvando}
-            className={`text-sm ${BOTAO_SECUNDARIO}`}
-          >
-            {salvando ? "Salvando..." : "Salvar rascunho"}
-          </button>
-          <button
-            type="button"
-            onClick={() => salvar(true)}
-            disabled={salvando}
-            className={`text-sm ${BOTAO_PRIMARIO}`}
-          >
-            Confirmar resultados
-          </button>
-          {mensagem && <span className="text-sm text-ink-soft">{mensagem}</span>}
-          {!mensagem && autoSalvo && (
-            <span className="text-xs text-ink-soft">
-              Salvo automaticamente às {autoSalvo}
-            </span>
-          )}
+        <div className="mt-4 space-y-1">
+          <p className="max-w-2xl text-xs leading-relaxed text-ink-soft">
+            Confirme um rato por vez. Ao confirmar, aquela linha é salva na hora
+            e travada — não precisa salvar rascunho, e o que foi confirmado
+            continua salvo mesmo se a internet ou o site cair. Um resultado
+            confirmado não pode mais ser alterado.
+          </p>
+          {mensagem && <p className="text-sm text-alerta">{mensagem}</p>}
         </div>
       )}
 
