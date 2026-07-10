@@ -71,3 +71,105 @@ export async function removerFuncao(dados: {
   revalidatePath(`/projetos/${dados.projetoId}/sacrificio`);
   return { sucesso: true };
 }
+
+// --- Fatia 2: sobrevivência + contagem ao vivo ---
+
+// Semeia/atualiza a lista de ratos do sacrifício com quem sobreviveu. O upsert
+// só toca sobreviveu/motivo/grupo — caixa/ordem/status (da contagem) ficam.
+export async function salvarSobrevivencia(dados: {
+  projetoId: string;
+  sacrificioId: string;
+  linhas: {
+    rato: string;
+    grupoId: string;
+    sobreviveu: boolean;
+    motivo: string | null;
+  }[];
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  if (dados.linhas.length === 0) return { sucesso: true };
+
+  const excluidoSemMotivo = dados.linhas.find(
+    (l) => !l.sobreviveu && !(l.motivo && l.motivo.trim())
+  );
+  if (excluidoSemMotivo) {
+    return {
+      erro: `Rato ${excluidoSemMotivo.rato}: informe a justificativa da exclusão.`,
+    };
+  }
+
+  const paraUpsert = dados.linhas.map((l) => ({
+    sacrificio_id: dados.sacrificioId,
+    rato: l.rato,
+    grupo_id: l.grupoId,
+    sobreviveu: l.sobreviveu,
+    exclusao_motivo: l.sobreviveu ? null : (l.motivo?.trim() ?? null),
+  }));
+
+  const { error } = await supabase
+    .from("sacrificio_ratos")
+    .upsert(paraUpsert, { onConflict: "sacrificio_id,rato" });
+  if (error) {
+    return { erro: "Não foi possível salvar a sobrevivência: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}
+
+// Marca um rato como dissecado, gravando a caixa (digitada ao vivo). A ordem
+// na sequência é calculada no servidor (max + 1) para não haver corrida quando
+// marcam vários rápido.
+export async function marcarDissecado(dados: {
+  projetoId: string;
+  sacrificioId: string;
+  sacrificioRatoId: string;
+  caixa: string | null;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+
+  const { data: maxRow } = await supabase
+    .from("sacrificio_ratos")
+    .select("ordem")
+    .eq("sacrificio_id", dados.sacrificioId)
+    .not("ordem", "is", null)
+    .order("ordem", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const proximaOrdem = ((maxRow?.ordem as number | null) ?? 0) + 1;
+
+  const { error } = await supabase
+    .from("sacrificio_ratos")
+    .update({
+      caixa: dados.caixa?.trim() || null,
+      ordem: proximaOrdem,
+      status: "dissecado",
+    })
+    .eq("id", dados.sacrificioRatoId);
+  if (error) {
+    return { erro: "Não foi possível registrar: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}
+
+// Desfaz o "dissecado" (volta para pendente) — corrige um clique errado.
+export async function reabrirRato(dados: {
+  projetoId: string;
+  sacrificioId: string;
+  sacrificioRatoId: string;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("sacrificio_ratos")
+    .update({ status: "pendente" })
+    .eq("id", dados.sacrificioRatoId);
+  if (error) {
+    return { erro: "Não foi possível reabrir: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}

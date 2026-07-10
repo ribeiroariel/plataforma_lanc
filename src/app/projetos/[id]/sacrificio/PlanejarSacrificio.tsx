@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
   criarSacrificio,
   designarFuncao,
@@ -192,6 +193,12 @@ function PainelSacrificio({
         )}
         {sacrificio.duracaoMin != null && <span>· ~{sacrificio.duracaoMin} min</span>}
         <span>· {sacrificio.status}</span>
+        <Link
+          href={`/projetos/${projetoId}/sacrificio/${sacrificio.id}`}
+          className="ml-auto rounded border border-rule px-2 py-0.5 text-[11px] normal-case tracking-normal text-ink transition-colors hover:border-signal"
+        >
+          Abrir dia →
+        </Link>
       </div>
 
       <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft">
