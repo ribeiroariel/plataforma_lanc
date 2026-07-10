@@ -55,15 +55,16 @@
 | destino | text | `bioquimica` / `histologia` / `ambos` |
 | status | text | `pendente` / `dissecado` |
 
-### `sacrificio_rato_tecidos` — o que foi (ou não) coletado por rato/tecido
+### `sacrificio_rato_tecidos` — o que foi (ou não) coletado por rato/órgão
 | coluna | tipo | nota |
 |---|---|---|
 | id | uuid PK | |
 | sacrificio_rato_id | uuid FK | |
-| tecido | text | órgão/tecido (lista do §3) |
-| coletado | bool | |
+| tecido | text | órgão (lista do §3) |
+| coletado | bool | pegou a amostra bioquímica |
 | nao_coletado_motivo | text null | justificativa (crítico p/ sangue) |
-| uso | text | `bioquimica` / `histologia` |
+| para_histologia | bool | órgão destinado à histologia (flag independente) |
+| — | — | unique (sacrificio_rato_id, tecido) |
 
 ### `sacrificio_aliquotas` — peso → tampão (padrão célula→confirma→trava)
 | coluna | tipo | nota |

@@ -5,10 +5,18 @@ import {
   salvarSobrevivencia,
   marcarDissecado,
   reabrirRato,
+  salvarColeta,
 } from "@/lib/actions/sacrificio";
+import { ORGAOS_DISSECAVEIS } from "@/lib/sacrificio";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type RatoRoster = { numero: number; grupoId: string; grupoNome: string };
+type TecidoColeta = {
+  tecido: string;
+  coletado: boolean;
+  motivo: string | null;
+  paraHistologia: boolean;
+};
 type RatoSalvo = {
   id: string;
   rato: string;
@@ -17,6 +25,7 @@ type RatoSalvo = {
   sobreviveu: boolean;
   motivo: string | null;
   status: string;
+  tecidos: TecidoColeta[];
 };
 
 type Props = {
@@ -286,6 +295,170 @@ export default function DiaSacrificio({
           </>
         )}
       </section>
+
+      {/* 3. Coleta e histologia */}
+      <section>
+        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          3 · Coleta e histologia
+        </p>
+        {dissecados.length === 0 ? (
+          <p className="text-xs text-ink-soft">
+            Marque ratos como dissecados na contagem para registrar a coleta de
+            órgãos.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {dissecados.map((r) => (
+              <PainelColeta
+                key={r.id}
+                projetoId={projetoId}
+                sacrificioId={sacrificioId}
+                rato={r}
+                podeRegistrar={podeRegistrar}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function PainelColeta({
+  projetoId,
+  sacrificioId,
+  rato,
+  podeRegistrar,
+}: {
+  projetoId: string;
+  sacrificioId: string;
+  rato: RatoSalvo;
+  podeRegistrar: boolean;
+}) {
+  const salvo = new Map(rato.tecidos.map((t) => [t.tecido, t]));
+  const [pend, iniciar] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+  const [estados, setEstados] = useState<
+    Record<string, { coletado: boolean; motivo: string; hist: boolean }>
+  >(() => {
+    const init: Record<
+      string,
+      { coletado: boolean; motivo: string; hist: boolean }
+    > = {};
+    for (const o of ORGAOS_DISSECAVEIS) {
+      const s = salvo.get(o.valor);
+      init[o.valor] = {
+        coletado: s?.coletado ?? true,
+        motivo: s?.motivo ?? "",
+        hist: s?.paraHistologia ?? false,
+      };
+    }
+    return init;
+  });
+
+  function setOrgao(
+    tecido: string,
+    patch: Partial<{ coletado: boolean; motivo: string; hist: boolean }>
+  ) {
+    setEstados((p) => ({ ...p, [tecido]: { ...p[tecido], ...patch } }));
+  }
+
+  function salvar() {
+    setErro(null);
+    const tecidos = ORGAOS_DISSECAVEIS.map((o) => ({
+      tecido: o.valor,
+      coletado: estados[o.valor].coletado,
+      motivo: estados[o.valor].motivo || null,
+      paraHistologia: estados[o.valor].hist,
+    }));
+    iniciar(async () => {
+      const res = await salvarColeta({
+        projetoId,
+        sacrificioId,
+        sacrificioRatoId: rato.id,
+        tecidos,
+      });
+      if ("erro" in res) setErro(res.erro);
+    });
+  }
+
+  return (
+    <div className="rounded border border-rule bg-paper-raised p-3">
+      <p className="mb-2 font-mono text-xs text-ink">
+        Rato {rato.rato}
+        {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <th className="py-1 pr-3 font-normal">Órgão</th>
+              <th className="py-1 pr-3 font-normal">Coletado</th>
+              <th className="py-1 pr-3 font-normal">Histologia</th>
+              <th className="py-1 font-normal">Se não coletado, por quê</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ORGAOS_DISSECAVEIS.map((o) => {
+              const e = estados[o.valor];
+              return (
+                <tr key={o.valor} className="border-t border-rule/60">
+                  <td className="py-1 pr-3 text-ink">{o.rotulo}</td>
+                  <td className="py-1 pr-3">
+                    <input
+                      type="checkbox"
+                      checked={e.coletado}
+                      disabled={!podeRegistrar}
+                      onChange={(ev) =>
+                        setOrgao(o.valor, { coletado: ev.target.checked })
+                      }
+                    />
+                  </td>
+                  <td className="py-1 pr-3">
+                    <input
+                      type="checkbox"
+                      checked={e.hist}
+                      disabled={!podeRegistrar}
+                      onChange={(ev) =>
+                        setOrgao(o.valor, { hist: ev.target.checked })
+                      }
+                    />
+                  </td>
+                  <td className="py-1">
+                    {!e.coletado && (
+                      <input
+                        type="text"
+                        value={e.motivo}
+                        disabled={!podeRegistrar}
+                        onChange={(ev) =>
+                          setOrgao(o.valor, { motivo: ev.target.value })
+                        }
+                        placeholder={
+                          o.valor === "plasma" || o.valor === "eritrocito"
+                            ? "Ex.: coleta de sangue falhou"
+                            : "Motivo"
+                        }
+                        className={`${INPUT_SM} w-56`}
+                      />
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {podeRegistrar && (
+        <button
+          type="button"
+          onClick={salvar}
+          disabled={pend}
+          className={`mt-2 ${BOTAO_SECUNDARIO_SM}`}
+        >
+          {pend ? "Salvando..." : "Salvar coleta"}
+        </button>
+      )}
+      {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
     </div>
   );
 }

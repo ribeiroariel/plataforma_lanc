@@ -154,6 +154,43 @@ export async function marcarDissecado(dados: {
   return { sucesso: true };
 }
 
+// --- Fatia 3: coleta + histologia por órgão ---
+
+// Salva a coleta de um rato (uma linha por órgão): coletado + motivo (se não) +
+// destino histológico. Upsert por (rato, órgão).
+export async function salvarColeta(dados: {
+  projetoId: string;
+  sacrificioId: string;
+  sacrificioRatoId: string;
+  tecidos: {
+    tecido: string;
+    coletado: boolean;
+    motivo: string | null;
+    paraHistologia: boolean;
+  }[];
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  if (dados.tecidos.length === 0) return { sucesso: true };
+
+  const paraUpsert = dados.tecidos.map((t) => ({
+    sacrificio_rato_id: dados.sacrificioRatoId,
+    tecido: t.tecido,
+    coletado: t.coletado,
+    nao_coletado_motivo: t.coletado ? null : t.motivo?.trim() || null,
+    para_histologia: t.paraHistologia,
+  }));
+
+  const { error } = await supabase
+    .from("sacrificio_rato_tecidos")
+    .upsert(paraUpsert, { onConflict: "sacrificio_rato_id,tecido" });
+  if (error) {
+    return { erro: "Não foi possível salvar a coleta: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}
+
 // Desfaz o "dissecado" (volta para pendente) — corrige um clique errado.
 export async function reabrirRato(dados: {
   projetoId: string;

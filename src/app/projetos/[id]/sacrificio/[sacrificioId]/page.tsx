@@ -14,6 +14,12 @@ type Sacrificio = {
 };
 type Projeto = { nome: string; numero_levas: number | null; finalizado: boolean };
 type Membro = { profile_id: string; papel: "coautor" | "ajudante" };
+type TecidoColeta = {
+  tecido: string;
+  coletado: boolean;
+  nao_coletado_motivo: string | null;
+  para_histologia: boolean;
+};
 type RatoSalvo = {
   id: string;
   rato: string;
@@ -22,6 +28,7 @@ type RatoSalvo = {
   sobreviveu: boolean;
   exclusao_motivo: string | null;
   status: string;
+  sacrificio_rato_tecidos: TecidoColeta[];
 };
 
 export default async function PaginaDiaSacrificio({
@@ -63,7 +70,9 @@ export default async function PaginaDiaSacrificio({
         .returns<Membro[]>(),
       supabase
         .from("sacrificio_ratos")
-        .select("id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status")
+        .select(
+          "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, coletado, nao_coletado_motivo, para_histologia)"
+        )
         .eq("sacrificio_id", sacrificioId)
         .returns<RatoSalvo[]>(),
     ]);
@@ -121,6 +130,12 @@ export default async function PaginaDiaSacrificio({
           sobreviveu: r.sobreviveu,
           motivo: r.exclusao_motivo,
           status: r.status,
+          tecidos: (r.sacrificio_rato_tecidos ?? []).map((t) => ({
+            tecido: t.tecido,
+            coletado: t.coletado,
+            motivo: t.nao_coletado_motivo,
+            paraHistologia: t.para_histologia,
+          })),
         }))}
       />
     </main>

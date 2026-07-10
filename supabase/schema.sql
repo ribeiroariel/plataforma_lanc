@@ -966,9 +966,9 @@ create table if not exists public.sacrificio_ratos (
   unique (sacrificio_id, rato)
 );
 
--- O que foi (ou não) coletado por rato/órgão. Histologia é marcada por órgão
--- (uso = 'histologia'), então o mesmo órgão pode ter linha bioquímica e outra
--- histológica.
+-- O que foi (ou não) coletado por rato/órgão, uma linha por (rato, órgão).
+-- `coletado` = pegou a amostra bioquímica; `para_histologia` = esse órgão do
+-- rato foi destinado à histologia (flag independente).
 create table if not exists public.sacrificio_rato_tecidos (
   id uuid primary key default gen_random_uuid(),
   sacrificio_rato_id uuid not null
@@ -976,9 +976,8 @@ create table if not exists public.sacrificio_rato_tecidos (
   tecido text not null,
   coletado boolean not null default true,
   nao_coletado_motivo text,
-  uso text not null default 'bioquimica'
-    check (uso in ('bioquimica', 'histologia')),
-  unique (sacrificio_rato_id, tecido, uso)
+  para_histologia boolean not null default false,
+  unique (sacrificio_rato_id, tecido)
 );
 
 -- Peso da amostra → tampão. Homogenato 10% (1:9): volume_ul = peso_g * 9000
