@@ -24,6 +24,15 @@ export function nomeTecido(tecido: Tecido) {
   return NOMES_TECIDO[tecido];
 }
 
+// Tecidos que um projeto pode marcar como "serão analisados". Exclui "geral"
+// (tampões, referências, preparo de amostras) — nenhum teste designável tem
+// esse tecido. É o conjunto que filtra os testes oferecidos na designação.
+export const TECIDOS_ANALISAVEIS: Tecido[] = [
+  "cortex-rins",
+  "eritrocitos-plasma",
+  "figado",
+];
+
 /**
  * Só o nome do ensaio, sem o sufixo de matriz ("Catalase (CAT) — eritrócitos"
  * → "Catalase (CAT)"). Usado em contextos que já mostram o tecido/matriz

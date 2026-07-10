@@ -16,9 +16,8 @@ import { regressaoLinear } from "@/lib/estatistica";
 import type { RatoDoRoster } from "@/lib/roster";
 import type { ConfigTeste } from "@/lib/tiposTeste";
 import {
-  salvarResultadosLote,
+  confirmarCelula as confirmarCelulaServer,
   definirStatusTeste,
-  type LinhaResultado,
 } from "@/lib/actions/resultados";
 import { INPUT_SM } from "@/lib/estilos";
 import ImportarTecan from "./ImportarTecan";
@@ -150,18 +149,34 @@ export default function RegistroResultado({
   const [confirmados, setConfirmados] = useState<Set<string>>(
     () => new Set(resultadosExistentes.filter((r) => r.confirmado).map((r) => r.rato))
   );
+  // Células já confirmadas (gravadas) por rato — reflete só o que está salvo
+  // em leituras.colunas. Cada célula confirmada é imutável.
+  const [confirmadas, setConfirmadas] = useState<Record<string, Set<string>>>(
+    () => {
+      const inicial: Record<string, Set<string>> = {};
+      for (const r of resultadosExistentes) {
+        const salvas = (r.leituras?.colunas ?? {}) as Record<string, unknown>;
+        inicial[r.rato] = new Set(Object.keys(salvas));
+      }
+      return inicial;
+    }
+  );
 
   const [qcCat, setQcCat] = useState("");
   const [controleSod, setControleSod] = useState<Record<string, string>>({});
   const [curva, setCurva] = useState<Record<string, string>>({});
 
   const [status, setStatus] = useState(statusAtual);
-  const [salvandoRato, setSalvandoRato] = useState<string | null>(null);
+  const [confirmandoCelula, setConfirmandoCelula] = useState<string | null>(null);
   const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
-  const [erroRato, setErroRato] = useState<Record<string, string>>({});
+  const [erroCelula, setErroCelula] = useState<Record<string, string>>({});
 
   const editavel = (rato: string) => podeRegistrar && !confirmados.has(rato);
+  const celulaConfirmada = (rato: string, key: string) =>
+    confirmados.has(rato) || (confirmadas[rato]?.has(key) ?? false);
+  const celulaEditavel = (rato: string, key: string) =>
+    podeRegistrar && !celulaConfirmada(rato, key);
 
   // Mescla o que a planilha do Tecan preencheu na tabela, sem tocar em ratos
   // já confirmados (esses estão travados). O bolsista ainda confere e confirma.
@@ -172,7 +187,12 @@ export default function RegistroResultado({
       const novo = { ...prev };
       for (const [rato, cols] of Object.entries(preenchimento)) {
         if (confirmados.has(rato)) continue;
-        novo[rato] = { ...(novo[rato] ?? {}), ...cols };
+        const alvo = { ...(novo[rato] ?? {}) };
+        for (const [k, v] of Object.entries(cols)) {
+          if (confirmadas[rato]?.has(k)) continue; // não sobrescreve célula confirmada
+          alvo[k] = v;
+        }
+        novo[rato] = alvo;
       }
       return novo;
     });
@@ -247,8 +267,11 @@ export default function RegistroResultado({
       ? qcCurvaOk
       : null;
 
-  function valorDoRato(rato: string): number | null {
-    const linha = linhas[rato] ?? {};
+  function valorDoRato(
+    rato: string,
+    override?: Record<string, string>
+  ): number | null {
+    const linha = { ...(linhas[rato] ?? {}), ...(override ?? {}) };
     if (config.familia === "cat") {
       const s = slopeMinLinha(TEMPOS_CAT, linha);
       return s === null ? null : Math.abs(s);
@@ -307,56 +330,74 @@ export default function RegistroResultado({
     return sessao;
   }
 
-  // Monta a linha de UM rato para salvar. Retorna null se ainda não há dado
-  // suficiente (nenhuma leitura preenchida) para confirmar.
-  function montarLinhaRato(rato: string): LinhaResultado | null {
-    const r = roster.find((x) => String(x.numero) === rato);
-    if (!r) return null;
-    const dados = linhas[rato] ?? {};
-    const temLeitura = Object.values(dados).some((v) => v !== "" && v != null);
-    if (!temLeitura) return null;
-    return {
-      rato,
-      grupoId: r.grupoId,
-      leituras: { tipo: config.familia, colunas: dados, sessao: montarSessao() },
-      valorCalculado: valorDoRato(rato),
-      dentroDoPadrao: qcSessaoOk,
-      observacoes: obs[rato] ?? null,
-    };
-  }
+  // Confirma UMA célula: normaliza o valor, grava só ela no banco e trava.
+  // Se for a última célula que faltava na linha, fecha também o valor
+  // calculado e marca o rato inteiro como confirmado.
+  async function confirmarCelula(rato: string, col: Coluna) {
+    const chave = `${rato}:${col.key}`;
+    setErroCelula((p) => ({ ...p, [chave]: "" }));
 
-  // Confirma um rato por vez: salva imediatamente no banco e trava a linha.
-  // Não há rascunho nem autosave — só o que é confirmado fica persistido, e
-  // um resultado confirmado não pode mais ter o valor alterado (trigger no
-  // banco garante isso mesmo fora do site).
-  async function confirmarRato(rato: string) {
-    setErroRato((p) => ({ ...p, [rato]: "" }));
-    setMensagem(null);
-    const linha = montarLinhaRato(rato);
-    if (!linha) {
-      setErroRato((p) => ({ ...p, [rato]: "Preencha as leituras antes de confirmar." }));
-      return;
+    const bruto = linhas[rato]?.[col.key] ?? "";
+    let valor: string;
+    if (col.absorbancia) {
+      const v = absReal(bruto);
+      if (Number.isNaN(v)) {
+        setErroCelula((p) => ({ ...p, [chave]: "Valor inválido." }));
+        return;
+      }
+      valor = v.toFixed(3);
+      setCelula(rato, col.key, valor);
+    } else {
+      valor = bruto.trim();
+      if (valor === "") {
+        setErroCelula((p) => ({ ...p, [chave]: "Preencha antes de confirmar." }));
+        return;
+      }
     }
-    if (linha.valorCalculado === null && config.familia !== "simples") {
-      setErroRato((p) => ({
-        ...p,
-        [rato]: "Faltam dados da sessão (curva/controle) para calcular o valor.",
-      }));
-      return;
+
+    const jaConf = new Set(confirmadas[rato] ?? []);
+    jaConf.add(col.key);
+    const completa = colunas.every((c) => jaConf.has(c.key));
+
+    let valorCalc: number | null = null;
+    let dentro: boolean | null = null;
+    if (completa) {
+      valorCalc = valorDoRato(rato, { [col.key]: valor });
+      if (valorCalc === null && config.familia !== "simples") {
+        setErroCelula((p) => ({
+          ...p,
+          [chave]: "Faltam dados da sessão (curva/controle) para fechar o valor.",
+        }));
+        return;
+      }
+      dentro = qcSessaoOk;
     }
-    setSalvandoRato(rato);
-    const r = await salvarResultadosLote({
+
+    const r = roster.find((x) => String(x.numero) === rato);
+    if (!r) return;
+
+    setConfirmandoCelula(chave);
+    const res = await confirmarCelulaServer({
       projetoId,
       projetoTesteId,
-      linhas: [linha],
-      confirmar: true,
+      rato,
+      grupoId: r.grupoId,
+      tipo: config.familia,
+      colKey: col.key,
+      valor,
+      sessao: montarSessao(),
+      completa,
+      valorCalculado: valorCalc,
+      dentroDoPadrao: dentro,
+      observacoes: obs[rato] ?? null,
     });
-    setSalvandoRato(null);
-    if ("erro" in r) {
-      setErroRato((p) => ({ ...p, [rato]: r.erro }));
+    setConfirmandoCelula(null);
+    if ("erro" in res) {
+      setErroCelula((p) => ({ ...p, [chave]: res.erro }));
       return;
     }
-    setConfirmados((prev) => new Set(prev).add(rato));
+    setConfirmadas((prev) => ({ ...prev, [rato]: jaConf }));
+    if (completa) setConfirmados((prev) => new Set(prev).add(rato));
   }
 
   async function alternarStatus() {
@@ -521,7 +562,6 @@ export default function RegistroResultado({
                 Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
               </th>
               <th className="py-2 pl-2 font-normal">Observação</th>
-              {podeRegistrar && <th className="py-2 pl-2 font-normal">Confirmar</th>}
             </tr>
           </thead>
           <tbody>
@@ -541,21 +581,52 @@ export default function RegistroResultado({
                   <td className="py-1.5 pr-3 whitespace-nowrap text-ink-soft">
                     {r.grupoNome}
                   </td>
-                  {colunas.map((c) => (
-                    <td key={c.key} className="py-1.5 pr-2">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={linhas[rato]?.[c.key] ?? ""}
-                        onChange={(e) => setCelula(rato, c.key, e.target.value)}
-                        onBlur={() => normalizarCelula(rato, c)}
-                        disabled={!editavel(rato)}
-                        className={`${INPUT_SM} w-20`}
-                      />
-                    </td>
-                  ))}
+                  {colunas.map((c) => {
+                    const chaveCel = `${rato}:${c.key}`;
+                    const conf = celulaConfirmada(rato, c.key);
+                    return (
+                      <td key={c.key} className="py-1.5 pr-2 align-top">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={linhas[rato]?.[c.key] ?? ""}
+                            onChange={(e) => setCelula(rato, c.key, e.target.value)}
+                            onBlur={() => normalizarCelula(rato, c)}
+                            disabled={!celulaEditavel(rato, c.key)}
+                            className={`${INPUT_SM} w-20`}
+                          />
+                          {podeRegistrar &&
+                            (conf ? (
+                              <span
+                                title="célula confirmada"
+                                className="text-green-700 dark:text-green-400"
+                              >
+                                ✓
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                title="confirmar célula"
+                                onClick={() => confirmarCelula(rato, c)}
+                                disabled={confirmandoCelula === chaveCel}
+                                className="rounded border border-rule px-1 text-xs leading-none text-ink-soft transition-colors hover:border-signal hover:text-signal disabled:opacity-50"
+                              >
+                                ✓
+                              </button>
+                            ))}
+                        </div>
+                        {erroCelula[chaveCel] && (
+                          <span className="mt-0.5 block max-w-[8rem] text-[10px] leading-tight text-alerta">
+                            {erroCelula[chaveCel]}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
                   <td className="py-1.5 pr-2 font-mono tabular-nums text-ink">
                     {fmt(valor, config.familia === "curva" ? 3 : 4)}
+                    {travado && <span title="valor travado"> 🔒</span>}
                   </td>
                   <td className="py-1.5 pl-2">
                     <input
@@ -569,31 +640,6 @@ export default function RegistroResultado({
                       className={`${INPUT_SM} w-40`}
                     />
                   </td>
-                  {podeRegistrar && (
-                    <td className="py-1.5 pl-2">
-                      {travado ? (
-                        <span className="font-mono text-[11px] uppercase tracking-wide text-green-700 dark:text-green-400">
-                          🔒 confirmado
-                        </span>
-                      ) : (
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => confirmarRato(rato)}
-                            disabled={salvandoRato === rato}
-                            className="rounded bg-signal px-3 py-1 text-xs font-medium text-white transition hover:brightness-110 disabled:opacity-50"
-                          >
-                            {salvandoRato === rato ? "Salvando..." : "Confirmar"}
-                          </button>
-                          {erroRato[rato] && (
-                            <span className="max-w-[10rem] text-[11px] leading-tight text-alerta">
-                              {erroRato[rato]}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  )}
                 </tr>
               );
             })}
@@ -613,10 +659,10 @@ export default function RegistroResultado({
       {podeRegistrar && (
         <div className="mt-4 space-y-1">
           <p className="max-w-2xl text-xs leading-relaxed text-ink-soft">
-            Confirme um rato por vez. Ao confirmar, aquela linha é salva na hora
-            e travada — não precisa salvar rascunho, e o que foi confirmado
-            continua salvo mesmo se a internet ou o site cair. Um resultado
-            confirmado não pode mais ser alterado.
+            Confirme célula por célula no ✓ ao lado de cada leitura. Cada célula
+            confirmada é salva na hora e travada — não dá pra alterar depois, e
+            só o que é confirmado fica salvo. Quando a última célula da linha é
+            confirmada, o valor calculado fecha e trava automaticamente.
           </p>
           {mensagem && <p className="text-sm text-alerta">{mensagem}</p>}
         </div>

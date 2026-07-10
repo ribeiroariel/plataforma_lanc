@@ -124,6 +124,76 @@ export async function salvarResultadosLote(dados: {
   return { sucesso: true };
 }
 
+// Confirma UMA célula (uma leitura) de um rato. Só o que é confirmado fica
+// salvo em `leituras.colunas` — célula não confirmada nunca chega ao banco.
+// Cada célula gravada é imutável (garantido pelo trigger `travar_confirmado`).
+// Quando `completa` for true (última célula da linha), grava também o valor
+// calculado e marca a linha inteira como confirmada (trava o valor).
+export async function confirmarCelula(dados: {
+  projetoId: string;
+  projetoTesteId: string;
+  rato: string;
+  grupoId: string;
+  tipo: string;
+  colKey: string;
+  valor: string;
+  sessao: Record<string, unknown>;
+  completa: boolean;
+  valorCalculado: number | null;
+  dentroDoPadrao: boolean | null;
+  observacoes: string | null;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Você precisa estar logado." };
+
+  const { data: atual } = await supabase
+    .from("resultados_teste")
+    .select("leituras, confirmado")
+    .eq("projeto_teste_id", dados.projetoTesteId)
+    .eq("rato", dados.rato)
+    .maybeSingle();
+
+  if (atual?.confirmado) {
+    return { erro: "Este rato já está totalmente confirmado." };
+  }
+
+  const leiturasAtual = (atual?.leituras ?? {}) as {
+    colunas?: Record<string, string>;
+  };
+  const colunas = { ...(leiturasAtual.colunas ?? {}) };
+  if (colunas[dados.colKey] !== undefined) {
+    return { erro: "Esta célula já foi confirmada." };
+  }
+  colunas[dados.colKey] = dados.valor;
+
+  const leituras = { tipo: dados.tipo, colunas, sessao: dados.sessao };
+
+  const { error } = await supabase.from("resultados_teste").upsert(
+    {
+      projeto_teste_id: dados.projetoTesteId,
+      rato: dados.rato,
+      grupo_id: dados.grupoId,
+      leituras,
+      valor_calculado: dados.completa ? dados.valorCalculado : null,
+      dentro_do_padrao: dados.completa ? dados.dentroDoPadrao : null,
+      observacoes: dados.observacoes,
+      confirmado: dados.completa,
+      registrado_por: user.id,
+    },
+    { onConflict: "projeto_teste_id,rato" }
+  );
+  if (error) {
+    return { erro: "Não foi possível confirmar a célula: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
 export async function definirStatusTeste(
   projetoId: string,
   projetoTesteId: string,

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { editarProjeto } from "@/lib/actions/projetos";
+import { TECIDOS_ANALISAVEIS, nomeTecido } from "@/lib/tecidos";
 import { INPUT, INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type LinhaGrupo = { id?: string; nome: string; ratos: string[] };
@@ -13,12 +14,14 @@ export default function EditarForm({
   descricaoInicial,
   levasInicial,
   gruposIniciais,
+  tecidosIniciais,
 }: {
   projetoId: string;
   nomeInicial: string;
   descricaoInicial: string;
   levasInicial: number;
   gruposIniciais: LinhaGrupo[];
+  tecidosIniciais: string[];
 }) {
   const [estado, formAction, pendente] = useActionState(editarProjeto, undefined);
   const [numeroLevas, setNumeroLevas] = useState(levasInicial);
@@ -96,6 +99,29 @@ export default function EditarForm({
           className={`${INPUT} w-28`}
         />
       </label>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium text-ink">
+          Tecidos que serão analisados
+        </legend>
+        <p className="text-xs leading-relaxed text-ink-soft">
+          Só os testes desses tecidos ficam disponíveis para designar. Deixe sem
+          marcar para não restringir.
+        </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+          {TECIDOS_ANALISAVEIS.map((t) => (
+            <label key={t} className="flex items-center gap-1.5 text-sm text-ink">
+              <input
+                type="checkbox"
+                name="tecidos"
+                value={t}
+                defaultChecked={tecidosIniciais.includes(t)}
+              />
+              {nomeTecido(t)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div>
         <p className="text-sm font-medium text-ink">Grupos experimentais</p>

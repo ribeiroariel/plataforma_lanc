@@ -239,6 +239,10 @@ create table if not exists public.projetos (
 alter table public.projetos add column if not exists numero_levas integer;
 alter table public.projetos add column if not exists finalizado boolean not null default false;
 alter table public.projetos add column if not exists finalizado_em timestamptz;
+-- Tecidos que o projeto vai analisar (ex.: {"figado","cortex-rins"}). Filtra
+-- os testes oferecidos na designação — só testes desses tecidos. Vazio = sem
+-- restrição (projetos antigos criados antes desta coluna).
+alter table public.projetos add column if not exists tecidos text[] not null default '{}';
 
 -- Histórico de versões do projeto (cada edição grava um "retrato" do estado
 -- em jsonb). Registro de transparência de como o desenho experimental mudou
@@ -519,11 +523,16 @@ create policy "Coautor remove designação"
 -- Remove a assinatura antiga (text[], integer[]) antes de recriar.
 drop function if exists public.criar_projeto(text, text, integer, text[], integer[]);
 
+-- Nota: a assinatura mudou (ganhou p_tecidos). Como não dá pra "create or
+-- replace" trocando a lista de argumentos, dropa a versão antiga primeiro.
+drop function if exists public.criar_projeto(text, text, integer, jsonb);
+
 create or replace function public.criar_projeto(
   p_nome text,
   p_descricao text,
   p_numero_levas integer,
-  p_grupos jsonb
+  p_grupos jsonb,
+  p_tecidos text[]
 )
 returns uuid
 language plpgsql
@@ -548,8 +557,8 @@ begin
     raise exception 'Informe o número de levas de sacrifício (mínimo 1).';
   end if;
 
-  insert into public.projetos (nome, descricao, numero_levas, criado_por)
-  values (p_nome, p_descricao, p_numero_levas, auth.uid())
+  insert into public.projetos (nome, descricao, numero_levas, tecidos, criado_por)
+  values (p_nome, p_descricao, p_numero_levas, coalesce(p_tecidos, '{}'), auth.uid())
   returning id into v_projeto_id;
 
   insert into public.projeto_membros (projeto_id, profile_id, papel)
@@ -593,7 +602,7 @@ grant execute on function public.is_orientador() to authenticated, anon;
 grant execute on function public.pode_exportar_dados() to authenticated;
 grant execute on function public.eh_membro_projeto(uuid) to authenticated;
 grant execute on function public.eh_coautor_projeto(uuid) to authenticated;
-grant execute on function public.criar_projeto(text, text, integer, jsonb) to authenticated;
+grant execute on function public.criar_projeto(text, text, integer, jsonb, text[]) to authenticated;
 grant execute on function public.buscar_bolsista_por_email(text) to authenticated;
 
 -- ----------------------------------------------------------------------------
@@ -730,24 +739,48 @@ create policy "Responsável atualiza o próprio resultado"
 -- Sem policy de delete de propósito: apagar um resultado de ensaio já
 -- registrado deveria ser exceção rara, tratada manualmente se acontecer.
 
--- Transparência: uma vez confirmado, o resultado não pode mais ter o valor,
--- as leituras, o rato ou o grupo alterados — só as observações. Vale mesmo
--- para o próprio responsável. E não dá pra "desconfirmar".
+-- Transparência: a confirmação é POR CÉLULA. Cada leitura gravada em
+-- `leituras->'colunas'` é uma célula já confirmada e imutável — não pode mudar
+-- de valor nem ser removida (só é permitido ADICIONAR novas células). Quando a
+-- linha inteira fecha (`confirmado = true`), o valor calculado também trava e
+-- não dá pra "desconfirmar". Vale mesmo para o próprio responsável.
 create or replace function public.travar_resultado_confirmado()
 returns trigger
 language plpgsql
 as $$
+declare
+  chave text;
+  cols_old jsonb := coalesce(OLD.leituras->'colunas', '{}'::jsonb);
+  cols_new jsonb := coalesce(NEW.leituras->'colunas', '{}'::jsonb);
 begin
-  if OLD.confirmado then
-    if NEW.leituras is distinct from OLD.leituras
-       or NEW.valor_calculado is distinct from OLD.valor_calculado
-       or NEW.dentro_do_padrao is distinct from OLD.dentro_do_padrao
-       or NEW.rato is distinct from OLD.rato
-       or NEW.grupo_id is distinct from OLD.grupo_id
-       or NEW.confirmado is distinct from OLD.confirmado then
-      raise exception 'Resultado confirmado: só as observações podem ser alteradas.';
+  -- Cada célula já confirmada é imutável: não pode sumir nem mudar de valor.
+  for chave in select jsonb_object_keys(cols_old) loop
+    if not (cols_new ? chave) then
+      raise exception 'Célula confirmada (%) não pode ser removida.', chave;
+    end if;
+    if cols_new -> chave is distinct from cols_old -> chave then
+      raise exception 'Célula confirmada (%) não pode ter o valor alterado.', chave;
+    end if;
+  end loop;
+
+  -- Depois que qualquer célula foi confirmada, rato e grupo ficam fixos.
+  if cols_old <> '{}'::jsonb then
+    if NEW.rato is distinct from OLD.rato
+       or NEW.grupo_id is distinct from OLD.grupo_id then
+      raise exception 'Rato/grupo não podem mudar depois de confirmar células.';
     end if;
   end if;
+
+  -- Linha totalmente confirmada: valor travado e sem "desconfirmar".
+  if OLD.confirmado then
+    if NEW.confirmado is distinct from OLD.confirmado then
+      raise exception 'Não é possível desconfirmar um resultado.';
+    end if;
+    if NEW.valor_calculado is distinct from OLD.valor_calculado then
+      raise exception 'Resultado confirmado: o valor não pode mais mudar.';
+    end if;
+  end if;
+
   return NEW;
 end;
 $$;
