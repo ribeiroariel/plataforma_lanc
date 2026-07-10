@@ -917,6 +917,172 @@ create policy "Responsável apaga foto de caderno"
   );
 
 -- ----------------------------------------------------------------------------
+-- SACRIFÍCIO — ferramenta do dia de sacrifício (ver docs/sacrificio-spec.md)
+-- ----------------------------------------------------------------------------
+-- Um sacrifício por leva do projeto. Escrita = coautores (donos); no dia, a
+-- conta do responsável fica aberta e qualquer pessoa presente digita nela.
+-- Leitura = membros do projeto + orientadora. RLS force em tudo.
+
+create table if not exists public.sacrificios (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  leva integer,
+  data date,
+  duracao_estimada_min integer,
+  status text not null default 'planejado'
+    check (status in ('planejado', 'em_andamento', 'concluido')),
+  criado_por uuid not null references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+-- Designação de funções do dia (N pessoas por função).
+create table if not exists public.sacrificio_funcoes (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_id uuid not null references public.sacrificios (id) on delete cascade,
+  funcao text not null check (funcao in (
+    'decapitacao', 'deslocamento_cervical', 'dissecacao_figado',
+    'dissecacao_rim', 'dissecacao_pancreas', 'dissecacao_cortex',
+    'separacao_cortex_cerebelo', 'homogeneizacao', 'separacao_sangue',
+    'organizacao_geral')),
+  profile_id uuid not null references public.profiles (id),
+  unique (sacrificio_id, funcao, profile_id)
+);
+
+-- Um registro por animal do sacrifício. "caixa" é rótulo digitado ao vivo.
+create table if not exists public.sacrificio_ratos (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_id uuid not null references public.sacrificios (id) on delete cascade,
+  rato text not null,
+  grupo_id uuid not null references public.projeto_grupos (id),
+  caixa text,
+  ordem integer,
+  sobreviveu boolean not null default true,
+  exclusao_motivo text,
+  destino text not null default 'bioquimica'
+    check (destino in ('bioquimica', 'histologia', 'ambos')),
+  status text not null default 'pendente'
+    check (status in ('pendente', 'dissecado')),
+  created_at timestamptz not null default now(),
+  unique (sacrificio_id, rato)
+);
+
+-- O que foi (ou não) coletado por rato/órgão. Histologia é marcada por órgão
+-- (uso = 'histologia'), então o mesmo órgão pode ter linha bioquímica e outra
+-- histológica.
+create table if not exists public.sacrificio_rato_tecidos (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_rato_id uuid not null
+    references public.sacrificio_ratos (id) on delete cascade,
+  tecido text not null,
+  coletado boolean not null default true,
+  nao_coletado_motivo text,
+  uso text not null default 'bioquimica'
+    check (uso in ('bioquimica', 'histologia')),
+  unique (sacrificio_rato_id, tecido, uso)
+);
+
+-- Peso da amostra → tampão. Homogenato 10% (1:9): volume_ul = peso_g * 9000
+-- (ex.: 1 g → 9000 µL = 9 mL de tampão). Padrão célula→confirma→trava:
+-- confirmado trava peso e volume.
+create table if not exists public.sacrificio_aliquotas (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_rato_id uuid not null
+    references public.sacrificio_ratos (id) on delete cascade,
+  tecido text not null,
+  peso_g numeric,
+  volume_tampao_ul numeric,
+  confirmado boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (sacrificio_rato_id, tecido)
+);
+
+-- Helpers p/ RLS: projeto dono de um sacrifício (direto e via rato).
+create or replace function public.sac_projeto(p_sac uuid)
+returns uuid language sql security definer set search_path = public stable as $$
+  select projeto_id from public.sacrificios where id = p_sac;
+$$;
+
+create or replace function public.sac_projeto_do_rato(p_rato uuid)
+returns uuid language sql security definer set search_path = public stable as $$
+  select s.projeto_id
+  from public.sacrificio_ratos sr
+  join public.sacrificios s on s.id = sr.sacrificio_id
+  where sr.id = p_rato;
+$$;
+
+grant execute on function public.sac_projeto(uuid) to authenticated;
+grant execute on function public.sac_projeto_do_rato(uuid) to authenticated;
+
+-- Leitura = membros + orientadora; escrita = coautores. Vale p/ as 5 tabelas.
+alter table public.sacrificios enable row level security;
+alter table public.sacrificios force row level security;
+drop policy if exists "Membros veem o sacrifício" on public.sacrificios;
+create policy "Membros veem o sacrifício" on public.sacrificios for select
+  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+drop policy if exists "Coautor gerencia o sacrifício" on public.sacrificios;
+create policy "Coautor gerencia o sacrifício" on public.sacrificios for all
+  using (public.eh_coautor_projeto(projeto_id))
+  with check (public.eh_coautor_projeto(projeto_id));
+
+alter table public.sacrificio_funcoes enable row level security;
+alter table public.sacrificio_funcoes force row level security;
+drop policy if exists "Membros veem as funções" on public.sacrificio_funcoes;
+create policy "Membros veem as funções" on public.sacrificio_funcoes for select
+  using (public.eh_membro_projeto(public.sac_projeto(sacrificio_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia funções" on public.sacrificio_funcoes;
+create policy "Coautor gerencia funções" on public.sacrificio_funcoes for all
+  using (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)));
+
+alter table public.sacrificio_ratos enable row level security;
+alter table public.sacrificio_ratos force row level security;
+drop policy if exists "Membros veem os ratos do sacrifício" on public.sacrificio_ratos;
+create policy "Membros veem os ratos do sacrifício" on public.sacrificio_ratos for select
+  using (public.eh_membro_projeto(public.sac_projeto(sacrificio_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia os ratos do sacrifício" on public.sacrificio_ratos;
+create policy "Coautor gerencia os ratos do sacrifício" on public.sacrificio_ratos for all
+  using (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)));
+
+alter table public.sacrificio_rato_tecidos enable row level security;
+alter table public.sacrificio_rato_tecidos force row level security;
+drop policy if exists "Membros veem tecidos do rato" on public.sacrificio_rato_tecidos;
+create policy "Membros veem tecidos do rato" on public.sacrificio_rato_tecidos for select
+  using (public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia tecidos do rato" on public.sacrificio_rato_tecidos;
+create policy "Coautor gerencia tecidos do rato" on public.sacrificio_rato_tecidos for all
+  using (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)));
+
+alter table public.sacrificio_aliquotas enable row level security;
+alter table public.sacrificio_aliquotas force row level security;
+drop policy if exists "Membros veem alíquotas" on public.sacrificio_aliquotas;
+create policy "Membros veem alíquotas" on public.sacrificio_aliquotas for select
+  using (public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia alíquotas" on public.sacrificio_aliquotas;
+create policy "Coautor gerencia alíquotas" on public.sacrificio_aliquotas for all
+  using (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)));
+
+-- Trava da alíquota confirmada: peso e volume não mudam mais.
+create or replace function public.travar_aliquota_confirmada()
+returns trigger language plpgsql as $$
+begin
+  if OLD.confirmado then
+    if NEW.peso_g is distinct from OLD.peso_g
+       or NEW.volume_tampao_ul is distinct from OLD.volume_tampao_ul
+       or NEW.confirmado is distinct from OLD.confirmado then
+      raise exception 'Alíquota confirmada: peso e tampão não podem mais mudar.';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+drop trigger if exists travar_aliquota on public.sacrificio_aliquotas;
+create trigger travar_aliquota before update on public.sacrificio_aliquotas
+  for each row execute function public.travar_aliquota_confirmada();
+
+-- ----------------------------------------------------------------------------
 -- CONTAGEM PÚBLICA DE PROJETOS
 -- ----------------------------------------------------------------------------
 -- Só o número, nunca os dados — usado na página inicial pública (barra

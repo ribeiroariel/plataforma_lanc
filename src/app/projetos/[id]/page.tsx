@@ -175,6 +175,15 @@ export default async function DetalheProjeto({
         )}
       </div>
 
+      <div className="mt-4">
+        <Link
+          href={`/projetos/${projeto.id}/sacrificio`}
+          className="inline-block rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-signal"
+        >
+          Sacrifício →
+        </Link>
+      </div>
+
       {souCoautor && !projeto.finalizado && (
         <div className="mt-4 flex items-center gap-4">
           <Link
