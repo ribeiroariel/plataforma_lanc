@@ -6,8 +6,9 @@ import {
   marcarDissecado,
   reabrirRato,
   salvarColeta,
+  confirmarAliquota,
 } from "@/lib/actions/sacrificio";
-import { ORGAOS_DISSECAVEIS } from "@/lib/sacrificio";
+import { ORGAOS_DISSECAVEIS, volumeTampaoUl } from "@/lib/sacrificio";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type RatoRoster = { numero: number; grupoId: string; grupoNome: string };
@@ -16,6 +17,12 @@ type TecidoColeta = {
   coletado: boolean;
   motivo: string | null;
   paraHistologia: boolean;
+};
+type AliquotaSalva = {
+  tecido: string;
+  pesoG: number | null;
+  volumeUl: number | null;
+  confirmado: boolean;
 };
 type RatoSalvo = {
   id: string;
@@ -26,6 +33,7 @@ type RatoSalvo = {
   motivo: string | null;
   status: string;
   tecidos: TecidoColeta[];
+  aliquotas: AliquotaSalva[];
 };
 
 type Props = {
@@ -320,6 +328,162 @@ export default function DiaSacrificio({
           </div>
         )}
       </section>
+
+      {/* 4. Alíquotas (peso → tampão) */}
+      <section>
+        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          4 · Alíquotas (peso → tampão)
+        </p>
+        <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
+          Pese cada órgão coletado (g); o tampão é calculado como homogenato 10%
+          (peso × 9000 = µL). Ao confirmar, o peso e o volume travam.
+        </p>
+        {dissecados.length === 0 ? (
+          <p className="text-xs text-ink-soft">
+            Registre a coleta dos ratos dissecados para pesar as amostras.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {dissecados.map((r) => (
+              <PainelAliquotas
+                key={r.id}
+                projetoId={projetoId}
+                sacrificioId={sacrificioId}
+                rato={r}
+                podeRegistrar={podeRegistrar}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function PainelAliquotas({
+  projetoId,
+  sacrificioId,
+  rato,
+  podeRegistrar,
+}: {
+  projetoId: string;
+  sacrificioId: string;
+  rato: RatoSalvo;
+  podeRegistrar: boolean;
+}) {
+  const coletados = rato.tecidos.filter((t) => t.coletado);
+  const aliqPorTecido = new Map(rato.aliquotas.map((a) => [a.tecido, a]));
+  const [pend, iniciar] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+  const [pesos, setPesos] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const t of coletados) {
+      const a = aliqPorTecido.get(t.tecido);
+      init[t.tecido] = a?.pesoG != null ? String(a.pesoG) : "";
+    }
+    return init;
+  });
+
+  const rotulo = (tecido: string) =>
+    ORGAOS_DISSECAVEIS.find((o) => o.valor === tecido)?.rotulo ?? tecido;
+
+  function confirmar(tecido: string) {
+    const pesoG = parseFloat((pesos[tecido] ?? "").replace(",", "."));
+    if (!Number.isFinite(pesoG) || pesoG <= 0) {
+      setErro(`Peso inválido para ${rotulo(tecido)}.`);
+      return;
+    }
+    setErro(null);
+    setConfirmando(tecido);
+    iniciar(async () => {
+      const res = await confirmarAliquota({
+        projetoId,
+        sacrificioId,
+        sacrificioRatoId: rato.id,
+        tecido,
+        pesoG,
+      });
+      if ("erro" in res) setErro(res.erro);
+      setConfirmando(null);
+    });
+  }
+
+  if (coletados.length === 0) return null;
+
+  return (
+    <div className="rounded border border-rule bg-paper-raised p-3">
+      <p className="mb-2 font-mono text-xs text-ink">
+        Rato {rato.rato}
+        {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <th className="py-1 pr-3 font-normal">Órgão</th>
+              <th className="py-1 pr-3 font-normal">Peso (g)</th>
+              <th className="py-1 pr-3 font-normal">Tampão (µL)</th>
+              <th className="py-1 font-normal"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {coletados.map((t) => {
+              const a = aliqPorTecido.get(t.tecido);
+              const travado = a?.confirmado ?? false;
+              const pesoNum = parseFloat((pesos[t.tecido] ?? "").replace(",", "."));
+              const previa =
+                Number.isFinite(pesoNum) && pesoNum > 0
+                  ? volumeTampaoUl(pesoNum)
+                  : null;
+              return (
+                <tr key={t.tecido} className="border-t border-rule/60">
+                  <td className="py-1 pr-3 text-ink">{rotulo(t.tecido)}</td>
+                  <td className="py-1 pr-3">
+                    {travado ? (
+                      <span className="font-mono text-ink">{a?.pesoG}</span>
+                    ) : (
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={pesos[t.tecido] ?? ""}
+                        onChange={(e) =>
+                          setPesos((p) => ({ ...p, [t.tecido]: e.target.value }))
+                        }
+                        disabled={!podeRegistrar}
+                        className={`${INPUT_SM} w-20`}
+                      />
+                    )}
+                  </td>
+                  <td className="py-1 pr-3 font-mono tabular-nums text-ink-soft">
+                    {travado ? a?.volumeUl : previa != null ? previa : "—"}
+                  </td>
+                  <td className="py-1">
+                    {travado ? (
+                      <span
+                        title="alíquota confirmada"
+                        className="text-green-700 dark:text-green-400"
+                      >
+                        🔒 confirmada
+                      </span>
+                    ) : podeRegistrar ? (
+                      <button
+                        type="button"
+                        onClick={() => confirmar(t.tecido)}
+                        disabled={pend || confirmando === t.tecido}
+                        className={BOTAO_SECUNDARIO_SM}
+                      >
+                        {confirmando === t.tecido ? "..." : "Confirmar"}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { volumeTampaoUl } from "@/lib/sacrificio";
 
 // Cria o sacrifício de uma leva (RLS garante que só coautor do projeto insere).
 export async function criarSacrificio(dados: {
@@ -205,6 +206,51 @@ export async function reabrirRato(dados: {
     .eq("id", dados.sacrificioRatoId);
   if (error) {
     return { erro: "Não foi possível reabrir: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}
+
+// --- Fatia 4: alíquotas (peso → tampão), padrão confirma→trava ---
+
+// Confirma a alíquota de um órgão: grava peso (g) + volume de tampão calculado
+// (peso × 9000) e trava (o trigger travar_aliquota impede mudança depois).
+export async function confirmarAliquota(dados: {
+  projetoId: string;
+  sacrificioId: string;
+  sacrificioRatoId: string;
+  tecido: string;
+  pesoG: number;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+
+  if (!Number.isFinite(dados.pesoG) || dados.pesoG <= 0) {
+    return { erro: "Informe um peso válido (g)." };
+  }
+
+  const { data: existente } = await supabase
+    .from("sacrificio_aliquotas")
+    .select("confirmado")
+    .eq("sacrificio_rato_id", dados.sacrificioRatoId)
+    .eq("tecido", dados.tecido)
+    .maybeSingle();
+  if (existente?.confirmado) {
+    return { erro: "Esta alíquota já está confirmada." };
+  }
+
+  const { error } = await supabase.from("sacrificio_aliquotas").upsert(
+    {
+      sacrificio_rato_id: dados.sacrificioRatoId,
+      tecido: dados.tecido,
+      peso_g: dados.pesoG,
+      volume_tampao_ul: volumeTampaoUl(dados.pesoG),
+      confirmado: true,
+    },
+    { onConflict: "sacrificio_rato_id,tecido" }
+  );
+  if (error) {
+    return { erro: "Não foi possível confirmar a alíquota: " + error.message };
   }
 
   revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);

@@ -20,6 +20,12 @@ type TecidoColeta = {
   nao_coletado_motivo: string | null;
   para_histologia: boolean;
 };
+type Aliquota = {
+  tecido: string;
+  peso_g: number | null;
+  volume_tampao_ul: number | null;
+  confirmado: boolean;
+};
 type RatoSalvo = {
   id: string;
   rato: string;
@@ -29,6 +35,7 @@ type RatoSalvo = {
   exclusao_motivo: string | null;
   status: string;
   sacrificio_rato_tecidos: TecidoColeta[];
+  sacrificio_aliquotas: Aliquota[];
 };
 
 export default async function PaginaDiaSacrificio({
@@ -71,7 +78,7 @@ export default async function PaginaDiaSacrificio({
       supabase
         .from("sacrificio_ratos")
         .select(
-          "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, coletado, nao_coletado_motivo, para_histologia)"
+          "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, coletado, nao_coletado_motivo, para_histologia), sacrificio_aliquotas(tecido, peso_g, volume_tampao_ul, confirmado)"
         )
         .eq("sacrificio_id", sacrificioId)
         .returns<RatoSalvo[]>(),
@@ -135,6 +142,12 @@ export default async function PaginaDiaSacrificio({
             coletado: t.coletado,
             motivo: t.nao_coletado_motivo,
             paraHistologia: t.para_histologia,
+          })),
+          aliquotas: (r.sacrificio_aliquotas ?? []).map((a) => ({
+            tecido: a.tecido,
+            pesoG: a.peso_g,
+            volumeUl: a.volume_tampao_ul,
+            confirmado: a.confirmado,
           })),
         }))}
       />
