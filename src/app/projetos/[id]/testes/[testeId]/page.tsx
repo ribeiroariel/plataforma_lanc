@@ -5,7 +5,9 @@ import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
 import { configDoTeste } from "@/lib/tiposTeste";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
+import { listarFotosCaderno } from "@/lib/actions/fotos-caderno";
 import RegistroResultado from "./RegistroResultado";
+import FotosCaderno from "./FotosCaderno";
 
 type ProjetoTeste = {
   id: string;
@@ -102,6 +104,8 @@ export default async function PaginaResultado({
     );
   }
 
+  const fotosCaderno = await listarFotosCaderno(projetoTeste.id);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link
@@ -133,6 +137,13 @@ export default async function PaginaResultado({
         resultadosExistentes={resultados ?? []}
         podeRegistrar={souResponsavel}
         podeAlterarStatus={souResponsavel || souCoautor}
+      />
+
+      <FotosCaderno
+        projetoId={projetoId}
+        projetoTesteId={projetoTeste.id}
+        fotos={fotosCaderno}
+        podeAnexar={souResponsavel}
       />
     </main>
   );

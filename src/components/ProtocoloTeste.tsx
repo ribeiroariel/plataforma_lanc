@@ -9,6 +9,23 @@ import { Fragment, type ReactNode } from "react";
 
 const RE_SECAO = /^\d+\.\d+\.\s+(.*)$/;
 
+// Tabelas no formato markdown ("| a | b |" com linha separadora "| --- |")
+// — usadas p.ex. na curva padrão da Lowry (Tubo · BSA · Água · Reativo C).
+function ehLinhaTabela(linha: string): boolean {
+  return linha.startsWith("|") && linha.endsWith("|") && linha.length > 1;
+}
+
+function ehSeparadorTabela(linha: string): boolean {
+  return ehLinhaTabela(linha) && /^\|[\s:|-]+\|$/.test(linha);
+}
+
+function celulasTabela(linha: string): string[] {
+  return linha
+    .slice(1, -1)
+    .split("|")
+    .map((c) => c.trim());
+}
+
 function classeParagrafo(texto: string): string {
   if (/^Controle de Qualidade/i.test(texto)) {
     return "rounded border-l-2 border-reagent bg-reagent/5 px-3 py-2 text-sm leading-relaxed text-ink";
@@ -60,8 +77,31 @@ export function ProtocoloTeste({ conteudo }: { conteudo: string }) {
     );
   }
 
-  for (; i < corpo.length; i++) {
+  while (i < corpo.length) {
     const linha = corpo[i];
+
+    // Bloco de tabela: consome as linhas "| ... |" seguidas de uma vez.
+    if (ehLinhaTabela(linha)) {
+      const inicio = i;
+      const linhasTabela: string[] = [];
+      while (i < corpo.length && ehLinhaTabela(corpo[i])) {
+        linhasTabela.push(corpo[i]);
+        i++;
+      }
+      const semSeparador = linhasTabela.filter((l) => !ehSeparadorTabela(l));
+      if (semSeparador.length > 0) {
+        const [cabecalho, ...corpoTabela] = semSeparador;
+        blocos.push(
+          <TabelaProtocolo
+            key={inicio}
+            cabecalho={celulasTabela(cabecalho)}
+            linhas={corpoTabela.map(celulasTabela)}
+          />
+        );
+      }
+      continue;
+    }
+
     const m = linha.match(RE_SECAO);
     if (m) {
       blocos.push(
@@ -79,7 +119,50 @@ export function ProtocoloTeste({ conteudo }: { conteudo: string }) {
         </p>
       );
     }
+    i++;
   }
 
   return <div className="flex flex-col gap-2.5">{blocos}</div>;
+}
+
+function TabelaProtocolo({
+  cabecalho,
+  linhas,
+}: {
+  cabecalho: string[];
+  linhas: string[][];
+}) {
+  return (
+    <div className="my-2 overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+            {cabecalho.map((c, idx) => (
+              <th key={idx} className="py-2 pr-4 font-normal">
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.map((linha, r) => (
+            <tr key={r} className="border-b border-rule/60">
+              {linha.map((cel, c) => (
+                <td
+                  key={c}
+                  className={
+                    c === 0
+                      ? "py-1.5 pr-4 text-ink"
+                      : "py-1.5 pr-4 font-mono tabular-nums text-ink-soft"
+                  }
+                >
+                  {cel}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }

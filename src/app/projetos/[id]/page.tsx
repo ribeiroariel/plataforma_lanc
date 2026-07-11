@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { testes as catalogoTestes } from "@/lib/testes";
+import { nomeTecido, type Tecido } from "@/lib/tecidos";
 import { ehTesteDesignavel } from "@/lib/tiposTeste";
 import FormularioMembro from "./FormularioMembro";
 import FormularioTeste from "./FormularioTeste";
@@ -14,6 +15,7 @@ type Projeto = {
   descricao: string | null;
   numero_levas: number | null;
   finalizado: boolean;
+  tecidos: string[] | null;
   created_at: string;
 };
 
@@ -63,7 +65,7 @@ export default async function DetalheProjeto({
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, descricao, numero_levas, finalizado, created_at")
+        .select("id, nome, descricao, numero_levas, finalizado, tecidos, created_at")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -100,6 +102,14 @@ export default async function DetalheProjeto({
     ]);
 
   if (!projeto) notFound();
+
+  // Só oferece na designação os testes dos tecidos que o projeto analisa
+  // (sem tecidos definidos = todos, compatível com projetos antigos).
+  const tecidosProjeto = new Set(projeto.tecidos ?? []);
+  const testesParaDesignar =
+    tecidosProjeto.size === 0
+      ? testesDesignaveis
+      : testesDesignaveis.filter((t) => tecidosProjeto.has(t.tecido));
 
   const souCoautor =
     membros?.some(
@@ -150,11 +160,28 @@ export default async function DetalheProjeto({
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">
         <span>{totalRatos} rato(s) no total</span>
         {projeto.numero_levas && <span>· {projeto.numero_levas} leva(s)</span>}
+        {tecidosProjeto.size > 0 && (
+          <span>
+            · Tecidos:{" "}
+            {(projeto.tecidos ?? [])
+              .map((t) => nomeTecido(t as Tecido))
+              .join(", ")}
+          </span>
+        )}
         {projeto.finalizado && (
           <span className="rounded-full bg-ink/5 px-2 py-0.5 uppercase tracking-wide text-ink-soft">
             finalizado
           </span>
         )}
+      </div>
+
+      <div className="mt-4">
+        <Link
+          href={`/projetos/${projeto.id}/sacrificio`}
+          className="inline-block rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-signal"
+        >
+          Sacrifício →
+        </Link>
       </div>
 
       {souCoautor && !projeto.finalizado && (
@@ -292,7 +319,7 @@ export default async function DetalheProjeto({
         {souCoautor && !projeto.finalizado && (
           <FormularioTeste
             projetoId={projeto.id}
-            testes={testesDesignaveis}
+            testes={testesParaDesignar}
             pessoas={membrosParaDesignar}
             numeroLevas={projeto.numero_levas ?? 1}
           />

@@ -239,6 +239,10 @@ create table if not exists public.projetos (
 alter table public.projetos add column if not exists numero_levas integer;
 alter table public.projetos add column if not exists finalizado boolean not null default false;
 alter table public.projetos add column if not exists finalizado_em timestamptz;
+-- Tecidos que o projeto vai analisar (ex.: {"figado","cortex-rins"}). Filtra
+-- os testes oferecidos na designação — só testes desses tecidos. Vazio = sem
+-- restrição (projetos antigos criados antes desta coluna).
+alter table public.projetos add column if not exists tecidos text[] not null default '{}';
 
 -- Histórico de versões do projeto (cada edição grava um "retrato" do estado
 -- em jsonb). Registro de transparência de como o desenho experimental mudou
@@ -519,11 +523,16 @@ create policy "Coautor remove designação"
 -- Remove a assinatura antiga (text[], integer[]) antes de recriar.
 drop function if exists public.criar_projeto(text, text, integer, text[], integer[]);
 
+-- Nota: a assinatura mudou (ganhou p_tecidos). Como não dá pra "create or
+-- replace" trocando a lista de argumentos, dropa a versão antiga primeiro.
+drop function if exists public.criar_projeto(text, text, integer, jsonb);
+
 create or replace function public.criar_projeto(
   p_nome text,
   p_descricao text,
   p_numero_levas integer,
-  p_grupos jsonb
+  p_grupos jsonb,
+  p_tecidos text[]
 )
 returns uuid
 language plpgsql
@@ -548,8 +557,8 @@ begin
     raise exception 'Informe o número de levas de sacrifício (mínimo 1).';
   end if;
 
-  insert into public.projetos (nome, descricao, numero_levas, criado_por)
-  values (p_nome, p_descricao, p_numero_levas, auth.uid())
+  insert into public.projetos (nome, descricao, numero_levas, tecidos, criado_por)
+  values (p_nome, p_descricao, p_numero_levas, coalesce(p_tecidos, '{}'), auth.uid())
   returning id into v_projeto_id;
 
   insert into public.projeto_membros (projeto_id, profile_id, papel)
@@ -593,7 +602,7 @@ grant execute on function public.is_orientador() to authenticated, anon;
 grant execute on function public.pode_exportar_dados() to authenticated;
 grant execute on function public.eh_membro_projeto(uuid) to authenticated;
 grant execute on function public.eh_coautor_projeto(uuid) to authenticated;
-grant execute on function public.criar_projeto(text, text, integer, jsonb) to authenticated;
+grant execute on function public.criar_projeto(text, text, integer, jsonb, text[]) to authenticated;
 grant execute on function public.buscar_bolsista_por_email(text) to authenticated;
 
 -- ----------------------------------------------------------------------------
@@ -730,24 +739,48 @@ create policy "Responsável atualiza o próprio resultado"
 -- Sem policy de delete de propósito: apagar um resultado de ensaio já
 -- registrado deveria ser exceção rara, tratada manualmente se acontecer.
 
--- Transparência: uma vez confirmado, o resultado não pode mais ter o valor,
--- as leituras, o rato ou o grupo alterados — só as observações. Vale mesmo
--- para o próprio responsável. E não dá pra "desconfirmar".
+-- Transparência: a confirmação é POR CÉLULA. Cada leitura gravada em
+-- `leituras->'colunas'` é uma célula já confirmada e imutável — não pode mudar
+-- de valor nem ser removida (só é permitido ADICIONAR novas células). Quando a
+-- linha inteira fecha (`confirmado = true`), o valor calculado também trava e
+-- não dá pra "desconfirmar". Vale mesmo para o próprio responsável.
 create or replace function public.travar_resultado_confirmado()
 returns trigger
 language plpgsql
 as $$
+declare
+  chave text;
+  cols_old jsonb := coalesce(OLD.leituras->'colunas', '{}'::jsonb);
+  cols_new jsonb := coalesce(NEW.leituras->'colunas', '{}'::jsonb);
 begin
-  if OLD.confirmado then
-    if NEW.leituras is distinct from OLD.leituras
-       or NEW.valor_calculado is distinct from OLD.valor_calculado
-       or NEW.dentro_do_padrao is distinct from OLD.dentro_do_padrao
-       or NEW.rato is distinct from OLD.rato
-       or NEW.grupo_id is distinct from OLD.grupo_id
-       or NEW.confirmado is distinct from OLD.confirmado then
-      raise exception 'Resultado confirmado: só as observações podem ser alteradas.';
+  -- Cada célula já confirmada é imutável: não pode sumir nem mudar de valor.
+  for chave in select jsonb_object_keys(cols_old) loop
+    if not (cols_new ? chave) then
+      raise exception 'Célula confirmada (%) não pode ser removida.', chave;
+    end if;
+    if cols_new -> chave is distinct from cols_old -> chave then
+      raise exception 'Célula confirmada (%) não pode ter o valor alterado.', chave;
+    end if;
+  end loop;
+
+  -- Depois que qualquer célula foi confirmada, rato e grupo ficam fixos.
+  if cols_old <> '{}'::jsonb then
+    if NEW.rato is distinct from OLD.rato
+       or NEW.grupo_id is distinct from OLD.grupo_id then
+      raise exception 'Rato/grupo não podem mudar depois de confirmar células.';
     end if;
   end if;
+
+  -- Linha totalmente confirmada: valor travado e sem "desconfirmar".
+  if OLD.confirmado then
+    if NEW.confirmado is distinct from OLD.confirmado then
+      raise exception 'Não é possível desconfirmar um resultado.';
+    end if;
+    if NEW.valor_calculado is distinct from OLD.valor_calculado then
+      raise exception 'Resultado confirmado: o valor não pode mais mudar.';
+    end if;
+  end if;
+
   return NEW;
 end;
 $$;
@@ -795,6 +828,258 @@ create policy "Dono apaga a própria foto"
     bucket_id = 'avatars'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ----------------------------------------------------------------------------
+-- FOTOS DO CADERNO DE BANCADA (transparência) — opcional, por ensaio
+-- ----------------------------------------------------------------------------
+-- Registro fotográfico da tabela feita à mão no caderno, ligado ao ensaio
+-- (projeto_teste), não ao rato. Não é fonte de dado — a absorbância válida é a
+-- digitada em resultados_teste; a foto é só a fonte auditável. Ao contrário do
+-- bucket "avatars" (público), este é PRIVADO: só quem vê o resultado vê a
+-- foto, via signed URL. Caminho no bucket: "{projeto_teste_id}/{uuid}.<ext>",
+-- então o 1º nível do caminho é o ensaio, o que as policies de storage usam.
+
+create table if not exists public.fotos_caderno (
+  id uuid primary key default gen_random_uuid(),
+  projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
+  caminho text not null,
+  enviado_por uuid not null references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.fotos_caderno enable row level security;
+alter table public.fotos_caderno force row level security;
+
+drop policy if exists "Membros e orientadora veem fotos do caderno" on public.fotos_caderno;
+create policy "Membros e orientadora veem fotos do caderno"
+  on public.fotos_caderno
+  for select
+  using (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
+
+drop policy if exists "Responsável anexa foto do caderno" on public.fotos_caderno;
+create policy "Responsável anexa foto do caderno"
+  on public.fotos_caderno
+  for insert
+  with check (
+    enviado_por = auth.uid()
+    and public.eh_responsavel_teste(projeto_teste_id)
+  );
+
+drop policy if exists "Responsável remove a própria foto do caderno" on public.fotos_caderno;
+create policy "Responsável remove a própria foto do caderno"
+  on public.fotos_caderno
+  for delete
+  using (
+    enviado_por = auth.uid()
+    and public.eh_responsavel_teste(projeto_teste_id)
+  );
+
+-- Bucket PRIVADO (público = false), servido por signed URL.
+insert into storage.buckets (id, name, public)
+values ('cadernos', 'cadernos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "Ver foto de caderno do próprio teste" on storage.objects;
+create policy "Ver foto de caderno do próprio teste"
+  on storage.objects
+  for select
+  using (
+    bucket_id = 'cadernos'
+    and (
+      public.eh_executor_teste(((storage.foldername(name))[1])::uuid)
+      or public.eh_coautor_do_teste(((storage.foldername(name))[1])::uuid)
+      or public.is_orientador()
+      or public.pode_exportar_dados()
+    )
+  );
+
+drop policy if exists "Responsável sobe foto de caderno" on storage.objects;
+create policy "Responsável sobe foto de caderno"
+  on storage.objects
+  for insert
+  with check (
+    bucket_id = 'cadernos'
+    and public.eh_responsavel_teste(((storage.foldername(name))[1])::uuid)
+  );
+
+drop policy if exists "Responsável apaga foto de caderno" on storage.objects;
+create policy "Responsável apaga foto de caderno"
+  on storage.objects
+  for delete
+  using (
+    bucket_id = 'cadernos'
+    and public.eh_responsavel_teste(((storage.foldername(name))[1])::uuid)
+  );
+
+-- ----------------------------------------------------------------------------
+-- SACRIFÍCIO — ferramenta do dia de sacrifício (ver docs/sacrificio-spec.md)
+-- ----------------------------------------------------------------------------
+-- Um sacrifício por leva do projeto. Escrita = coautores (donos); no dia, a
+-- conta do responsável fica aberta e qualquer pessoa presente digita nela.
+-- Leitura = membros do projeto + orientadora. RLS force em tudo.
+
+create table if not exists public.sacrificios (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  leva integer,
+  data date,
+  duracao_estimada_min integer,
+  status text not null default 'planejado'
+    check (status in ('planejado', 'em_andamento', 'concluido')),
+  criado_por uuid not null references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+-- Designação de funções do dia (N pessoas por função).
+create table if not exists public.sacrificio_funcoes (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_id uuid not null references public.sacrificios (id) on delete cascade,
+  funcao text not null check (funcao in (
+    'decapitacao', 'deslocamento_cervical', 'dissecacao_figado',
+    'dissecacao_rim', 'dissecacao_pancreas', 'dissecacao_cortex',
+    'separacao_cortex_cerebelo', 'homogeneizacao', 'separacao_sangue',
+    'organizacao_geral')),
+  profile_id uuid not null references public.profiles (id),
+  unique (sacrificio_id, funcao, profile_id)
+);
+
+-- Um registro por animal do sacrifício. "caixa" é rótulo digitado ao vivo.
+create table if not exists public.sacrificio_ratos (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_id uuid not null references public.sacrificios (id) on delete cascade,
+  rato text not null,
+  grupo_id uuid not null references public.projeto_grupos (id),
+  caixa text,
+  ordem integer,
+  sobreviveu boolean not null default true,
+  exclusao_motivo text,
+  destino text not null default 'bioquimica'
+    check (destino in ('bioquimica', 'histologia', 'ambos')),
+  status text not null default 'pendente'
+    check (status in ('pendente', 'dissecado')),
+  created_at timestamptz not null default now(),
+  unique (sacrificio_id, rato)
+);
+
+-- O que foi (ou não) coletado por rato/órgão, uma linha por (rato, órgão).
+-- `coletado` = pegou a amostra bioquímica; `para_histologia` = esse órgão do
+-- rato foi destinado à histologia (flag independente).
+create table if not exists public.sacrificio_rato_tecidos (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_rato_id uuid not null
+    references public.sacrificio_ratos (id) on delete cascade,
+  tecido text not null,
+  coletado boolean not null default true,
+  nao_coletado_motivo text,
+  para_histologia boolean not null default false,
+  unique (sacrificio_rato_id, tecido)
+);
+
+-- Peso da amostra → tampão. Homogenato 10% (1:9): volume_ul = peso_g * 9000
+-- (ex.: 1 g → 9000 µL = 9 mL de tampão). Padrão célula→confirma→trava:
+-- confirmado trava peso e volume.
+create table if not exists public.sacrificio_aliquotas (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_rato_id uuid not null
+    references public.sacrificio_ratos (id) on delete cascade,
+  tecido text not null,
+  peso_g numeric,
+  volume_tampao_ul numeric,
+  confirmado boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (sacrificio_rato_id, tecido)
+);
+
+-- Helpers p/ RLS: projeto dono de um sacrifício (direto e via rato).
+create or replace function public.sac_projeto(p_sac uuid)
+returns uuid language sql security definer set search_path = public stable as $$
+  select projeto_id from public.sacrificios where id = p_sac;
+$$;
+
+create or replace function public.sac_projeto_do_rato(p_rato uuid)
+returns uuid language sql security definer set search_path = public stable as $$
+  select s.projeto_id
+  from public.sacrificio_ratos sr
+  join public.sacrificios s on s.id = sr.sacrificio_id
+  where sr.id = p_rato;
+$$;
+
+grant execute on function public.sac_projeto(uuid) to authenticated;
+grant execute on function public.sac_projeto_do_rato(uuid) to authenticated;
+
+-- Leitura = membros + orientadora; escrita = coautores. Vale p/ as 5 tabelas.
+alter table public.sacrificios enable row level security;
+alter table public.sacrificios force row level security;
+drop policy if exists "Membros veem o sacrifício" on public.sacrificios;
+create policy "Membros veem o sacrifício" on public.sacrificios for select
+  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+drop policy if exists "Coautor gerencia o sacrifício" on public.sacrificios;
+create policy "Coautor gerencia o sacrifício" on public.sacrificios for all
+  using (public.eh_coautor_projeto(projeto_id))
+  with check (public.eh_coautor_projeto(projeto_id));
+
+alter table public.sacrificio_funcoes enable row level security;
+alter table public.sacrificio_funcoes force row level security;
+drop policy if exists "Membros veem as funções" on public.sacrificio_funcoes;
+create policy "Membros veem as funções" on public.sacrificio_funcoes for select
+  using (public.eh_membro_projeto(public.sac_projeto(sacrificio_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia funções" on public.sacrificio_funcoes;
+create policy "Coautor gerencia funções" on public.sacrificio_funcoes for all
+  using (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)));
+
+alter table public.sacrificio_ratos enable row level security;
+alter table public.sacrificio_ratos force row level security;
+drop policy if exists "Membros veem os ratos do sacrifício" on public.sacrificio_ratos;
+create policy "Membros veem os ratos do sacrifício" on public.sacrificio_ratos for select
+  using (public.eh_membro_projeto(public.sac_projeto(sacrificio_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia os ratos do sacrifício" on public.sacrificio_ratos;
+create policy "Coautor gerencia os ratos do sacrifício" on public.sacrificio_ratos for all
+  using (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)));
+
+alter table public.sacrificio_rato_tecidos enable row level security;
+alter table public.sacrificio_rato_tecidos force row level security;
+drop policy if exists "Membros veem tecidos do rato" on public.sacrificio_rato_tecidos;
+create policy "Membros veem tecidos do rato" on public.sacrificio_rato_tecidos for select
+  using (public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia tecidos do rato" on public.sacrificio_rato_tecidos;
+create policy "Coautor gerencia tecidos do rato" on public.sacrificio_rato_tecidos for all
+  using (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)));
+
+alter table public.sacrificio_aliquotas enable row level security;
+alter table public.sacrificio_aliquotas force row level security;
+drop policy if exists "Membros veem alíquotas" on public.sacrificio_aliquotas;
+create policy "Membros veem alíquotas" on public.sacrificio_aliquotas for select
+  using (public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)) or public.is_orientador());
+drop policy if exists "Coautor gerencia alíquotas" on public.sacrificio_aliquotas;
+create policy "Coautor gerencia alíquotas" on public.sacrificio_aliquotas for all
+  using (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)))
+  with check (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)));
+
+-- Trava da alíquota confirmada: peso e volume não mudam mais.
+create or replace function public.travar_aliquota_confirmada()
+returns trigger language plpgsql as $$
+begin
+  if OLD.confirmado then
+    if NEW.peso_g is distinct from OLD.peso_g
+       or NEW.volume_tampao_ul is distinct from OLD.volume_tampao_ul
+       or NEW.confirmado is distinct from OLD.confirmado then
+      raise exception 'Alíquota confirmada: peso e tampão não podem mais mudar.';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+drop trigger if exists travar_aliquota on public.sacrificio_aliquotas;
+create trigger travar_aliquota before update on public.sacrificio_aliquotas
+  for each row execute function public.travar_aliquota_confirmada();
 
 -- ----------------------------------------------------------------------------
 -- CONTAGEM PÚBLICA DE PROJETOS

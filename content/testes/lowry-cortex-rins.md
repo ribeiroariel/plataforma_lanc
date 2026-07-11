@@ -34,34 +34,14 @@ Reativo C (preparar no dia — para 10 amostras + curva + 10%)
 18,6 mL de Reativo A + 190 µL de B1 + 190 µL de B2. Preparar imediatamente antes do uso.
 14.4. CURVA PADRÃO
 Controle de Qualidade — Curva Padrão: o coeficiente de determinação (R²) da curva de BSA deve ser ≥ 0,99. Se R² < 0,98: verificar (1) integridade da solução estoque de BSA — descongelar alíquota fresca; (2) se o Reagente de Folin não está degradado (solução amarelada intensa indica oxidação — preparar novo lote); (3) se os tubos foram incubados exatamente 30 minutos no escuro. Preparar nova curva antes de prosseguir com as amostras.
-Tubo
-BSA 1 mg/mL (µL)
-Água milli-Q (µL)
-Reativo C (mL)
-Branco
-0
-200
-1,0
-1
-10
-190
-1,0
-2
-20
-180
-1,0
-4
-40
-160
-1,0
-6
-60
-140
-1,0
-8
-80
-120
-1,0
+| Tubo | BSA 1 mg/mL (µL) | Água milli-Q (µL) | Reativo C (mL) |
+| --- | --- | --- | --- |
+| Branco | 0 | 200 | 1,0 |
+| 1 | 10 | 190 | 1,0 |
+| 2 | 20 | 180 | 1,0 |
+| 4 | 40 | 160 | 1,0 |
+| 6 | 60 | 140 | 1,0 |
+| 8 | 80 | 120 | 1,0 |
 Agitar e aguardar 10 minutos.
 Adicionar 100 µL de Reagente de Folin em todos os tubos. Agitar.
 Incubar no escuro por 30 minutos. Zerar com branco a 650 nm. Ler.

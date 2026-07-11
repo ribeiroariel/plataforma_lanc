@@ -3,6 +3,15 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { TECIDOS_ANALISAVEIS, testes as catalogoTestes } from "@/lib/tecidos";
+
+// Lê os tecidos marcados no formulário, mantendo só os válidos.
+function tecidosDoForm(formData: FormData): string[] {
+  return formData
+    .getAll("tecidos")
+    .map(String)
+    .filter((t) => (TECIDOS_ANALISAVEIS as string[]).includes(t));
+}
 
 export type ResultadoAcao = { erro: string } | void;
 
@@ -83,6 +92,7 @@ export async function criarProjeto(
     p_descricao: descricao || null,
     p_numero_levas: numeroLevas,
     p_grupos: gruposValidos,
+    p_tecidos: tecidosDoForm(formData),
   });
 
   if (error) {
@@ -147,7 +157,12 @@ export async function editarProjeto(
 
   const { error: erroProj } = await supabase
     .from("projetos")
-    .update({ nome, descricao: descricao || null, numero_levas: numeroLevas })
+    .update({
+      nome,
+      descricao: descricao || null,
+      numero_levas: numeroLevas,
+      tecidos: tecidosDoForm(formData),
+    })
     .eq("id", projetoId);
   if (erroProj) {
     return { erro: "Não foi possível salvar: " + erroProj.message };
@@ -252,6 +267,26 @@ export async function designarTeste(
 
   if (!testeSlug || !profileId) {
     return { erro: "Escolha o teste e a pessoa responsável." };
+  }
+
+  // Defesa: o teste designado precisa ser de um tecido que o projeto analisa
+  // (a UI já filtra, isto blinda contra chamada forjada). Projeto sem tecidos
+  // definidos = sem restrição (compatível com projetos antigos).
+  const { data: proj } = await supabase
+    .from("projetos")
+    .select("tecidos")
+    .eq("id", projetoId)
+    .maybeSingle();
+  const tecidosProjeto = (proj?.tecidos ?? []) as string[];
+  const teste = catalogoTestes.find((t) => t.slug === testeSlug);
+  if (
+    teste &&
+    tecidosProjeto.length > 0 &&
+    !tecidosProjeto.includes(teste.tecido)
+  ) {
+    return {
+      erro: "Este teste é de um tecido fora dos tecidos analisados do projeto.",
+    };
   }
 
   const { data: novo, error } = await supabase

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { criarProjeto } from "@/lib/actions/projetos";
+import { TECIDOS_ANALISAVEIS, nomeTecido } from "@/lib/tecidos";
 import { INPUT, INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type LinhaGrupo = { nome: string; ratos: string[] };
@@ -116,6 +117,27 @@ export default function NovoProjeto() {
             quantos ratos cada grupo tem em cada leva.
           </span>
         </label>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium text-ink">
+            Tecidos que serão analisados
+          </legend>
+          <p className="text-xs leading-relaxed text-ink-soft">
+            Só os testes desses tecidos ficam disponíveis para designar depois.
+            Deixe sem marcar para não restringir.
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {TECIDOS_ANALISAVEIS.map((t) => (
+              <label
+                key={t}
+                className="flex items-center gap-1.5 text-sm text-ink"
+              >
+                <input type="checkbox" name="tecidos" value={t} />
+                {nomeTecido(t)}
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         <div>
           <p className="text-sm font-medium text-ink">Grupos experimentais</p>
