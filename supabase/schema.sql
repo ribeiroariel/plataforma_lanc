@@ -1098,3 +1098,45 @@ as $$
 $$;
 
 grant execute on function public.contagem_projetos_ativos() to anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- EXCLUSÃO DE PROJETO (só enquanto não há dado registrado)
+-- ----------------------------------------------------------------------------
+-- Um coautor pode excluir um projeto que acabou de criar e ficou errado, DESDE
+-- QUE não haja nada registrado dentro dele: nenhum resultado de teste e nenhum
+-- sacrifício. O delete cascateia para grupos, membros, testes, versões e todo
+-- o módulo de sacrifício (todas as FKs para projetos são "on delete cascade").
+-- Roda como security definer (bypassa RLS, mesmo padrão de criar_projeto) e faz
+-- a autorização e a guarda de dados explicitamente aqui dentro — não há política
+-- de delete em projetos, essa função é o único caminho de exclusão.
+create or replace function public.excluir_projeto(p_projeto_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.eh_coautor_projeto(p_projeto_id) then
+    raise exception 'Só um coautor do projeto pode excluí-lo.';
+  end if;
+
+  if exists (
+    select 1
+    from public.resultados_teste rt
+    join public.projeto_testes pt on pt.id = rt.projeto_teste_id
+    where pt.projeto_id = p_projeto_id
+  ) then
+    raise exception 'Este projeto já tem resultado de teste registrado e não pode ser excluído.';
+  end if;
+
+  if exists (
+    select 1 from public.sacrificios where projeto_id = p_projeto_id
+  ) then
+    raise exception 'Este projeto já tem sacrifício registrado e não pode ser excluído.';
+  end if;
+
+  delete from public.projetos where id = p_projeto_id;
+end;
+$$;
+
+grant execute on function public.excluir_projeto(uuid) to authenticated;

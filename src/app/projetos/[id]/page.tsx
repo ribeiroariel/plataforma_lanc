@@ -8,6 +8,7 @@ import { ehTesteDesignavel } from "@/lib/tiposTeste";
 import FormularioMembro from "./FormularioMembro";
 import FormularioTeste from "./FormularioTeste";
 import FinalizarBotao from "./FinalizarBotao";
+import ExcluirProjetoBotao from "./ExcluirProjetoBotao";
 
 type Projeto = {
   id: string;
@@ -119,6 +120,28 @@ export default async function DetalheProjeto({
 
   const totalRatos = grupos?.reduce((soma, g) => soma + g.numero_ratos, 0) ?? 0;
 
+  // Projeto só pode ser excluído por um coautor enquanto não houver nada
+  // registrado nele: nenhum resultado de teste e nenhum sacrifício. A guarda
+  // real é a RPC excluir_projeto; aqui só decidimos se mostra o botão, para
+  // não oferecer uma ação que a função vai recusar.
+  let temDadosRegistrados = false;
+  if (souCoautor) {
+    const testeIds = (testesDesignados ?? []).map((t) => t.id);
+    const { count: nSacrificios } = await supabase
+      .from("sacrificios")
+      .select("id", { count: "exact", head: true })
+      .eq("projeto_id", id);
+    let nResultados = 0;
+    if (testeIds.length > 0) {
+      const { count } = await supabase
+        .from("resultados_teste")
+        .select("id", { count: "exact", head: true })
+        .in("projeto_teste_id", testeIds);
+      nResultados = count ?? 0;
+    }
+    temDadosRegistrados = nResultados > 0 || (nSacrificios ?? 0) > 0;
+  }
+
   // Pessoas que ainda não são membros (para o dropdown de adicionar membro).
   const idsMembros = new Set((membros ?? []).map((m) => m.profile_id));
   const naoMembros = (bolsistas ?? []).filter((b) => !idsMembros.has(b.id));
@@ -193,6 +216,19 @@ export default async function DetalheProjeto({
             Editar grupos e levas
           </Link>
           <FinalizarBotao projetoId={projeto.id} />
+        </div>
+      )}
+
+      {souCoautor && !temDadosRegistrados && (
+        <div className="mt-3">
+          <ExcluirProjetoBotao
+            projetoId={projeto.id}
+            nomeProjeto={projeto.nome}
+          />
+          <p className="mt-1 text-xs text-ink-soft">
+            Disponível só enquanto o projeto não tem nenhum resultado ou
+            sacrifício registrado.
+          </p>
         </div>
       )}
 

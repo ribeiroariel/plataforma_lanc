@@ -3,6 +3,7 @@ import Link from "next/link";
 import { testes, nomeTecido, tituloSemTecido } from "@/lib/testes";
 import { conteudoProtocolo } from "@/lib/protocolo";
 import { ProtocoloTeste } from "@/components/ProtocoloTeste";
+import CalculadoraReagentes from "./CalculadoraReagentes";
 
 export function generateStaticParams() {
   return testes.map((teste) => ({ slug: teste.slug }));
@@ -19,6 +20,7 @@ export default async function PaginaTeste({
 
   const conteudo = conteudoProtocolo(slug);
   const ehLowry = slug.startsWith("lowry-");
+  const ehTampoes = slug === "tampoes-reagentes-gerais";
 
   return (
     <article>
@@ -36,6 +38,12 @@ export default async function PaginaTeste({
         >
           Abrir calculadora da curva padrão →
         </Link>
+      )}
+
+      {ehTampoes && (
+        <div className="mt-6">
+          <CalculadoraReagentes />
+        </div>
       )}
 
       <div className="mt-6">
