@@ -63,10 +63,14 @@ export async function cadastrar(
     options: {
       data: { nome, papel: "bolsista" },
       // Com a confirmação de e-mail ligada, o link do e-mail passa por
-      // /auth/confirmar (que troca o token por sessão e leva pra área do
-      // bolsista). Lembre de cadastrar essa URL nos Redirect URLs do
+      // /auth/confirmar (troca o token por sessão) e cai em
+      // /cadastro-confirmado — uma página PÚBLICA de "aguardando aprovação".
+      // Não mandamos para /bolsista aqui: recém-confirmado o cadastro ainda
+      // está aprovado=false, e /bolsista é rota logada (proxy + layout) que
+      // aparecia como erro quando a sessão recém-criada não persistia.
+      // Lembre de cadastrar a URL /auth/confirmar nos Redirect URLs do
       // Supabase, senão o link não funciona.
-      emailRedirectTo: `${origem}/auth/confirmar?next=/bolsista`,
+      emailRedirectTo: `${origem}/auth/confirmar?next=/cadastro-confirmado`,
     },
   });
 
