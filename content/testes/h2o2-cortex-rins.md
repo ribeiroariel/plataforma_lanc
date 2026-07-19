@@ -27,13 +27,13 @@ Dissolver 0,099 g de dextrose (D-glicose) em ~90 mL de água ultrapura (milli-Q)
 Ajustar pH para 7,0 com NaOH 0,1 M ou HCl 0,1 M; completar para 100 mL (q.s.p.);
 Manter a 4 °C. Preparar no dia.
 Meio de reação (preparar no dia, proteger da luz)
-Tampão fosfato de sódio 50 mM pH 7,4: ver seção 37.1;
+Tampão fosfato de sódio 50 mM pH 7,4: preparo na aba "Tampões e reagentes gerais";
 Peroxidase de rábano (HRP): dissolver para concentração final de 8,5 U/mL no tampão fosfato;
 Vermelho de fenol (fenolsulfonftaleína): 1 mg/mL no tampão fosfato;
 Misturar 235 µL de tampão fosfato + 5 µL de HRP (8,5 U/mL) + 5 µL de vermelho de fenol (1 mg/mL) por amostra.
 Obs.: A peroxidase de rábano é instável à temperatura ambiente. Armazenar em gelo durante todo o experimento.
 NaOH 1 N
-Ver seção 37.17 (NaOH 1 M — usar como NaOH 1 N).
+Preparo na aba "Tampões e reagentes gerais" (NaOH 1 M — usar como NaOH 1 N).
 Solução padrão de H₂O₂
 Preparar diluições seriadas de H₂O₂ 30% em tampão dextrose pH 7,0: 0; 0,5; 1,0; 2,0; 5,0; 10,0 nmol/mL;
 Calcular a concentração exata da solução estoque de H₂O₂ usando ε₂₄₀ = 43,6 M⁻¹·cm⁻¹.

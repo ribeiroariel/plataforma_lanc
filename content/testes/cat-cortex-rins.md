@@ -23,7 +23,7 @@ Centrífuga refrigerada, banho de gelo, eppendorfs, micropipetas.
 9.3. PREPARAÇÃO DAS SOLUÇÕES
 Quantidade calculada para 10 amostras (+10% de margem de segurança). Preparar sempre 10% a mais do que o necessário para cobrir eventuais erros de pipetagem.
 Tampão Fosfato de Potássio 10 mM pH 7,0
-Ver seção 37. Estável por 30 dias em geladeira.
+Preparo na aba "Tampões e reagentes gerais". Estável por 30 dias em geladeira.
 Meio de Reação (preparar no dia)
 2,7 mL de tampão fosfato de potássio 10 mM pH 7,0 + 5,4 µL de H₂O₂ 30%.
 Obs.: Quantidade calculada para 10 amostras + 10% (10 × 240 µL × 1,10 = 2.640 µL). Armazenar em frasco fechado coberto com papel alumínio. Preparar imediatamente antes do uso.

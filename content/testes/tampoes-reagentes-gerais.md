@@ -5,7 +5,7 @@ Obs.: Para todas as soluções m/v: sempre dissolver o soluto em volume menor qu
 0,710 g de fosfato de sódio dibásico anidro (Na₂HPO₄, PM = 141,96 g/mol);
 2,610 g de KCl;
 Dissolver em ~200 mL de água ultrapura (milli-Q), ajustar pH 7,4 com HCl 1 M ou NaOH 1 M, completar para 250 mL em balão volumétrico (q.s.p. 250 mL). Geladeira. Validade: 30 dias.
-Obs.: Para preparar tampão fosfato de sódio 50 mM pH 7,4 (utilizado no meio de reação do ensaio de H₂O₂ — seção 17): dissolver 0,233 g de NaH₂PO₄ anidro (monobásico) + 0,434 g de Na₂HPO₄ anidro (dibásico) em ~80 mL de água ultrapura (milli-Q); ajustar pH 7,4 com HCl 1 M ou NaOH 1 M; completar para 100 mL (q.s.p. 100 mL). Geladeira. Validade: 30 dias.
+Obs.: Para preparar tampão fosfato de sódio 50 mM pH 7,4 (utilizado no meio de reação do ensaio de H₂O₂): dissolver 0,233 g de NaH₂PO₄ anidro (monobásico) + 0,434 g de Na₂HPO₄ anidro (dibásico) em ~80 mL de água ultrapura (milli-Q); ajustar pH 7,4 com HCl 1 M ou NaOH 1 M; completar para 100 mL (q.s.p. 100 mL). Geladeira. Validade: 30 dias.
 37.2. KCl 1,15% (m/v)
 0,575 g de KCl q.s.p. 50 mL. Geladeira. Validade: 30 dias.
 37.3. SDS 8,1% (m/v)
@@ -35,13 +35,13 @@ KH₂PO₄ (monobásico anidro): 0,136 g;
 EDTA dissódico (Na₂-EDTA, PM = 372,2 g/mol): 0,186 g;
 Completar para 500 mL em balão volumétrico (q.s.p. 500 mL). Ajustar pH para 7,4 com HCl 1 M ou NaOH 1 M.
 Obs.: O EDTA é adicionado para quelar Cu²⁺ e Fe²⁺/Fe³⁺, que catalisariam a oxidação espontânea dos grupos –SH antes da reação com o DTNB, subestimando o conteúdo de sulfidrilas totais. Armazenar em geladeira. Validade: 30 dias.
-37.11. TAMPÃO ACETATO 50 mM pH 5,0 (para solução de DTNB — seção 15)
+37.11. TAMPÃO ACETATO 50 mM pH 5,0 (para solução de DTNB — Tióis e dissulfetos)
 dissolver 0,290 mL de ácido acético glacial em ~80 mL de água ultrapura (milli-Q); ajustar pH para 5,0 com NaOH 1 M; completar para 100 mL (q.s.p. 100 mL). Temperatura ambiente. Validade: 30 dias.
 37.12. TAMPÃO FOSFATO DE POTÁSSIO DIBÁSICO 0,2 M pH 8
 Dissolver 3,484 g de K₂HPO₄ (fosfato de potássio dibásico anidro, PM = 174,18 g/mol) em ~80 mL de água ultrapura (milli-Q); ajustar pH para 8,0 com HCl 1 M; completar para 100 mL em balão volumétrico (q.s.p. 100 mL). Geladeira. Validade: 30 dias.
 37.13. GUANIDINA 6 M
 14,33 g de cloridrato de guanidina (PM = 95,53 g/mol) q.s.p. 25 mL de tampão fosfato de potássio 20 mM pH 2,3. Preparar no dia do experimento.
-37.14. TAMPÃO FOSFATO DE POTÁSSIO 20 mM pH 2,3 (para Guanidina 6 M — seção 13)
+37.14. TAMPÃO FOSFATO DE POTÁSSIO 20 mM pH 2,3 (para Guanidina 6 M — Proteínas carboniladas)
 Dissolver 0,068 g de KH₂PO₄ (PM = 136,09 g/mol) em ~18 mL de água ultrapura (milli-Q); ajustar pH para 2,3 com H₃PO₄ concentrado (85%), gota a gota, sob pHmetro; completar para 25 mL em balão volumétrico (q.s.p. 25 mL). Preparar no dia do experimento. Temperatura ambiente.
 Obs.: Este tampão é preparado no dia junto com a guanidina 6 M. O pH 2,3 é necessário para suprimir a absorção de fundo da guanidina a 370 nm e estabilizar as hidrazonas formadas pelo DNPH. Ajustar o pH com H₃PO₄ concentrado (85%) gota a gota sob monitoramento de pHmetro — pequenas adições alteram bastante o pH nesta faixa ácida.
 37.15. ALOXANA — INDUÇÃO DE DIABETES
