@@ -4,6 +4,7 @@ import { testes, nomeTecido, tituloSemTecido } from "@/lib/testes";
 import { conteudoProtocolo } from "@/lib/protocolo";
 import { ProtocoloTeste } from "@/components/ProtocoloTeste";
 import CalculadoraReagentes from "./CalculadoraReagentes";
+import CalculadoraReagentesDia from "./CalculadoraReagentesDia";
 
 export function generateStaticParams() {
   return testes.map((teste) => ({ slug: teste.slug }));
@@ -41,8 +42,9 @@ export default async function PaginaTeste({
       )}
 
       {ehTampoes && (
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col gap-4">
           <CalculadoraReagentes />
+          <CalculadoraReagentesDia />
         </div>
       )}
 
