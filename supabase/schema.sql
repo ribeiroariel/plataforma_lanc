@@ -1140,3 +1140,110 @@ end;
 $$;
 
 grant execute on function public.excluir_projeto(uuid) to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- APROVAÇÃO DE CADASTRO PELO SITE (Ariel + orientadora)
+-- ----------------------------------------------------------------------------
+-- Até aqui, todo cadastro nascia aprovado=false e só a chave de serviço
+-- (script revisar-cadastros.mjs) mudava isso. Esta seção leva a aprovação
+-- para dentro do site: uma flag "pode_aprovar_cadastros" (protegida de
+-- autoedição igual papel/aprovado/pode_exportar_dados) e duas funções
+-- security definer que fazem a autorização explicitamente lá dentro.
+
+alter table public.profiles
+  add column if not exists pode_aprovar_cadastros boolean not null default false;
+
+-- Leitura da própria flag (o menu precisa saber se mostra a aba "Cadastros").
+-- Aditivo ao grant select de colunas já existente em profiles.
+grant select (pode_aprovar_cadastros) on public.profiles to authenticated;
+
+-- Ninguém muda a própria flag pelo site (mesmo motivo de papel/aprovado).
+revoke update (pode_aprovar_cadastros) on public.profiles from authenticated;
+
+-- Quem pode aprovar: a orientadora (sempre) ou quem tem a flag ligada
+-- (o Ariel). Reusa o mesmo desenho de is_orientador()/pode_exportar_dados().
+create or replace function public.pode_aprovar_cadastros()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.is_orientador() or exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid() and profiles.pode_aprovar_cadastros = true
+  );
+$$;
+
+-- Aprova um cadastro pendente. Autoriza e valida aqui dentro (não há policy
+-- de update em profiles.aprovado para authenticated). Só aprova bolsista.
+create or replace function public.aprovar_cadastro(p_profile_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.pode_aprovar_cadastros() then
+    raise exception 'Sem permissão para aprovar cadastros.';
+  end if;
+
+  update public.profiles
+    set aprovado = true
+    where id = p_profile_id and papel = 'bolsista';
+end;
+$$;
+
+-- Recusa um cadastro: apaga a conta de login inteira (cascata apaga o
+-- profile), mesmo efeito do "rejeitar" do script. profiles.id = auth.users.id
+-- neste schema, então o delete é direto pelo id do profile. Guarda: nunca
+-- deixa apagar uma conta já aprovada nem uma que não seja bolsista.
+create or replace function public.rejeitar_cadastro(p_profile_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.pode_aprovar_cadastros() then
+    raise exception 'Sem permissão para recusar cadastros.';
+  end if;
+
+  if not exists (
+    select 1 from public.profiles
+    where id = p_profile_id and papel = 'bolsista' and aprovado = false
+  ) then
+    raise exception 'Só é possível recusar um cadastro de bolsista ainda pendente.';
+  end if;
+
+  delete from auth.users where id = p_profile_id;
+end;
+$$;
+
+-- Lista os cadastros pendentes com e-mail — a coluna email NÃO é exposta no
+-- grant de select de profiles (é sensível), então quem aprova só a vê por
+-- esta função, e apenas se tiver permissão.
+create or replace function public.listar_cadastros_pendentes()
+returns table (id uuid, nome text, email text, created_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+begin
+  if not public.pode_aprovar_cadastros() then
+    raise exception 'Sem permissão para ver cadastros pendentes.';
+  end if;
+
+  return query
+    select p.id, p.nome, p.email, p.created_at
+    from public.profiles p
+    where p.papel = 'bolsista' and p.aprovado = false
+    order by p.created_at;
+end;
+$$;
+
+grant execute on function public.pode_aprovar_cadastros() to authenticated;
+grant execute on function public.listar_cadastros_pendentes() to authenticated;
+grant execute on function public.aprovar_cadastro(uuid) to authenticated;
+grant execute on function public.rejeitar_cadastro(uuid) to authenticated;

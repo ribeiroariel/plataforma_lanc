@@ -34,9 +34,12 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/cadastro");
+  // "/cadastro" exato (não "/cadastros", que é a área de aprovação).
+  const isAuthRoute = path.startsWith("/login") || path === "/cadastro";
   const isBolsistaRoute = path.startsWith("/bolsista");
   const isOrientadorRoute = path.startsWith("/orientador");
+  // /cadastros: aprovação de cadastros — só orientadora ou quem tem a flag.
+  const isCadastrosRoute = path.startsWith("/cadastros");
   // /projetos, /testes e /perfil são compartilhados pelos dois papéis (a
   // orientadora acompanha os projetos dos bolsistas, e qualquer um edita
   // o próprio perfil) — só exige login, sem checar papel específico.
@@ -45,7 +48,8 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/testes") ||
     path.startsWith("/meus-testes") ||
     path.startsWith("/perfil");
-  const isRotaLogada = isBolsistaRoute || isOrientadorRoute || isCompartilhadaRoute;
+  const isRotaLogada =
+    isBolsistaRoute || isOrientadorRoute || isCompartilhadaRoute || isCadastrosRoute;
 
   if (!user && isRotaLogada) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -55,10 +59,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (user && (isBolsistaRoute || isOrientadorRoute)) {
+  if (user && (isBolsistaRoute || isOrientadorRoute || isCadastrosRoute)) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("papel")
+      .select("papel, pode_aprovar_cadastros")
       .eq("id", user.id)
       .single();
 
@@ -66,6 +70,13 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
     if (isOrientadorRoute && profile?.papel !== "orientador") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    if (
+      isCadastrosRoute &&
+      profile?.papel !== "orientador" &&
+      !profile?.pode_aprovar_cadastros
+    ) {
       return NextResponse.redirect(new URL("/", request.url));
     }
   }
