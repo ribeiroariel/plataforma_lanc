@@ -222,6 +222,18 @@ export async function finalizarProjeto(projetoId: string) {
   revalidatePath(`/projetos/${projetoId}`);
 }
 
+export async function excluirProjeto(
+  projetoId: string
+): Promise<{ erro: string } | void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("excluir_projeto", {
+    p_projeto_id: projetoId,
+  });
+  if (error) return { erro: error.message };
+  revalidatePath("/projetos");
+  redirect("/projetos");
+}
+
 export async function adicionarMembro(
   _estadoAnterior: ResultadoAcao,
   formData: FormData

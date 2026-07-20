@@ -84,20 +84,14 @@ function colunasDaFamilia(config: ConfigTeste): Coluna[] {
       { key: "dil", label: "Diluição", absorbancia: false },
     ];
   }
-  return [
-    ...(config.camposBrutos ?? []).map((c) => ({
-      key: c.chave,
-      label: c.rotulo,
-      absorbancia: true,
-    })),
-    {
-      key: "valor_final",
-      label: `Valor final${
-        config.unidadeResultado ? ` (${config.unidadeResultado})` : ""
-      }`,
-      absorbancia: false,
-    },
-  ];
+  // Família "simples": só as absorbâncias brutas. A normalização por proteína
+  // (e o fator de diluição) é feita depois, na análise no R — a plataforma não
+  // guarda mais um "valor final" digitado à mão aqui.
+  return (config.camposBrutos ?? []).map((c) => ({
+    key: c.chave,
+    label: c.rotulo,
+    absorbancia: true,
+  }));
 }
 
 /** slope (ΔAbs/min) a partir dos tempos de uma linha, já em absorbância real. */
@@ -558,9 +552,11 @@ export default function RegistroResultado({
                   {c.label}
                 </th>
               ))}
-              <th className="py-2 pr-2 font-normal">
-                Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
-              </th>
+              {config.familia !== "simples" && (
+                <th className="py-2 pr-2 font-normal">
+                  Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
+                </th>
+              )}
               <th className="py-2 pl-2 font-normal">Observação</th>
             </tr>
           </thead>
@@ -624,10 +620,12 @@ export default function RegistroResultado({
                       </td>
                     );
                   })}
-                  <td className="py-1.5 pr-2 font-mono tabular-nums text-ink">
-                    {fmt(valor, config.familia === "curva" ? 3 : 4)}
-                    {travado && <span title="valor travado"> 🔒</span>}
-                  </td>
+                  {config.familia !== "simples" && (
+                    <td className="py-1.5 pr-2 font-mono tabular-nums text-ink">
+                      {fmt(valor, config.familia === "curva" ? 3 : 4)}
+                      {travado && <span title="valor travado"> 🔒</span>}
+                    </td>
+                  )}
                   <td className="py-1.5 pl-2">
                     <input
                       type="text"
@@ -649,10 +647,9 @@ export default function RegistroResultado({
 
       {config.familia === "simples" && (
         <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-          Cálculo automático não disponível para este teste (a fórmula do
-          manual depende de diluição e da concentração de proteína, feita na
-          análise). Registre as absorbâncias brutas e informe o valor final
-          que você calculou.
+          Registre apenas as absorbâncias brutas. A normalização por proteína e
+          o fator de diluição são aplicados depois, na análise dos dados (R) —
+          a plataforma não fecha um valor final aqui.
         </p>
       )}
 

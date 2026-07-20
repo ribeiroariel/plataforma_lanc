@@ -1,8 +1,7 @@
 25. PROTEÍNAS CARBONILADAS – PLASMA
 Tecido/Amostra: Plasma. Ensaio: Derivatização de grupos carbonila com DNPH. λ de leitura: 370 nm (UV). Tipo de cubeta: Plástico (convencional) ou microplaca UV-Star 96 poços (Infinite 200 Pro). Expressão dos resultados: nmol carbonila · mg proteína⁻¹.
 25.1. PRINCÍPIO
-Referência: Levine, R.L. et al. (1990). Methods in Enzymology, 186, 464–478.
-Idêntico ao descrito na seção 13.1. Os grupos carbonila do plasma reagem com DNPH formando hidrazonas estáveis com ε₃₇₀ = 22.000 M⁻¹·cm⁻¹. Atenção: o plasma contém proteínas de absorção basal a 370 nm — o branco da amostra é obrigatório para cada tubo individual.
+Grupos carbonila gerados por oxidação proteica reagem com DNPH formando hidrazonas estáveis, detectadas a 370 nm (ε₃₇₀ = 22.000 M⁻¹·cm⁻¹). Atenção: o plasma contém proteínas de absorção basal a 370 nm — o branco da amostra é obrigatório para cada tubo individual. Referência: Levine, R.L. et al. (1990). Methods in Enzymology, 186, 464–478.
 25.2. EQUIPAMENTOS
 Espectrofotômetro UV-Vis (cubeta de plástico, 370 nm) — para leitura convencional;
 Obs.: O Infinite 200 Pro somente pode ser utilizado na presença de um dos responsáveis pelo equipamento. Nunca operar o aparelho sem supervisão de um responsável habilitado. Para leitura a 370 nm: utilizar microplaca UV-Star de 96 poços. Pipetar o sobrenadante final (após guanidina) diretamente no poço.

@@ -23,7 +23,7 @@ Centrífuga, banho de gelo, eppendorfs, micropipetas, papel alumínio.
 10.3. PREPARAÇÃO DAS SOLUÇÕES
 Quantidade calculada para 10 amostras (+10% de margem de segurança). Preparar sempre 10% a mais do que o necessário para cobrir eventuais erros de pipetagem.
 Tampão TRIS 50 mM com EDTA 1 mM, pH 8,2
-Ver seção 37. Estável por 1 mês em geladeira.
+Preparo na aba "Tampões e reagentes gerais". Estável por 1 mês em geladeira.
 Pirogalol 24 mM em HCl 10 mM (preparar imediatamente antes do uso)
 0,00303 g de pirogalol + 1,0 mL de HCl 10 mM. Frasco com papel alumínio.
 Obs.: Preparar somente a quantidade necessária imediatamente antes do uso. Para 10 amostras + 10% de margem: apenas 44 µL de solução de pirogalol são necessários (10 amostras × 4 µL × 1,10). O restante deve ser descartado. O pirogalol se oxida rapidamente — nunca reutilizar.
