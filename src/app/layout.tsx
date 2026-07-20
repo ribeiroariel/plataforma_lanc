@@ -3,7 +3,7 @@ import { Newsreader, Public_Sans, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
-import { getUsuarioAtual } from "@/lib/supabase/profile";
+import { getUsuarioAtual, podeAprovarCadastros } from "@/lib/supabase/profile";
 import { logout } from "@/lib/actions/auth";
 import { NavPrincipal } from "@/components/NavPrincipal";
 
@@ -58,6 +58,10 @@ export default async function RootLayout({
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" }
     );
+  }
+  // Aba de aprovação de cadastros: só para quem pode (orientadora ou Ariel).
+  if (podeAprovarCadastros(usuario)) {
+    navPrincipal.push({ href: "/cadastros", rotulo: "Cadastros" });
   }
 
   return (
