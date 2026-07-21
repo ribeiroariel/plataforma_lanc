@@ -7,7 +7,15 @@ import { Fragment, type ReactNode } from "react";
 // e os critérios de controle de qualidade / avisos ganham realce (é a
 // parte mais acionável para quem está na bancada).
 
-const RE_SECAO = /^\d+\.\d+\.\s+(.*)$/;
+// "39.5. TÍTULO" (seção) e também "39.5.2. Título" (subseção) — o nível vem
+// da quantidade de números, para a subseção não cair como parágrafo solto.
+const RE_SECAO = /^(\d+(?:\.\d+)+)\.\s+(.*)$/;
+
+// Itens de lista ("- item"): viram marcadores em vez de uma sequência de
+// parágrafos indistinguíveis (ex.: passos do POP-002 no descarte).
+function ehLinhaLista(linha: string): boolean {
+  return linha.startsWith("- ") && linha.length > 2;
+}
 
 // Tabelas no formato markdown ("| a | b |" com linha separadora "| --- |")
 // — usadas p.ex. na curva padrão da Lowry (Tubo · BSA · Água · Reativo C).
@@ -102,15 +110,49 @@ export function ProtocoloTeste({ conteudo }: { conteudo: string }) {
       continue;
     }
 
+    // Bloco de lista: consome os "- item" seguidos de uma vez.
+    if (ehLinhaLista(linha)) {
+      const inicio = i;
+      const itens: string[] = [];
+      while (i < corpo.length && ehLinhaLista(corpo[i])) {
+        itens.push(corpo[i].slice(2).trim());
+        i++;
+      }
+      blocos.push(
+        <ul
+          key={inicio}
+          className="my-1 ml-5 flex list-disc flex-col gap-1.5 marker:text-absorbance"
+        >
+          {itens.map((item, idx) => (
+            <li key={idx} className="pl-1 text-sm leading-relaxed text-ink-soft">
+              {item}
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
     const m = linha.match(RE_SECAO);
     if (m) {
+      // 39.5 -> seção (2 números) ; 39.5.2 -> subseção (3+)
+      const nivel = m[1].split(".").length;
       blocos.push(
-        <h2
-          key={i}
-          className="mt-7 font-mono text-xs font-medium uppercase tracking-[0.12em] text-absorbance"
-        >
-          {m[1]}
-        </h2>
+        nivel >= 3 ? (
+          <h3
+            key={i}
+            className="mt-5 font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-ink"
+          >
+            {m[2]}
+          </h3>
+        ) : (
+          <h2
+            key={i}
+            className="mt-7 font-mono text-xs font-medium uppercase tracking-[0.12em] text-absorbance"
+          >
+            {m[2]}
+          </h2>
+        )
       );
     } else {
       blocos.push(

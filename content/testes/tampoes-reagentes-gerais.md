@@ -112,106 +112,60 @@ Espectrofotômetro: nunca introduzir cubetas com líquido externo. Cobrir o equi
 Todos os resíduos químicos gerados no laboratório devem ser gerenciados conforme o Procedimento POP-002 CMA/SGA da FURB (FURB/CMA/SGA, 2021a), a Política Nacional de Resíduos Sólidos (Lei n° 12.305/2010), a NBR 10004:2004 e a Resolução CONAMA n° 430/2011.
 39.5.1. Planejamento — Passo 1 ao Passo 3 do POP-002
 Antes de iniciar qualquer experimento que gere resíduos perigosos (FURB/CMA/SGA, 2021a):
-Levantar dados sobre a periculosidade físico-química ou biológica das amostras a serem manuseadas;
-Consultar Fichas de Segurança (FISPQ), boletins técnicos e rótulos dos reagentes para identificar substâncias perigosas;
-Identificar possíveis produtos de reação entre reagentes e amostras que possam gerar resíduos perigosos.
+- Levantar dados sobre a periculosidade físico-química ou biológica das amostras a serem manuseadas;
+- Consultar Fichas de Segurança (FISPQ), boletins técnicos e rótulos dos reagentes para identificar substâncias perigosas;
+- Identificar possíveis produtos de reação entre reagentes e amostras que possam gerar resíduos perigosos.
 Obs.: O bolsista que não tiver conhecimento pleno sobre o experimento deve consultar o responsável pelo projeto antes de iniciar (POP-002 Obs. 1).
 39.5.2. Classificação e Identificação do Código FURB — Passo 4 e 5 do POP-002
 Com o auxílio do DT-001 — Lista de Códigos FURB para Descarte de Resíduos Perigosos (FURB/CMA/SGA, 2021b), identificar o código correspondente ao resíduo gerado. Os códigos aplicáveis a este laboratório são:
-Código FURB
-Descrição
-Aplicação neste Laboratório
-Custo R$/kg (2024)
-40255
-Reagentes para laboratório contendo substância perigosa; material contaminado por estes. (IBAMA 18 02 02)
-CAT, SOD, TBARS, Sulfidrilas, DNPH/Carboniladas (fração aquosa), Lowry, EPIs contaminados, cubetas plásticas e eppendorfs contaminados
-7,15
-40259
-Solventes orgânicos não halogenados; líquidos de lavagem e efluentes orgânicos; material contaminado. (IBAMA 07 07 04)
-Etanol + acetato de etila gerados nas lavagens do ensaio de Proteínas Carboniladas
-6,20
-40266
-Resíduos que contenham ou estejam contaminados com microrganismos ou material biológico potencialmente patogênico. (IBAMA 18 01 01)
-Maravalha contaminada, instrumentais descartáveis de manipulação animal, EPIs em contato com material biológico
-8,92
-40273
-Materiais perfurocortantes ou escarificantes; utensílios de vidro quebrados contaminados com produtos perigosos. (IBAMA 18 04 01)
-Agulhas de seringa, lâminas, pipetas Pasteur e vidros quebrados contaminados
-9,36
-31088
-Resíduos de serviços de saúde com risco de infecção biológica. (IBAMA 18 01 02)
-Material com sangue, plasma ou secreções biológicas de animais
-—
+| Código FURB | Descrição | Aplicação neste Laboratório |
+| --- | --- | --- |
+| 40255 | Reagentes para laboratório contendo substância perigosa; material contaminado por estes. (IBAMA 18 02 02) | CAT, SOD, TBARS, Sulfidrilas, DNPH/Carboniladas (fração aquosa), Lowry, EPIs contaminados, cubetas plásticas e eppendorfs contaminados |
+| 40259 | Solventes orgânicos não halogenados; líquidos de lavagem e efluentes orgânicos; material contaminado. (IBAMA 07 07 04) | Etanol + acetato de etila gerados nas lavagens do ensaio de Proteínas Carboniladas |
+| 40266 | Resíduos que contenham ou estejam contaminados com microrganismos ou material biológico potencialmente patogênico. (IBAMA 18 01 01) | Maravalha contaminada, instrumentais descartáveis de manipulação animal, EPIs em contato com material biológico |
+| 40273 | Materiais perfurocortantes ou escarificantes; utensílios de vidro quebrados contaminados com produtos perigosos. (IBAMA 18 04 01) | Agulhas de seringa, lâminas, pipetas Pasteur e vidros quebrados contaminados |
+| 31088 | Resíduos de serviços de saúde com risco de infecção biológica. (IBAMA 18 01 02) | Material com sangue, plasma ou secreções biológicas de animais |
 39.5.3. Acondicionamento — Passo 6 do POP-002
 Com base no estado físico do resíduo e no código FURB identificado (FURB/CMA/SGA, 2021a):
-Resíduos líquidos e semissólidos: acondicionar em bombonas de plástico com tampa (capacidade máxima: 20 L);
-Resíduos sólidos: acondicionar em sacos plásticos dentro de caixas de papelão (peso máximo: 10 kg);
-Perfurocortantes: acondicionar exclusivamente em caixa rígida amarela (até 2/3 da capacidade);
-Material biológico (FURB 40266/31088): acondicionar em saco vermelho identificado como resíduo infectante.
+- Resíduos líquidos e semissólidos: acondicionar em bombonas de plástico com tampa (capacidade máxima: 20 L);
+- Resíduos sólidos: acondicionar em sacos plásticos dentro de caixas de papelão (peso máximo: 10 kg);
+- Perfurocortantes: acondicionar exclusivamente em caixa rígida amarela (até 2/3 da capacidade);
+- Material biológico (FURB 40266/31088): acondicionar em saco vermelho identificado como resíduo infectante.
 Obs.: Resíduos que contenham substâncias que atacam o plástico (ex.: ácidos ou bases concentrados) devem ser acondicionados em recipientes de material resistente (POP-002 Obs. 3).
 Obs.: Resíduos perigosos de naturezas diferentes, mas compatíveis, podem ser acumulados na mesma bombona (POP-002 Obs. 4). Ex.: todos os resíduos aquosos do ensaio de CAT, SOD, TBARS e Lowry podem ir juntos na bombona FURB 40255 se forem compatíveis. O DNPH e o acetato de etila/etanol devem ser mantidos em bombonas separadas.
 39.5.4. Identificação e Pesagem — Passo 7 do POP-002
 Após fechar a embalagem, pesá-la e identificá-la com etiqueta ou papel fixado com fita. A etiqueta deve conter obrigatoriamente (FURB/CMA/SGA, 2021a; RIBEIRO, 2024):
-Código FURB (ex.: FURB 40255) escrito de forma legível;
-Peso em kg (ex.: 3,5 kg);
-Nome do setor de origem: Laboratório de Neurociências e Comportamento — Bloco S;
-PCC do laboratório;
-Identificação do resíduo: nome por extenso das substâncias contidas;
-Data de saída: data em que o resíduo foi etiquetado e a embalagem foi selada;
-Nome e contato do responsável pelo preenchimento;
-Frase de risco e pictograma GHS correspondente ao resíduo.
+- Código FURB (ex.: FURB 40255) escrito de forma legível;
+- Peso em kg (ex.: 3,5 kg);
+- Nome do setor de origem: Laboratório de Neurociências e Comportamento — Bloco S;
+- PCC do laboratório;
+- Identificação do resíduo: nome por extenso das substâncias contidas;
+- Data de saída: data em que o resíduo foi etiquetado e a embalagem foi selada;
+- Nome e contato do responsável pelo preenchimento;
+- Frase de risco e pictograma GHS correspondente ao resíduo.
 39.5.5. Registro no DT-002 e Solicitação de Coleta — Passo 8 do POP-002
 Após identificar e pesar as embalagens (FURB/CMA/SGA, 2021a):
-Preencher o formulário DT-002 — Inventário para Descarte de Resíduos Perigosos FURB/SGA, disponível online pelo SGA. Inserir data, código FURB, descrição do resíduo e quantidade em kg;
-Reservar as embalagens no local indicado pelo responsável pelo projeto até a coleta pelo SGA;
-Quando a bombona atingir 80% do volume, notificar o responsável para iniciar o processo de coleta;
-Solicitar a coleta pelo sistema ERP-FURB, inserindo o código da bombona e os dados do DT-002;
-Aguardar a equipe do SGA-FURB (Veólia) para retirada no local designado.
+- Preencher o formulário DT-002 — Inventário para Descarte de Resíduos Perigosos FURB/SGA, disponível online pelo SGA. Inserir data, código FURB, descrição do resíduo e quantidade em kg;
+- Reservar as embalagens no local indicado pelo responsável pelo projeto até a coleta pelo SGA;
+- Quando a bombona atingir 80% do volume, notificar o responsável para iniciar o processo de coleta;
+- Solicitar a coleta pelo sistema ERP-FURB, inserindo o código da bombona e os dados do DT-002;
+- Aguardar a equipe do SGA-FURB (Veólia) para retirada no local designado.
 Obs.: Nunca descartar resíduos perigosos na pia, no lixo comum ou no esgoto. Tais práticas violam a Lei n° 12.305/2010, a Resolução CONAMA n° 430/2011 e a NBR 10004:2004, podendo gerar sanções administrativas e ambientais para a instituição.
 39.5.6. Resumo por Ensaio — Bombonas e Códigos FURB
-Ensaio
-Bombona
-FURB
-Principais Substâncias
-CAT
-CAT-H₂O₂
-40255
-H₂O₂, tampão fosfato de potássio, homogeneizado
-SOD
-SOD-TRIS
-40255
-Pirogalol oxidado, tampão TRIS-EDTA, catalase, homogeneizado
-TBARS
-TBARS
-40255
-SDS, ácido acético, TBA, KCl, homogeneizado ou plasma
-Sulfidrilas
-SULFIDRILAS-DTNB
-40255
-DTNB, TNB, PBS-EDTA, ácido sulfossalicílico, homogeneizado
-Carboniladas (aquosa)
-CARBONILADAS-DNPH
-40255
-DNPH, HCl 2M, TCA, guanidina, homogeneizado
-Carboniladas (solventes)
-SOLVENTES-NAOH
-40259
-Etanol + acetato de etila (lavagens)
-Lowry
-LOWRY
-40255
-BSA, NaOH, Na₂CO₃, CuSO₄, tartarato, Folin, homogeneizado
-Material biológico
-BIO-ANIMAL
-40266
-Maravalha, EPIs, instrumentais de manipulação animal
-Perfurocortantes
-Caixa rígida amarela
-40273
-Agulhas, lâminas, vidros quebrados contaminados
+| Ensaio | Bombona | FURB | Principais Substâncias |
+| --- | --- | --- | --- |
+| CAT | CAT-H₂O₂ | 40255 | H₂O₂, tampão fosfato de potássio, homogeneizado |
+| SOD | SOD-TRIS | 40255 | Pirogalol oxidado, tampão TRIS-EDTA, catalase, homogeneizado |
+| TBARS | TBARS | 40255 | SDS, ácido acético, TBA, KCl, homogeneizado ou plasma |
+| Sulfidrilas | SULFIDRILAS-DTNB | 40255 | DTNB, TNB, PBS-EDTA, ácido sulfossalicílico, homogeneizado |
+| Carboniladas (aquosa) | CARBONILADAS-DNPH | 40255 | DNPH, HCl 2M, TCA, guanidina, homogeneizado |
+| Carboniladas (solventes) | SOLVENTES-NAOH | 40259 | Etanol + acetato de etila (lavagens) |
+| Lowry | LOWRY | 40255 | BSA, NaOH, Na₂CO₃, CuSO₄, tartarato, Folin, homogeneizado |
+| Material biológico | BIO-ANIMAL | 40266 | Maravalha, EPIs, instrumentais de manipulação animal |
+| Perfurocortantes | Caixa rígida amarela | 40273 | Agulhas, lâminas, vidros quebrados contaminados |
 39.6. DESCARTE DE MATERIAL BIOLÓGICO
-Resíduos de tecidos, sangue, eritrócitos e plasma: saco vermelho identificado como resíduo infectante (FURB 40266);
-Carcaças de animais: encaminhar para a Taxidermia em até 24 horas; pesar e registrar no livro de controle;
-Maravalha contaminada: saco identificado, descartado no lixo atrás do laboratório de anatomia.
+- Resíduos de tecidos, sangue, eritrócitos e plasma: saco vermelho identificado como resíduo infectante (FURB 40266);
+- Carcaças de animais: encaminhar para a Taxidermia em até 24 horas; pesar e registrar no livro de controle;
+- Maravalha contaminada: saco identificado, descartado no lixo atrás do laboratório de anatomia.
 39.7. DESCARTE DE PERFUROCORTANTES
 Agulhas, lâminas, micropipetas quebradas e vidros contaminados devem ser descartados exclusivamente em caixa rígida amarela (FURB 40273). Encaminhar ao SGA quando atingir 2/3 da capacidade.
