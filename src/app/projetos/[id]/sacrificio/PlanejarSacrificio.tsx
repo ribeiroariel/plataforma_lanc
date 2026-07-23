@@ -46,12 +46,21 @@ export default function PlanejarSacrificio({
 
   function criar() {
     setErro(null);
+    if (!data) {
+      setErro("Informe a data do sacrifício.");
+      return;
+    }
+    const duracaoNum = parseInt(duracao, 10);
+    if (!duracao || !Number.isFinite(duracaoNum) || duracaoNum <= 0) {
+      setErro("Informe a duração estimada (min).");
+      return;
+    }
     iniciar(async () => {
       const r = await criarSacrificio({
         projetoId,
         leva: leva ? parseInt(leva, 10) : null,
-        data: data || null,
-        duracaoMin: duracao ? parseInt(duracao, 10) : null,
+        data,
+        duracaoMin: duracaoNum,
       });
       if ("erro" in r) setErro(r.erro);
       else {
@@ -84,19 +93,21 @@ export default function PlanejarSacrificio({
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-soft">
-              Data
+              Data <span className="text-signal">*</span>
               <input
                 type="date"
+                required
                 value={data}
                 onChange={(e) => setData(e.target.value)}
                 className={INPUT_SM}
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-soft">
-              Duração estimada (min)
+              Duração estimada (min) <span className="text-signal">*</span>
               <input
                 type="number"
-                min={0}
+                min={1}
+                required
                 value={duracao}
                 onChange={(e) => setDuracao(e.target.value)}
                 className={`${INPUT_SM} w-28`}
@@ -105,7 +116,7 @@ export default function PlanejarSacrificio({
             <button
               type="button"
               onClick={criar}
-              disabled={pend}
+              disabled={pend || !data || !duracao}
               className={BOTAO_SECUNDARIO_SM}
             >
               {pend ? "Criando..." : "Criar sacrifício"}

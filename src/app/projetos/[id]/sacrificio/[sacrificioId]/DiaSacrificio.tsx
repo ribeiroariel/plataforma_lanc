@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   salvarSobrevivencia,
   marcarDissecado,
@@ -53,6 +54,7 @@ export default function DiaSacrificio({
 }: Props) {
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
 
+  const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
 
@@ -85,6 +87,7 @@ export default function DiaSacrificio({
     iniciar(async () => {
       const res = await salvarSobrevivencia({ projetoId, sacrificioId, linhas });
       if ("erro" in res) setErro(res.erro);
+      else router.refresh();
     });
   }
 
@@ -105,6 +108,7 @@ export default function DiaSacrificio({
         caixa: caixas[r.id] ?? null,
       });
       if ("erro" in res) setErro(res.erro);
+      else router.refresh();
     });
   }
   function reabrir(r: RatoSalvo) {
@@ -116,6 +120,7 @@ export default function DiaSacrificio({
         sacrificioRatoId: r.id,
       });
       if ("erro" in res) setErro(res.erro);
+      else router.refresh();
     });
   }
 
@@ -373,6 +378,7 @@ function PainelAliquotas({
 }) {
   const coletados = rato.tecidos.filter((t) => t.coletado);
   const aliqPorTecido = new Map(rato.aliquotas.map((a) => [a.tecido, a]));
+  const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState<string | null>(null);
@@ -405,6 +411,7 @@ function PainelAliquotas({
         pesoG,
       });
       if ("erro" in res) setErro(res.erro);
+      else router.refresh();
       setConfirmando(null);
     });
   }
@@ -500,6 +507,7 @@ function PainelColeta({
   podeRegistrar: boolean;
 }) {
   const salvo = new Map(rato.tecidos.map((t) => [t.tecido, t]));
+  const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [estados, setEstados] = useState<
@@ -543,6 +551,7 @@ function PainelColeta({
         tecidos,
       });
       if ("erro" in res) setErro(res.erro);
+      else router.refresh();
     });
   }
 

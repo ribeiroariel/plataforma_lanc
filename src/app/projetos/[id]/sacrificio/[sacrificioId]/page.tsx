@@ -56,7 +56,12 @@ export default async function PaginaDiaSacrificio({
     .returns<Sacrificio>();
   if (!sacrificio) notFound();
 
-  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: ratos }] =
+  const [
+    { data: projeto },
+    { data: grupos },
+    { data: membros },
+    { data: ratos, error: ratosErro },
+  ] =
     await Promise.all([
       supabase
         .from("projetos")
@@ -123,6 +128,14 @@ export default async function PaginaDiaSacrificio({
       <p className="mt-1 font-mono text-xs text-ink-soft">
         {projeto?.nome} · {sacrificio.status}
       </p>
+
+      {ratosErro && (
+        <p className="mt-4 rounded border border-alerta/50 bg-alerta/10 p-3 text-sm text-alerta">
+          Não foi possível carregar os ratos deste sacrifício, então as etapas
+          abaixo (contagem, coleta e alíquotas) podem não aparecer mesmo depois
+          de salvar. Detalhe técnico: {ratosErro.message}
+        </p>
+      )}
 
       <DiaSacrificio
         projetoId={id}
