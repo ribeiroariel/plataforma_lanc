@@ -12,7 +12,11 @@ import {
   reabrirSacrificio,
   type DestinoTecido,
 } from "@/lib/actions/sacrificio";
-import { ORGAOS_DISSECAVEIS, volumeTampaoUl } from "@/lib/sacrificio";
+import {
+  ORGAOS_DISSECAVEIS,
+  volumeTampaoUl,
+  type SecaoSacrificio,
+} from "@/lib/sacrificio";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type RatoRoster = { numero: number; grupoId: string; grupoNome: string };
@@ -47,6 +51,10 @@ type Props = {
   status: string;
   roster: RatoRoster[];
   ratos: RatoSalvo[];
+  // Escopo da aba. undefined = aba geral (todas as seções, todos os órgãos).
+  // Definido = aba de uma função (só as seções/órgãos dela).
+  secoes?: SecaoSacrificio[];
+  orgaosVisiveis?: string[];
 };
 
 export default function DiaSacrificio({
@@ -57,6 +65,8 @@ export default function DiaSacrificio({
   status,
   roster,
   ratos,
+  secoes,
+  orgaosVisiveis,
 }: Props) {
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
 
@@ -65,6 +75,7 @@ export default function DiaSacrificio({
   const [erro, setErro] = useState<string | null>(null);
 
   const concluido = status === "concluido";
+  const mostra = (s: SecaoSacrificio) => !secoes || secoes.includes(s);
 
   function encerrar() {
     setErro(null);
@@ -200,10 +211,10 @@ export default function DiaSacrificio({
         </div>
       )}
 
-      {/* 1. Sobrevivência */}
+      {mostra("sobrevivencia") && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          1 · Sobrevivência
+          Sobrevivência
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
           Desmarque os ratos que não entram no sacrifício (morreram, adoeceram,
@@ -270,11 +281,12 @@ export default function DiaSacrificio({
           </button>
         )}
       </section>
+      )}
 
-      {/* 2. Contagem ao vivo */}
+      {mostra("contagem") && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          2 · Contagem ao vivo
+          Contagem ao vivo
         </p>
         {sobreviventes.length === 0 ? (
           <p className="text-xs text-ink-soft">
@@ -372,11 +384,12 @@ export default function DiaSacrificio({
           </>
         )}
       </section>
+      )}
 
-      {/* 3. Coleta e histologia */}
+      {mostra("coleta") && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          3 · Coleta e histologia
+          Coleta e histologia
         </p>
         {dissecados.length === 0 ? (
           <p className="text-xs text-ink-soft">
@@ -392,16 +405,18 @@ export default function DiaSacrificio({
                 sacrificioId={sacrificioId}
                 rato={r}
                 podeRegistrar={podeRegistrar}
+                orgaosVisiveis={orgaosVisiveis}
               />
             ))}
           </div>
         )}
       </section>
+      )}
 
-      {/* 4. Alíquotas (peso → tampão) */}
+      {mostra("homogeneizacao") && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          4 · Alíquotas (peso → tampão)
+          Homogeneização (peso → tampão)
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
           Pese cada órgão coletado (g); o tampão é calculado como homogenato 10%
@@ -420,11 +435,13 @@ export default function DiaSacrificio({
                 sacrificioId={sacrificioId}
                 rato={r}
                 podeRegistrar={podeRegistrar}
+                orgaosVisiveis={orgaosVisiveis}
               />
             ))}
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }
@@ -434,13 +451,19 @@ function PainelAliquotas({
   sacrificioId,
   rato,
   podeRegistrar,
+  orgaosVisiveis,
 }: {
   projetoId: string;
   sacrificioId: string;
   rato: RatoSalvo;
   podeRegistrar: boolean;
+  orgaosVisiveis?: string[];
 }) {
-  const coletados = rato.tecidos.filter((t) => t.destino === "coleta");
+  const coletados = rato.tecidos.filter(
+    (t) =>
+      t.destino === "coleta" &&
+      (!orgaosVisiveis || orgaosVisiveis.includes(t.tecido))
+  );
   const aliqPorTecido = new Map(rato.aliquotas.map((a) => [a.tecido, a]));
   const router = useRouter();
   const [pend, iniciar] = useTransition();
@@ -564,12 +587,17 @@ function PainelColeta({
   sacrificioId,
   rato,
   podeRegistrar,
+  orgaosVisiveis,
 }: {
   projetoId: string;
   sacrificioId: string;
   rato: RatoSalvo;
   podeRegistrar: boolean;
+  orgaosVisiveis?: string[];
 }) {
+  const orgaos = orgaosVisiveis
+    ? ORGAOS_DISSECAVEIS.filter((o) => orgaosVisiveis.includes(o.valor))
+    : ORGAOS_DISSECAVEIS;
   const salvo = new Map(rato.tecidos.map((t) => [t.tecido, t]));
   const router = useRouter();
   const [pend, iniciar] = useTransition();
@@ -578,7 +606,7 @@ function PainelColeta({
     Record<string, { destino: DestinoTecido; motivo: string }>
   >(() => {
     const init: Record<string, { destino: DestinoTecido; motivo: string }> = {};
-    for (const o of ORGAOS_DISSECAVEIS) {
+    for (const o of orgaos) {
       const s = salvo.get(o.valor);
       init[o.valor] = {
         destino: s?.destino ?? "coleta",
@@ -597,7 +625,7 @@ function PainelColeta({
 
   function salvar() {
     setErro(null);
-    const tecidos = ORGAOS_DISSECAVEIS.map((o) => ({
+    const tecidos = orgaos.map((o) => ({
       tecido: o.valor,
       destino: estados[o.valor].destino,
       motivo: estados[o.valor].motivo || null,
@@ -630,7 +658,7 @@ function PainelColeta({
             </tr>
           </thead>
           <tbody>
-            {ORGAOS_DISSECAVEIS.map((o) => {
+            {orgaos.map((o) => {
               const e = estados[o.valor];
               return (
                 <tr key={o.valor} className="border-t border-rule/60">
