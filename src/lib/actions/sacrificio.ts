@@ -17,10 +17,19 @@ export async function criarSacrificio(dados: {
   } = await supabase.auth.getUser();
   if (!user) return { erro: "Você precisa estar logado." };
 
+  if (!dados.data) return { erro: "A data do sacrifício é obrigatória." };
+  if (
+    dados.duracaoMin == null ||
+    !Number.isFinite(dados.duracaoMin) ||
+    dados.duracaoMin <= 0
+  ) {
+    return { erro: "A duração estimada (min) é obrigatória." };
+  }
+
   const { error } = await supabase.from("sacrificios").insert({
     projeto_id: dados.projetoId,
     leva: dados.leva,
-    data: dados.data || null,
+    data: dados.data,
     duracao_estimada_min: dados.duracaoMin,
     criado_por: user.id,
   });
