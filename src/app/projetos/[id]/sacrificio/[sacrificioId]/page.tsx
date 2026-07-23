@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
@@ -92,10 +92,12 @@ export default async function PaginaDiaSacrificio({
     membros?.some(
       (m) => m.papel === "coautor" && m.profile_id === usuario?.id
     ) ?? false;
-  const souMembro =
-    membros?.some((m) => m.profile_id === usuario?.id) ?? false;
   const souOrientador = usuario?.papel === "orientador";
-  if (!souMembro && !souOrientador) notFound();
+  // A aba geral (planejamento + consolidação ao vivo) é de quem organiza:
+  // coautores e orientador. Quem só tem função no dia usa a aba da função —
+  // mandamos para a lista dela. (Na fatia 3, quem tem a função "Organização
+  // geral" também passa a ter acesso a esta aba geral.)
+  if (!souCoautor && !souOrientador) redirect("/minhas-funcoes");
 
   const rosterCompleto = gerarRoster(grupos ?? [], projeto?.numero_levas ?? 1);
   const roster = (
