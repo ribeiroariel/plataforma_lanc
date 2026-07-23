@@ -942,7 +942,7 @@ create table if not exists public.sacrificio_funcoes (
   funcao text not null check (funcao in (
     'decapitacao', 'deslocamento_cervical', 'dissecacao_figado',
     'dissecacao_rim', 'dissecacao_pancreas', 'dissecacao_cortex',
-    'separacao_cortex_cerebelo', 'homogeneizacao', 'separacao_sangue',
+    'separacao_cortex_hipocampo', 'homogeneizacao', 'separacao_sangue',
     'organizacao_geral')),
   profile_id uuid not null references public.profiles (id),
   unique (sacrificio_id, funcao, profile_id)
@@ -966,17 +966,19 @@ create table if not exists public.sacrificio_ratos (
   unique (sacrificio_id, rato)
 );
 
--- O que foi (ou não) coletado por rato/órgão, uma linha por (rato, órgão).
--- `coletado` = pegou a amostra bioquímica; `para_histologia` = esse órgão do
--- rato foi destinado à histologia (flag independente).
+-- Destino de cada órgão por rato, uma linha por (rato, órgão). `destino` é
+-- EXCLUSIVO: 'coleta' (vai pra análise bioquímica), 'histologia' (não vai) ou
+-- 'nao_coletado' (com motivo). Substitui os antigos flags independentes
+-- `coletado`/`para_histologia` (um órgão nunca é coleta E histologia ao mesmo
+-- tempo).
 create table if not exists public.sacrificio_rato_tecidos (
   id uuid primary key default gen_random_uuid(),
   sacrificio_rato_id uuid not null
     references public.sacrificio_ratos (id) on delete cascade,
   tecido text not null,
-  coletado boolean not null default true,
+  destino text not null default 'coleta'
+    check (destino in ('coleta', 'histologia', 'nao_coletado')),
   nao_coletado_motivo text,
-  para_histologia boolean not null default false,
   unique (sacrificio_rato_id, tecido)
 );
 

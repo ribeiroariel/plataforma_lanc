@@ -166,28 +166,37 @@ export async function marcarDissecado(dados: {
 
 // --- Fatia 3: coleta + histologia por órgão ---
 
-// Salva a coleta de um rato (uma linha por órgão): coletado + motivo (se não) +
-// destino histológico. Upsert por (rato, órgão).
+// Salva o destino de cada órgão de um rato (uma linha por órgão). `destino` é
+// exclusivo: 'coleta' | 'histologia' | 'nao_coletado' (com motivo). Upsert por
+// (rato, órgão).
+export type DestinoTecido = "coleta" | "histologia" | "nao_coletado";
+
 export async function salvarColeta(dados: {
   projetoId: string;
   sacrificioId: string;
   sacrificioRatoId: string;
   tecidos: {
     tecido: string;
-    coletado: boolean;
+    destino: DestinoTecido;
     motivo: string | null;
-    paraHistologia: boolean;
   }[];
 }): Promise<{ erro: string } | { sucesso: true }> {
   const supabase = await createClient();
   if (dados.tecidos.length === 0) return { sucesso: true };
 
+  const semMotivo = dados.tecidos.find(
+    (t) => t.destino === "nao_coletado" && !(t.motivo && t.motivo.trim())
+  );
+  if (semMotivo) {
+    return { erro: `Informe o motivo de não coletar ${semMotivo.tecido}.` };
+  }
+
   const paraUpsert = dados.tecidos.map((t) => ({
     sacrificio_rato_id: dados.sacrificioRatoId,
     tecido: t.tecido,
-    coletado: t.coletado,
-    nao_coletado_motivo: t.coletado ? null : t.motivo?.trim() || null,
-    para_histologia: t.paraHistologia,
+    destino: t.destino,
+    nao_coletado_motivo:
+      t.destino === "nao_coletado" ? t.motivo?.trim() || null : null,
   }));
 
   const { error } = await supabase
@@ -198,6 +207,44 @@ export async function salvarColeta(dados: {
   }
 
   revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}
+
+// Encerra o sacrifício (status -> concluido). Trava a edição das etapas.
+// Só coautor/orientador (RLS de sacrificios garante a escrita).
+export async function encerrarSacrificio(dados: {
+  projetoId: string;
+  sacrificioId: string;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sacrificios")
+    .update({ status: "concluido" })
+    .eq("id", dados.sacrificioId);
+  if (error) {
+    return { erro: "Não foi possível encerrar o sacrifício: " + error.message };
+  }
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio`);
+  return { sucesso: true };
+}
+
+// Reabre um sacrifício encerrado (status -> em_andamento) — corrige um
+// encerramento por engano.
+export async function reabrirSacrificio(dados: {
+  projetoId: string;
+  sacrificioId: string;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sacrificios")
+    .update({ status: "em_andamento" })
+    .eq("id", dados.sacrificioId);
+  if (error) {
+    return { erro: "Não foi possível reabrir o sacrifício: " + error.message };
+  }
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio`);
   return { sucesso: true };
 }
 
