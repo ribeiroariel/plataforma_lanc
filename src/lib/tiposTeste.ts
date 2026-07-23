@@ -110,6 +110,23 @@ export function ehTesteDesignavel(slug: string): boolean {
   return familiaDoSlug(slug) !== null;
 }
 
+// --- Categorias de alíquota (separação em ependorfs por tipo de teste) ---
+// O homogeneizado é dividido em um ependorf por categoria de teste em que aquele
+// tecido é usado no projeto. Lowry (proteína) é categoria à parte. H₂O₂ usa
+// fatias de tecido (não homogenato) → não sai da alíquota do homogeneizado.
+export type CategoriaAliquota = "cat" | "sod" | "tbars" | "ponto_final" | "lowry";
+
+export function categoriaAliquota(slug: string): CategoriaAliquota | null {
+  const familia = familiaDoSlug(slug);
+  if (!familia) return null;
+  if (familia === "cat") return "cat";
+  if (familia === "sod") return "sod";
+  if (familia === "curva") return "lowry"; // Lowry / proteína
+  if (slug.startsWith("tbars")) return "tbars";
+  if (slug.startsWith("h2o2")) return null; // fatias de tecido, não homogenato
+  return "ponto_final"; // carboniladas, sulfidrilas, tióis-dissulfetos, ác. ascórbico
+}
+
 export function configDoTeste(slug: string): ConfigTeste | null {
   const familia = familiaDoSlug(slug);
   if (!familia) return null;

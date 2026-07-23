@@ -931,9 +931,15 @@ create table if not exists public.sacrificios (
   duracao_estimada_min integer,
   status text not null default 'planejado'
     check (status in ('planejado', 'em_andamento', 'concluido')),
+  -- Quando as alíquotas do homogeneizado são separadas: no mesmo dia ou no dia
+  -- seguinte (processo demorado; a equipe de alíquotas às vezes faz depois).
+  aliquotas_quando text not null default 'mesmo_dia'
+    check (aliquotas_quando in ('mesmo_dia', 'dia_seguinte')),
   criado_por uuid not null references public.profiles (id),
   created_at timestamptz not null default now()
 );
+alter table public.sacrificios
+  add column if not exists aliquotas_quando text not null default 'mesmo_dia';
 
 -- Designação de funções do dia (N pessoas por função).
 create table if not exists public.sacrificio_funcoes (
