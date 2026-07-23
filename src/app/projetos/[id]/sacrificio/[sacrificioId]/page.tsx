@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
@@ -16,9 +16,8 @@ type Projeto = { nome: string; numero_levas: number | null; finalizado: boolean 
 type Membro = { profile_id: string; papel: "coautor" | "ajudante" };
 type TecidoColeta = {
   tecido: string;
-  coletado: boolean;
+  destino: "coleta" | "histologia" | "nao_coletado";
   nao_coletado_motivo: string | null;
-  para_histologia: boolean;
 };
 type Aliquota = {
   tecido: string;
@@ -83,7 +82,7 @@ export default async function PaginaDiaSacrificio({
       supabase
         .from("sacrificio_ratos")
         .select(
-          "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, coletado, nao_coletado_motivo, para_histologia), sacrificio_aliquotas(tecido, peso_g, volume_tampao_ul, confirmado)"
+          "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, destino, nao_coletado_motivo), sacrificio_aliquotas(tecido, peso_g, volume_tampao_ul, confirmado)"
         )
         .eq("sacrificio_id", sacrificioId)
         .returns<RatoSalvo[]>(),
@@ -93,10 +92,12 @@ export default async function PaginaDiaSacrificio({
     membros?.some(
       (m) => m.papel === "coautor" && m.profile_id === usuario?.id
     ) ?? false;
-  const souMembro =
-    membros?.some((m) => m.profile_id === usuario?.id) ?? false;
   const souOrientador = usuario?.papel === "orientador";
-  if (!souMembro && !souOrientador) notFound();
+  // A aba geral (planejamento + consolidação ao vivo) é de quem organiza:
+  // coautores e orientador. Quem só tem função no dia usa a aba da função —
+  // mandamos para a lista dela. (Na fatia 3, quem tem a função "Organização
+  // geral" também passa a ter acesso a esta aba geral.)
+  if (!souCoautor && !souOrientador) redirect("/minhas-funcoes");
 
   const rosterCompleto = gerarRoster(grupos ?? [], projeto?.numero_levas ?? 1);
   const roster = (
@@ -113,6 +114,11 @@ export default async function PaginaDiaSacrificio({
     souCoautor &&
     sacrificio.status !== "concluido" &&
     !(projeto?.finalizado ?? false);
+
+  // Encerrar/reabrir é de quem organiza (coautor ou orientador), mesmo com o
+  // sacrifício já concluído (para reabrir).
+  const podeEncerrar =
+    (souCoautor || souOrientador) && !(projeto?.finalizado ?? false);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -141,6 +147,8 @@ export default async function PaginaDiaSacrificio({
         projetoId={id}
         sacrificioId={sacrificio.id}
         podeRegistrar={podeRegistrar}
+        podeEncerrar={podeEncerrar}
+        status={sacrificio.status}
         roster={roster}
         ratos={(ratos ?? []).map((r) => ({
           id: r.id,
@@ -152,9 +160,8 @@ export default async function PaginaDiaSacrificio({
           status: r.status,
           tecidos: (r.sacrificio_rato_tecidos ?? []).map((t) => ({
             tecido: t.tecido,
-            coletado: t.coletado,
+            destino: t.destino,
             motivo: t.nao_coletado_motivo,
-            paraHistologia: t.para_histologia,
           })),
           aliquotas: (r.sacrificio_aliquotas ?? []).map((a) => ({
             tecido: a.tecido,

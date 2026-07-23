@@ -942,7 +942,7 @@ create table if not exists public.sacrificio_funcoes (
   funcao text not null check (funcao in (
     'decapitacao', 'deslocamento_cervical', 'dissecacao_figado',
     'dissecacao_rim', 'dissecacao_pancreas', 'dissecacao_cortex',
-    'separacao_cortex_cerebelo', 'homogeneizacao', 'separacao_sangue',
+    'separacao_cortex_hipocampo', 'homogeneizacao', 'separacao_sangue',
     'organizacao_geral')),
   profile_id uuid not null references public.profiles (id),
   unique (sacrificio_id, funcao, profile_id)
@@ -966,17 +966,19 @@ create table if not exists public.sacrificio_ratos (
   unique (sacrificio_id, rato)
 );
 
--- O que foi (ou não) coletado por rato/órgão, uma linha por (rato, órgão).
--- `coletado` = pegou a amostra bioquímica; `para_histologia` = esse órgão do
--- rato foi destinado à histologia (flag independente).
+-- Destino de cada órgão por rato, uma linha por (rato, órgão). `destino` é
+-- EXCLUSIVO: 'coleta' (vai pra análise bioquímica), 'histologia' (não vai) ou
+-- 'nao_coletado' (com motivo). Substitui os antigos flags independentes
+-- `coletado`/`para_histologia` (um órgão nunca é coleta E histologia ao mesmo
+-- tempo).
 create table if not exists public.sacrificio_rato_tecidos (
   id uuid primary key default gen_random_uuid(),
   sacrificio_rato_id uuid not null
     references public.sacrificio_ratos (id) on delete cascade,
   tecido text not null,
-  coletado boolean not null default true,
+  destino text not null default 'coleta'
+    check (destino in ('coleta', 'histologia', 'nao_coletado')),
   nao_coletado_motivo text,
-  para_histologia boolean not null default false,
   unique (sacrificio_rato_id, tecido)
 );
 
@@ -1012,12 +1014,53 @@ $$;
 grant execute on function public.sac_projeto(uuid) to authenticated;
 grant execute on function public.sac_projeto_do_rato(uuid) to authenticated;
 
+-- Fatia 2 do redesenho: pessoas designadas a uma função de sacrifício (mesmo
+-- que não sejam membros do projeto) precisam LER o mínimo para ver a lista
+-- "Minhas funções" e a aba da função. A escrita continua coautor-only aqui — a
+-- escrita por função entra na fatia 3.
+create or replace function public.eh_designado_sacrificio(p_sac uuid)
+returns boolean language sql security definer set search_path = public stable as $$
+  select exists (
+    select 1 from public.sacrificio_funcoes
+    where sacrificio_id = p_sac and profile_id = auth.uid()
+  );
+$$;
+
+create or replace function public.eh_designado_projeto(p_projeto uuid)
+returns boolean language sql security definer set search_path = public stable as $$
+  select exists (
+    select 1
+    from public.sacrificios s
+    join public.sacrificio_funcoes sf on sf.sacrificio_id = s.id
+    where s.projeto_id = p_projeto and sf.profile_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.eh_designado_sacrificio(uuid) to authenticated;
+grant execute on function public.eh_designado_projeto(uuid) to authenticated;
+
+-- Reabre a leitura de projetos para designados de sacrifício (redefine a policy
+-- da seção de projetos, agora que os helpers de sacrifício já existem).
+drop policy if exists "Membros e orientadora veem o projeto" on public.projetos;
+create policy "Membros e orientadora veem o projeto"
+  on public.projetos for select
+  using (
+    public.eh_membro_projeto(id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+    or public.eh_designado_projeto(id)
+  );
+
 -- Leitura = membros + orientadora; escrita = coautores. Vale p/ as 5 tabelas.
 alter table public.sacrificios enable row level security;
 alter table public.sacrificios force row level security;
 drop policy if exists "Membros veem o sacrifício" on public.sacrificios;
 create policy "Membros veem o sacrifício" on public.sacrificios for select
-  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.eh_designado_sacrificio(id)
+  );
 drop policy if exists "Coautor gerencia o sacrifício" on public.sacrificios;
 create policy "Coautor gerencia o sacrifício" on public.sacrificios for all
   using (public.eh_coautor_projeto(projeto_id))
@@ -1027,7 +1070,11 @@ alter table public.sacrificio_funcoes enable row level security;
 alter table public.sacrificio_funcoes force row level security;
 drop policy if exists "Membros veem as funções" on public.sacrificio_funcoes;
 create policy "Membros veem as funções" on public.sacrificio_funcoes for select
-  using (public.eh_membro_projeto(public.sac_projeto(sacrificio_id)) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(public.sac_projeto(sacrificio_id))
+    or public.is_orientador()
+    or public.eh_designado_sacrificio(sacrificio_id)
+  );
 drop policy if exists "Coautor gerencia funções" on public.sacrificio_funcoes;
 create policy "Coautor gerencia funções" on public.sacrificio_funcoes for all
   using (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)))
