@@ -17,6 +17,7 @@ type Sacrificio = {
   data: string | null;
   duracaoMin: number | null;
   status: string;
+  aliquotasQuando: "mesmo_dia" | "dia_seguinte";
   funcoes: FuncaoAtrib[];
 };
 type Membro = { id: string; nome: string };
@@ -43,6 +44,9 @@ export default function PlanejarSacrificio({
   );
   const [data, setData] = useState("");
   const [duracao, setDuracao] = useState("");
+  const [aliquotasQuando, setAliquotasQuando] = useState<
+    "mesmo_dia" | "dia_seguinte"
+  >("mesmo_dia");
 
   function criar() {
     setErro(null);
@@ -61,6 +65,7 @@ export default function PlanejarSacrificio({
         leva: leva ? parseInt(leva, 10) : null,
         data,
         duracaoMin: duracaoNum,
+        aliquotasQuando,
       });
       if ("erro" in r) setErro(r.erro);
       else {
@@ -112,6 +117,21 @@ export default function PlanejarSacrificio({
                 onChange={(e) => setDuracao(e.target.value)}
                 className={`${INPUT_SM} w-28`}
               />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-soft">
+              Alíquotas
+              <select
+                value={aliquotasQuando}
+                onChange={(e) =>
+                  setAliquotasQuando(
+                    e.target.value as "mesmo_dia" | "dia_seguinte"
+                  )
+                }
+                className={INPUT_SM}
+              >
+                <option value="mesmo_dia">No mesmo dia</option>
+                <option value="dia_seguinte">No dia seguinte</option>
+              </select>
             </label>
             <button
               type="button"
@@ -203,6 +223,9 @@ function PainelSacrificio({
           </span>
         )}
         {sacrificio.duracaoMin != null && <span>· ~{sacrificio.duracaoMin} min</span>}
+        {sacrificio.aliquotasQuando === "dia_seguinte" && (
+          <span>· alíquotas no dia seguinte</span>
+        )}
         <span>· {sacrificio.status}</span>
         <Link
           href={`/projetos/${projetoId}/sacrificio/${sacrificio.id}`}

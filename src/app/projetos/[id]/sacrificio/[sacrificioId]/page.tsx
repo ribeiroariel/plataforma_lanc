@@ -15,6 +15,7 @@ type Sacrificio = {
 type Projeto = { nome: string; numero_levas: number | null; finalizado: boolean };
 type Membro = { profile_id: string; papel: "coautor" | "ajudante" };
 type MinhaFuncao = { funcao: string };
+type TesteDesignado = { teste_slug: string };
 
 export default async function PaginaDiaSacrificio({
   params,
@@ -34,26 +35,35 @@ export default async function PaginaDiaSacrificio({
     .returns<Sacrificio>();
   if (!sacrificio) notFound();
 
-  const [{ data: projeto }, { data: membros }, { data: minhasFuncoes }] =
-    await Promise.all([
-      supabase
-        .from("projetos")
-        .select("nome, numero_levas, finalizado")
-        .eq("id", id)
-        .maybeSingle()
-        .returns<Projeto>(),
-      supabase
-        .from("projeto_membros")
-        .select("profile_id, papel")
-        .eq("projeto_id", id)
-        .returns<Membro[]>(),
-      supabase
-        .from("sacrificio_funcoes")
-        .select("funcao")
-        .eq("sacrificio_id", sacrificioId)
-        .eq("profile_id", usuario?.id ?? "")
-        .returns<MinhaFuncao[]>(),
-    ]);
+  const [
+    { data: projeto },
+    { data: membros },
+    { data: minhasFuncoes },
+    { data: testesDesignados },
+  ] = await Promise.all([
+    supabase
+      .from("projetos")
+      .select("nome, numero_levas, finalizado")
+      .eq("id", id)
+      .maybeSingle()
+      .returns<Projeto>(),
+    supabase
+      .from("projeto_membros")
+      .select("profile_id, papel")
+      .eq("projeto_id", id)
+      .returns<Membro[]>(),
+    supabase
+      .from("sacrificio_funcoes")
+      .select("funcao")
+      .eq("sacrificio_id", sacrificioId)
+      .eq("profile_id", usuario?.id ?? "")
+      .returns<MinhaFuncao[]>(),
+    supabase
+      .from("projeto_testes")
+      .select("teste_slug")
+      .eq("projeto_id", id)
+      .returns<TesteDesignado[]>(),
+  ]);
 
   const souCoautor =
     membros?.some(
@@ -120,6 +130,7 @@ export default async function PaginaDiaSacrificio({
         status={sacrificio.status}
         roster={roster}
         ratos={ratos}
+        testesDesignados={(testesDesignados ?? []).map((t) => t.teste_slug)}
       />
     </main>
   );

@@ -27,6 +27,7 @@ type Sacrificio = {
   data: string | null;
   duracao_estimada_min: number | null;
   status: string;
+  aliquotas_quando: "mesmo_dia" | "dia_seguinte";
   sacrificio_funcoes: Funcao[];
 };
 
@@ -55,7 +56,7 @@ export default async function PaginaSacrificio({
       supabase
         .from("sacrificios")
         .select(
-          "id, leva, data, duracao_estimada_min, status, sacrificio_funcoes(id, funcao, profile_id, profiles:profile_id(nome))"
+          "id, leva, data, duracao_estimada_min, status, aliquotas_quando, sacrificio_funcoes(id, funcao, profile_id, profiles:profile_id(nome))"
         )
         .eq("projeto_id", id)
         .order("leva", { ascending: true })
@@ -110,6 +111,7 @@ export default async function PaginaSacrificio({
           data: s.data,
           duracaoMin: s.duracao_estimada_min,
           status: s.status,
+          aliquotasQuando: s.aliquotas_quando,
           funcoes: s.sacrificio_funcoes.map((f) => ({
             id: f.id,
             funcao: f.funcao,

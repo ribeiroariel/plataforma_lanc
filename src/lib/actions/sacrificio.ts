@@ -10,6 +10,7 @@ export async function criarSacrificio(dados: {
   leva: number | null;
   data: string | null;
   duracaoMin: number | null;
+  aliquotasQuando: "mesmo_dia" | "dia_seguinte";
 }): Promise<{ erro: string } | { sucesso: true }> {
   const supabase = await createClient();
   const {
@@ -31,6 +32,7 @@ export async function criarSacrificio(dados: {
     leva: dados.leva,
     data: dados.data,
     duracao_estimada_min: dados.duracaoMin,
+    aliquotas_quando: dados.aliquotasQuando,
     criado_por: user.id,
   });
   if (error) {
@@ -304,6 +306,50 @@ export async function confirmarAliquota(dados: {
       confirmado: true,
     },
     { onConflict: "sacrificio_rato_id,tecido" }
+  );
+  if (error) {
+    return { erro: "Não foi possível confirmar a alíquota: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
+  return { sucesso: true };
+}
+
+// --- Fatia 4: separação de alíquotas por categoria (ependorf) ---
+
+// Confirma a separação de uma categoria (ependorf) de um órgão homogeneizado:
+// grava o volume (µL) e trava (o trigger travar_aliquota_categoria impede
+// mudança depois). O volume vem calculado no cliente (ependorfsParaOrgao).
+export async function confirmarAliquotaCategoria(dados: {
+  projetoId: string;
+  sacrificioId: string;
+  sacrificioRatoId: string;
+  tecido: string;
+  categoria: string;
+  volumeUl: number;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+
+  const { data: existente } = await supabase
+    .from("sacrificio_aliquota_categorias")
+    .select("confirmado")
+    .eq("sacrificio_rato_id", dados.sacrificioRatoId)
+    .eq("tecido", dados.tecido)
+    .eq("categoria", dados.categoria)
+    .maybeSingle();
+  if (existente?.confirmado) {
+    return { erro: "Esta alíquota já está confirmada." };
+  }
+
+  const { error } = await supabase.from("sacrificio_aliquota_categorias").upsert(
+    {
+      sacrificio_rato_id: dados.sacrificioRatoId,
+      tecido: dados.tecido,
+      categoria: dados.categoria,
+      volume_ul: dados.volumeUl,
+      confirmado: true,
+    },
+    { onConflict: "sacrificio_rato_id,tecido,categoria" }
   );
   if (error) {
     return { erro: "Não foi possível confirmar a alíquota: " + error.message };

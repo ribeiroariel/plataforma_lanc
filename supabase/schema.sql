@@ -948,8 +948,8 @@ create table if not exists public.sacrificio_funcoes (
   funcao text not null check (funcao in (
     'decapitacao', 'deslocamento_cervical', 'dissecacao_figado',
     'dissecacao_rim', 'dissecacao_pancreas', 'dissecacao_cortex',
-    'separacao_cortex_hipocampo', 'homogeneizacao', 'separacao_sangue',
-    'organizacao_geral')),
+    'separacao_cortex_hipocampo', 'homogeneizacao', 'separacao_aliquotas',
+    'separacao_sangue', 'organizacao_geral')),
   profile_id uuid not null references public.profiles (id),
   unique (sacrificio_id, funcao, profile_id)
 );
@@ -1001,6 +1001,22 @@ create table if not exists public.sacrificio_aliquotas (
   confirmado boolean not null default false,
   created_at timestamptz not null default now(),
   unique (sacrificio_rato_id, tecido)
+);
+
+-- Separação de alíquotas do homogeneizado em ependorfs, um por (rato, órgão,
+-- categoria de teste). volume_ul é calculado no app (ependorfsParaOrgao) e
+-- gravado ao confirmar. Padrão célula→confirma→trava.
+create table if not exists public.sacrificio_aliquota_categorias (
+  id uuid primary key default gen_random_uuid(),
+  sacrificio_rato_id uuid not null
+    references public.sacrificio_ratos (id) on delete cascade,
+  tecido text not null,
+  categoria text not null
+    check (categoria in ('cat', 'sod', 'tbars', 'ponto_final', 'lowry')),
+  volume_ul numeric,
+  confirmado boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (sacrificio_rato_id, tecido, categoria)
 );
 
 -- Helpers p/ RLS: projeto dono de um sacrifício (direto e via rato).
@@ -1078,6 +1094,23 @@ create policy "Membros e orientadora veem os grupos"
   on public.projeto_grupos for select
   using (
     public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+    or public.eh_designado_projeto(projeto_id)
+  );
+
+-- Fatia 4: a separação de alíquotas precisa saber quais testes o projeto
+-- designou (para derivar as categorias/ependorfs). Designados leem a designação.
+drop policy if exists "Coautor, responsável e orientadora veem a designação" on public.projeto_testes;
+create policy "Coautor, responsável e orientadora veem a designação"
+  on public.projeto_testes for select
+  using (
+    public.eh_coautor_projeto(projeto_id)
+    or responsavel_id = auth.uid()
+    or exists (
+      select 1 from public.projeto_teste_ajudantes a
+      where a.projeto_teste_id = projeto_testes.id and a.profile_id = auth.uid()
+    )
     or public.is_orientador()
     or public.pode_exportar_dados()
     or public.eh_designado_projeto(projeto_id)
@@ -1189,6 +1222,45 @@ $$;
 drop trigger if exists travar_aliquota on public.sacrificio_aliquotas;
 create trigger travar_aliquota before update on public.sacrificio_aliquotas
   for each row execute function public.travar_aliquota_confirmada();
+
+-- Separação de alíquotas por categoria: mesma regra de leitura/escrita das
+-- demais tabelas filhas (membros + orientador + designados).
+alter table public.sacrificio_aliquota_categorias enable row level security;
+alter table public.sacrificio_aliquota_categorias force row level security;
+drop policy if exists "Membros veem categorias de alíquota" on public.sacrificio_aliquota_categorias;
+create policy "Membros veem categorias de alíquota" on public.sacrificio_aliquota_categorias for select
+  using (
+    public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.is_orientador()
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  );
+drop policy if exists "Coautor gerencia categorias de alíquota" on public.sacrificio_aliquota_categorias;
+create policy "Coautor gerencia categorias de alíquota" on public.sacrificio_aliquota_categorias for all
+  using (
+    public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  )
+  with check (
+    public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  );
+
+-- Trava da categoria de alíquota confirmada: volume não muda mais.
+create or replace function public.travar_aliquota_categoria_confirmada()
+returns trigger language plpgsql as $$
+begin
+  if OLD.confirmado then
+    if NEW.volume_ul is distinct from OLD.volume_ul
+       or NEW.confirmado is distinct from OLD.confirmado then
+      raise exception 'Alíquota confirmada: o volume não pode mais mudar.';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+drop trigger if exists travar_aliquota_categoria on public.sacrificio_aliquota_categorias;
+create trigger travar_aliquota_categoria before update on public.sacrificio_aliquota_categorias
+  for each row execute function public.travar_aliquota_categoria_confirmada();
 
 -- ----------------------------------------------------------------------------
 -- CONTAGEM PÚBLICA DE PROJETOS

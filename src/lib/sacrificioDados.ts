@@ -22,6 +22,12 @@ export type AliquotaDia = {
   volumeUl: number | null;
   confirmado: boolean;
 };
+export type CategoriaAliquotaDia = {
+  tecido: string;
+  categoria: string;
+  volumeUl: number | null;
+  confirmado: boolean;
+};
 export type RatoDia = {
   id: string;
   rato: string;
@@ -32,6 +38,7 @@ export type RatoDia = {
   status: string;
   tecidos: TecidoDia[];
   aliquotas: AliquotaDia[];
+  categoriasAliquota: CategoriaAliquotaDia[];
 };
 
 type RatoRow = {
@@ -51,6 +58,12 @@ type RatoRow = {
     tecido: string;
     peso_g: number | null;
     volume_tampao_ul: number | null;
+    confirmado: boolean;
+  }[];
+  sacrificio_aliquota_categorias: {
+    tecido: string;
+    categoria: string;
+    volume_ul: number | null;
     confirmado: boolean;
   }[];
 };
@@ -76,7 +89,7 @@ export async function carregarDia(
     supabase
       .from("sacrificio_ratos")
       .select(
-        "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, destino, nao_coletado_motivo), sacrificio_aliquotas(tecido, peso_g, volume_tampao_ul, confirmado)"
+        "id, rato, caixa, ordem, sobreviveu, exclusao_motivo, status, sacrificio_rato_tecidos(tecido, destino, nao_coletado_motivo), sacrificio_aliquotas(tecido, peso_g, volume_tampao_ul, confirmado), sacrificio_aliquota_categorias(tecido, categoria, volume_ul, confirmado)"
       )
       .eq("sacrificio_id", sacrificioId)
       .returns<RatoRow[]>(),
@@ -111,6 +124,12 @@ export async function carregarDia(
       pesoG: a.peso_g,
       volumeUl: a.volume_tampao_ul,
       confirmado: a.confirmado,
+    })),
+    categoriasAliquota: (r.sacrificio_aliquota_categorias ?? []).map((c) => ({
+      tecido: c.tecido,
+      categoria: c.categoria,
+      volumeUl: c.volume_ul,
+      confirmado: c.confirmado,
     })),
   }));
 
