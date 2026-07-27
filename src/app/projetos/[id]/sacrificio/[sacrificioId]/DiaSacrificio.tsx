@@ -8,6 +8,7 @@ import {
   reabrirRato,
   salvarColeta,
   confirmarAliquota,
+  confirmarAliquotaCategoria,
   encerrarSacrificio,
   reabrirSacrificio,
   type DestinoTecido,
@@ -17,6 +18,7 @@ import {
   volumeTampaoUl,
   type SecaoSacrificio,
 } from "@/lib/sacrificio";
+import { ependorfsParaOrgao, ROTULO_CATEGORIA } from "@/lib/aliquotas";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type RatoRoster = { numero: number; grupoId: string; grupoNome: string };
@@ -31,6 +33,12 @@ type AliquotaSalva = {
   volumeUl: number | null;
   confirmado: boolean;
 };
+type CategoriaAliquotaSalva = {
+  tecido: string;
+  categoria: string;
+  volumeUl: number | null;
+  confirmado: boolean;
+};
 type RatoSalvo = {
   id: string;
   rato: string;
@@ -41,6 +49,7 @@ type RatoSalvo = {
   status: string;
   tecidos: TecidoColeta[];
   aliquotas: AliquotaSalva[];
+  categoriasAliquota: CategoriaAliquotaSalva[];
 };
 
 type Props = {
@@ -55,6 +64,8 @@ type Props = {
   // Definido = aba de uma função (só as seções/órgãos dela).
   secoes?: SecaoSacrificio[];
   orgaosVisiveis?: string[];
+  // Slugs de teste designados no projeto — deriva as categorias de alíquota.
+  testesDesignados?: string[];
 };
 
 export default function DiaSacrificio({
@@ -67,6 +78,7 @@ export default function DiaSacrificio({
   ratos,
   secoes,
   orgaosVisiveis,
+  testesDesignados,
 }: Props) {
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
 
@@ -442,6 +454,38 @@ export default function DiaSacrificio({
         )}
       </section>
       )}
+
+      {mostra("aliquotas") && (
+      <section>
+        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          Separação de alíquotas
+        </p>
+        <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
+          Depois de homogeneizar, separe o homogeneizado em ependorfs por
+          categoria de teste. O volume de cada é calculado a partir dos testes
+          que o projeto designou para aquele tecido.
+        </p>
+        {dissecados.length === 0 ? (
+          <p className="text-xs text-ink-soft">
+            Homogeneíze os órgãos coletados para separar as alíquotas.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {dissecados.map((r) => (
+              <PainelSeparacaoAliquotas
+                key={r.id}
+                projetoId={projetoId}
+                sacrificioId={sacrificioId}
+                rato={r}
+                podeRegistrar={podeRegistrar}
+                orgaosVisiveis={orgaosVisiveis}
+                testesDesignados={testesDesignados ?? []}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      )}
     </div>
   );
 }
@@ -713,6 +757,139 @@ function PainelColeta({
           {pend ? "Salvando..." : "Salvar coleta"}
         </button>
       )}
+      {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
+    </div>
+  );
+}
+
+function PainelSeparacaoAliquotas({
+  projetoId,
+  sacrificioId,
+  rato,
+  podeRegistrar,
+  orgaosVisiveis,
+  testesDesignados,
+}: {
+  projetoId: string;
+  sacrificioId: string;
+  rato: RatoSalvo;
+  podeRegistrar: boolean;
+  orgaosVisiveis?: string[];
+  testesDesignados: string[];
+}) {
+  const router = useRouter();
+  const [pend, iniciar] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+
+  // Só órgãos coletados E já homogeneizados (alíquota peso→tampão confirmada).
+  const homogeneizadoOk = new Set(
+    rato.aliquotas.filter((a) => a.confirmado).map((a) => a.tecido)
+  );
+  const orgaos = rato.tecidos
+    .filter((t) => t.destino === "coleta" && homogeneizadoOk.has(t.tecido))
+    .filter((t) => !orgaosVisiveis || orgaosVisiveis.includes(t.tecido));
+
+  const catConfirmada = new Map(
+    rato.categoriasAliquota.map((c) => [`${c.tecido}:${c.categoria}`, c])
+  );
+  const rotuloOrgao = (tecido: string) =>
+    ORGAOS_DISSECAVEIS.find((o) => o.valor === tecido)?.rotulo ?? tecido;
+
+  function confirmar(tecido: string, categoria: string, volumeUl: number) {
+    setErro(null);
+    setConfirmando(`${tecido}:${categoria}`);
+    iniciar(async () => {
+      const res = await confirmarAliquotaCategoria({
+        projetoId,
+        sacrificioId,
+        sacrificioRatoId: rato.id,
+        tecido,
+        categoria,
+        volumeUl,
+      });
+      if ("erro" in res) setErro(res.erro);
+      else router.refresh();
+      setConfirmando(null);
+    });
+  }
+
+  if (orgaos.length === 0) return null;
+
+  return (
+    <div className="rounded border border-rule bg-paper-raised p-3">
+      <p className="mb-2 font-mono text-xs text-ink">
+        Rato {rato.rato}
+        {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
+      </p>
+      <div className="flex flex-col gap-3">
+        {orgaos.map((t) => {
+          const ependorfs = ependorfsParaOrgao(testesDesignados, t.tecido);
+          return (
+            <div key={t.tecido}>
+              <p className="mb-1 text-sm text-ink">{rotuloOrgao(t.tecido)}</p>
+              {ependorfs.length === 0 ? (
+                <p className="text-xs text-ink-soft">
+                  Nenhum teste designado para este tecido no projeto.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                        <th className="py-1 pr-3 font-normal">Ependorf (categoria)</th>
+                        <th className="py-1 pr-3 font-normal">Volume (µL)</th>
+                        <th className="py-1 font-normal"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ependorfs.map((e) => {
+                        const chave = `${t.tecido}:${e.categoria}`;
+                        const salva = catConfirmada.get(chave);
+                        const travado = salva?.confirmado ?? false;
+                        return (
+                          <tr
+                            key={e.categoria}
+                            className="border-t border-rule/60"
+                          >
+                            <td className="py-1 pr-3 text-ink">
+                              {ROTULO_CATEGORIA[e.categoria]}
+                            </td>
+                            <td className="py-1 pr-3 font-mono tabular-nums text-ink-soft">
+                              {travado ? salva?.volumeUl : e.volumeUl}
+                            </td>
+                            <td className="py-1">
+                              {travado ? (
+                                <span
+                                  title="alíquota confirmada"
+                                  className="text-green-700 dark:text-green-400"
+                                >
+                                  🔒 confirmada
+                                </span>
+                              ) : podeRegistrar ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    confirmar(t.tecido, e.categoria, e.volumeUl)
+                                  }
+                                  disabled={pend || confirmando === chave}
+                                  className={BOTAO_SECUNDARIO_SM}
+                                >
+                                  {confirmando === chave ? "..." : "Confirmar"}
+                                </button>
+                              ) : null}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
       {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
     </div>
   );

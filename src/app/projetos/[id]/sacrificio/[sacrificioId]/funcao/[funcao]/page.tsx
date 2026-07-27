@@ -12,6 +12,7 @@ type Sacrificio = {
   leva: number | null;
   status: string;
   data: string | null;
+  aliquotas_quando: "mesmo_dia" | "dia_seguinte";
   projetos: {
     nome: string;
     numero_levas: number | null;
@@ -20,6 +21,7 @@ type Sacrificio = {
 };
 type Designado = { profile_id: string; profiles: { nome: string } | null };
 type Membro = { profile_id: string; papel: "coautor" | "ajudante" };
+type TesteDesignado = { teste_slug: string };
 
 export default async function PaginaFuncaoSacrificio({
   params,
@@ -37,7 +39,7 @@ export default async function PaginaFuncaoSacrificio({
   const { data: sacrificio } = await supabase
     .from("sacrificios")
     .select(
-      "id, projeto_id, leva, status, data, projetos:projeto_id(nome, numero_levas, finalizado)"
+      "id, projeto_id, leva, status, data, aliquotas_quando, projetos:projeto_id(nome, numero_levas, finalizado)"
     )
     .eq("id", sacrificioId)
     .eq("projeto_id", id)
@@ -45,19 +47,25 @@ export default async function PaginaFuncaoSacrificio({
     .returns<Sacrificio>();
   if (!sacrificio) notFound();
 
-  const [{ data: designados }, { data: membros }] = await Promise.all([
-    supabase
-      .from("sacrificio_funcoes")
-      .select("profile_id, profiles:profile_id(nome)")
-      .eq("sacrificio_id", sacrificioId)
-      .eq("funcao", funcao)
-      .returns<Designado[]>(),
-    supabase
-      .from("projeto_membros")
-      .select("profile_id, papel")
-      .eq("projeto_id", id)
-      .returns<Membro[]>(),
-  ]);
+  const [{ data: designados }, { data: membros }, { data: testesDesignados }] =
+    await Promise.all([
+      supabase
+        .from("sacrificio_funcoes")
+        .select("profile_id, profiles:profile_id(nome)")
+        .eq("sacrificio_id", sacrificioId)
+        .eq("funcao", funcao)
+        .returns<Designado[]>(),
+      supabase
+        .from("projeto_membros")
+        .select("profile_id, papel")
+        .eq("projeto_id", id)
+        .returns<Membro[]>(),
+      supabase
+        .from("projeto_testes")
+        .select("teste_slug")
+        .eq("projeto_id", id)
+        .returns<TesteDesignado[]>(),
+    ]);
 
   const souDesignado = (designados ?? []).some(
     (d) => d.profile_id === usuario?.id
@@ -128,6 +136,15 @@ export default async function PaginaFuncaoSacrificio({
         </p>
       </section>
 
+      {funcao === "separacao_aliquotas" &&
+        sacrificio.aliquotas_quando === "dia_seguinte" && (
+          <p className="mt-4 rounded border border-reagent/50 bg-reagent/10 p-3 text-sm text-ink">
+            As alíquotas deste sacrifício foram planejadas para o{" "}
+            <strong>dia seguinte</strong>. Faça a separação quando a equipe se
+            reunir para isso.
+          </p>
+        )}
+
       {ratosErro && (
         <p className="mt-4 rounded border border-alerta/50 bg-alerta/10 p-3 text-sm text-alerta">
           Não foi possível carregar os ratos deste sacrifício. Detalhe técnico:{" "}
@@ -145,6 +162,7 @@ export default async function PaginaFuncaoSacrificio({
         ratos={ratos}
         secoes={escopo.secoes}
         orgaosVisiveis={escopo.orgaos}
+        testesDesignados={(testesDesignados ?? []).map((t) => t.teste_slug)}
       />
     </main>
   );

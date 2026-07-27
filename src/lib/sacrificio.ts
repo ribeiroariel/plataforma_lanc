@@ -18,6 +18,7 @@ export const FUNCOES_SACRIFICIO: FuncaoSacrificio[] = [
   { valor: "dissecacao_cortex", rotulo: "Dissecação — córtex", minPessoas: 1 },
   { valor: "separacao_cortex_hipocampo", rotulo: "Separação córtex/hipocampo", minPessoas: 1 },
   { valor: "homogeneizacao", rotulo: "Homogeneização", minPessoas: 1 },
+  { valor: "separacao_aliquotas", rotulo: "Separação de alíquotas", minPessoas: 1 },
   { valor: "separacao_sangue", rotulo: "Separação de sangue (plasma/eritrócito)", minPessoas: 1 },
   { valor: "organizacao_geral", rotulo: "Organização geral (limpeza/ordenamento)", minPessoas: 1 },
 ];
@@ -32,7 +33,8 @@ export type SecaoSacrificio =
   | "sobrevivencia"
   | "contagem"
   | "coleta"
-  | "homogeneizacao";
+  | "homogeneizacao"
+  | "aliquotas";
 
 // Escopo de cada função: quais seções da tela do dia ela preenche e, quando
 // aplicável, a quais órgãos ela se restringe (na coleta/homogeneização).
@@ -53,8 +55,15 @@ export const FUNCAO_ESCOPO: Record<
   },
   separacao_sangue: { secoes: ["coleta"], orgaos: ["plasma", "eritrocito"] },
   homogeneizacao: { secoes: ["homogeneizacao"] },
+  separacao_aliquotas: { secoes: ["aliquotas"] },
   organizacao_geral: {
-    secoes: ["sobrevivencia", "contagem", "coleta", "homogeneizacao"],
+    secoes: [
+      "sobrevivencia",
+      "contagem",
+      "coleta",
+      "homogeneizacao",
+      "aliquotas",
+    ],
   },
 };
 
