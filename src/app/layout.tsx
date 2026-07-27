@@ -49,6 +49,7 @@ export default async function RootLayout({
   if (usuario?.papel === "bolsista") {
     navPrincipal.push(
       { href: "/meus-testes", rotulo: "Meus testes" },
+      { href: "/minhas-funcoes", rotulo: "Minhas funções" },
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" }
     );

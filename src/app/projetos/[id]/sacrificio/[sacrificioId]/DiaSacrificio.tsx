@@ -8,6 +8,9 @@ import {
   reabrirRato,
   salvarColeta,
   confirmarAliquota,
+  encerrarSacrificio,
+  reabrirSacrificio,
+  type DestinoTecido,
 } from "@/lib/actions/sacrificio";
 import { ORGAOS_DISSECAVEIS, volumeTampaoUl } from "@/lib/sacrificio";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
@@ -15,9 +18,8 @@ import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 type RatoRoster = { numero: number; grupoId: string; grupoNome: string };
 type TecidoColeta = {
   tecido: string;
-  coletado: boolean;
+  destino: DestinoTecido;
   motivo: string | null;
-  paraHistologia: boolean;
 };
 type AliquotaSalva = {
   tecido: string;
@@ -41,6 +43,8 @@ type Props = {
   projetoId: string;
   sacrificioId: string;
   podeRegistrar: boolean;
+  podeEncerrar: boolean;
+  status: string;
   roster: RatoRoster[];
   ratos: RatoSalvo[];
 };
@@ -49,6 +53,8 @@ export default function DiaSacrificio({
   projetoId,
   sacrificioId,
   podeRegistrar,
+  podeEncerrar,
+  status,
   roster,
   ratos,
 }: Props) {
@@ -57,6 +63,25 @@ export default function DiaSacrificio({
   const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+
+  const concluido = status === "concluido";
+
+  function encerrar() {
+    setErro(null);
+    iniciar(async () => {
+      const res = await encerrarSacrificio({ projetoId, sacrificioId });
+      if ("erro" in res) setErro(res.erro);
+      else router.refresh();
+    });
+  }
+  function reabrirDia() {
+    setErro(null);
+    iniciar(async () => {
+      const res = await reabrirSacrificio({ projetoId, sacrificioId });
+      if ("erro" in res) setErro(res.erro);
+      else router.refresh();
+    });
+  }
 
   // --- Sobrevivência ---
   const [sobrev, setSobrev] = useState<Record<string, boolean>>(() => {
@@ -135,6 +160,45 @@ export default function DiaSacrificio({
   return (
     <div className="mt-8 flex flex-col gap-12">
       {erro && <p className="text-sm text-alerta">{erro}</p>}
+
+      {(podeEncerrar || concluido) && (
+        <div className="flex flex-wrap items-center gap-3 rounded border border-rule bg-paper-raised px-4 py-3">
+          {concluido ? (
+            <>
+              <span className="font-mono text-xs uppercase tracking-wide text-green-700 dark:text-green-400">
+                ● Sacrifício encerrado
+              </span>
+              <span className="text-xs text-ink-soft">
+                A edição das etapas está travada.
+              </span>
+              {podeEncerrar && (
+                <button
+                  type="button"
+                  onClick={reabrirDia}
+                  disabled={pend}
+                  className="ml-auto text-xs text-ink-soft underline-offset-2 hover:text-alerta hover:underline"
+                >
+                  reabrir
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-xs uppercase tracking-wide text-ink-soft">
+                Sacrifício em andamento
+              </span>
+              <button
+                type="button"
+                onClick={encerrar}
+                disabled={pend}
+                className="ml-auto rounded border border-alerta/50 px-3 py-1 text-xs text-alerta transition-colors hover:bg-alerta/10"
+              >
+                {pend ? "..." : "Encerrar sacrifício"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* 1. Sobrevivência */}
       <section>
@@ -376,7 +440,7 @@ function PainelAliquotas({
   rato: RatoSalvo;
   podeRegistrar: boolean;
 }) {
-  const coletados = rato.tecidos.filter((t) => t.coletado);
+  const coletados = rato.tecidos.filter((t) => t.destino === "coleta");
   const aliqPorTecido = new Map(rato.aliquotas.map((a) => [a.tecido, a]));
   const router = useRouter();
   const [pend, iniciar] = useTransition();
@@ -511,18 +575,14 @@ function PainelColeta({
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [estados, setEstados] = useState<
-    Record<string, { coletado: boolean; motivo: string; hist: boolean }>
+    Record<string, { destino: DestinoTecido; motivo: string }>
   >(() => {
-    const init: Record<
-      string,
-      { coletado: boolean; motivo: string; hist: boolean }
-    > = {};
+    const init: Record<string, { destino: DestinoTecido; motivo: string }> = {};
     for (const o of ORGAOS_DISSECAVEIS) {
       const s = salvo.get(o.valor);
       init[o.valor] = {
-        coletado: s?.coletado ?? true,
+        destino: s?.destino ?? "coleta",
         motivo: s?.motivo ?? "",
-        hist: s?.paraHistologia ?? false,
       };
     }
     return init;
@@ -530,7 +590,7 @@ function PainelColeta({
 
   function setOrgao(
     tecido: string,
-    patch: Partial<{ coletado: boolean; motivo: string; hist: boolean }>
+    patch: Partial<{ destino: DestinoTecido; motivo: string }>
   ) {
     setEstados((p) => ({ ...p, [tecido]: { ...p[tecido], ...patch } }));
   }
@@ -539,9 +599,8 @@ function PainelColeta({
     setErro(null);
     const tecidos = ORGAOS_DISSECAVEIS.map((o) => ({
       tecido: o.valor,
-      coletado: estados[o.valor].coletado,
+      destino: estados[o.valor].destino,
       motivo: estados[o.valor].motivo || null,
-      paraHistologia: estados[o.valor].hist,
     }));
     iniciar(async () => {
       const res = await salvarColeta({
@@ -566,8 +625,7 @@ function PainelColeta({
           <thead>
             <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
               <th className="py-1 pr-3 font-normal">Órgão</th>
-              <th className="py-1 pr-3 font-normal">Coletado</th>
-              <th className="py-1 pr-3 font-normal">Histologia</th>
+              <th className="py-1 pr-3 font-normal">Destino</th>
               <th className="py-1 font-normal">Se não coletado, por quê</th>
             </tr>
           </thead>
@@ -578,27 +636,23 @@ function PainelColeta({
                 <tr key={o.valor} className="border-t border-rule/60">
                   <td className="py-1 pr-3 text-ink">{o.rotulo}</td>
                   <td className="py-1 pr-3">
-                    <input
-                      type="checkbox"
-                      checked={e.coletado}
+                    <select
+                      value={e.destino}
                       disabled={!podeRegistrar}
                       onChange={(ev) =>
-                        setOrgao(o.valor, { coletado: ev.target.checked })
+                        setOrgao(o.valor, {
+                          destino: ev.target.value as DestinoTecido,
+                        })
                       }
-                    />
-                  </td>
-                  <td className="py-1 pr-3">
-                    <input
-                      type="checkbox"
-                      checked={e.hist}
-                      disabled={!podeRegistrar}
-                      onChange={(ev) =>
-                        setOrgao(o.valor, { hist: ev.target.checked })
-                      }
-                    />
+                      className={INPUT_SM}
+                    >
+                      <option value="coleta">Coleta (bioquímica)</option>
+                      <option value="histologia">Histologia</option>
+                      <option value="nao_coletado">Não coletado</option>
+                    </select>
                   </td>
                   <td className="py-1">
-                    {!e.coletado && (
+                    {e.destino === "nao_coletado" && (
                       <input
                         type="text"
                         value={e.motivo}

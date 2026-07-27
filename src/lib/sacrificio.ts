@@ -16,7 +16,7 @@ export const FUNCOES_SACRIFICIO: FuncaoSacrificio[] = [
   { valor: "dissecacao_rim", rotulo: "Dissecação — rim", minPessoas: 1 },
   { valor: "dissecacao_pancreas", rotulo: "Dissecação — pâncreas", minPessoas: 1 },
   { valor: "dissecacao_cortex", rotulo: "Dissecação — córtex", minPessoas: 1 },
-  { valor: "separacao_cortex_cerebelo", rotulo: "Separação córtex/cerebelo", minPessoas: 1 },
+  { valor: "separacao_cortex_hipocampo", rotulo: "Separação córtex/hipocampo", minPessoas: 1 },
   { valor: "homogeneizacao", rotulo: "Homogeneização", minPessoas: 1 },
   { valor: "separacao_sangue", rotulo: "Separação de sangue (plasma/eritrócito)", minPessoas: 1 },
   { valor: "organizacao_geral", rotulo: "Organização geral (limpeza/ordenamento)", minPessoas: 1 },
@@ -32,7 +32,7 @@ export const ORGAOS_DISSECAVEIS: { valor: string; rotulo: string }[] = [
   { valor: "rim", rotulo: "Rim" },
   { valor: "pancreas", rotulo: "Pâncreas" },
   { valor: "cortex", rotulo: "Córtex" },
-  { valor: "cerebelo", rotulo: "Cerebelo" },
+  { valor: "hipocampo", rotulo: "Hipocampo" },
   { valor: "plasma", rotulo: "Plasma" },
   { valor: "eritrocito", rotulo: "Eritrócito" },
 ];
