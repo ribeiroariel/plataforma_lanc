@@ -26,6 +26,38 @@ export function rotuloFuncao(valor: string): string {
   return FUNCOES_SACRIFICIO.find((f) => f.valor === valor)?.rotulo ?? valor;
 }
 
+// As etapas da tela do dia. A aba geral mostra todas; a aba de cada função
+// mostra só as do seu escopo (abaixo).
+export type SecaoSacrificio =
+  | "sobrevivencia"
+  | "contagem"
+  | "coleta"
+  | "homogeneizacao";
+
+// Escopo de cada função: quais seções da tela do dia ela preenche e, quando
+// aplicável, a quais órgãos ela se restringe (na coleta/homogeneização).
+// "Organização geral" enxerga tudo — é quem coordena o dia.
+export const FUNCAO_ESCOPO: Record<
+  string,
+  { secoes: SecaoSacrificio[]; orgaos?: string[] }
+> = {
+  decapitacao: { secoes: ["sobrevivencia", "contagem"] },
+  deslocamento_cervical: { secoes: ["sobrevivencia", "contagem"] },
+  dissecacao_figado: { secoes: ["coleta"], orgaos: ["figado"] },
+  dissecacao_rim: { secoes: ["coleta"], orgaos: ["rim"] },
+  dissecacao_pancreas: { secoes: ["coleta"], orgaos: ["pancreas"] },
+  dissecacao_cortex: { secoes: ["coleta"], orgaos: ["cortex"] },
+  separacao_cortex_hipocampo: {
+    secoes: ["coleta"],
+    orgaos: ["cortex", "hipocampo"],
+  },
+  separacao_sangue: { secoes: ["coleta"], orgaos: ["plasma", "eritrocito"] },
+  homogeneizacao: { secoes: ["homogeneizacao"] },
+  organizacao_geral: {
+    secoes: ["sobrevivencia", "contagem", "coleta", "homogeneizacao"],
+  },
+};
+
 // Órgãos/tecidos dissecáveis (mais granular que os tecidos de análise).
 export const ORGAOS_DISSECAVEIS: { valor: string; rotulo: string }[] = [
   { valor: "figado", rotulo: "Fígado" },

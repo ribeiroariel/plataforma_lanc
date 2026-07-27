@@ -1051,6 +1051,32 @@ create policy "Membros e orientadora veem o projeto"
     or public.eh_designado_projeto(id)
   );
 
+-- Fatia 3: designado a partir de um sacrificio_rato (para as tabelas filhas
+-- tecidos/alíquotas). Além de LER, os designados passam a ESCREVER a sua parte
+-- (a granularidade por função é feita na interface — todos os que escrevem são
+-- pessoas designadas ao dia pelo coautor).
+create or replace function public.eh_designado_sacrificio_do_rato(p_rato uuid)
+returns boolean language sql security definer set search_path = public stable as $$
+  select exists (
+    select 1
+    from public.sacrificio_ratos sr
+    join public.sacrificio_funcoes sf on sf.sacrificio_id = sr.sacrificio_id
+    where sr.id = p_rato and sf.profile_id = auth.uid()
+  );
+$$;
+grant execute on function public.eh_designado_sacrificio_do_rato(uuid) to authenticated;
+
+-- Roster: designados leem os grupos do projeto (para montar a fila de ratos).
+drop policy if exists "Membros e orientadora veem os grupos" on public.projeto_grupos;
+create policy "Membros e orientadora veem os grupos"
+  on public.projeto_grupos for select
+  using (
+    public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+    or public.eh_designado_projeto(projeto_id)
+  );
+
 -- Leitura = membros + orientadora; escrita = coautores. Vale p/ as 5 tabelas.
 alter table public.sacrificios enable row level security;
 alter table public.sacrificios force row level security;
@@ -1084,31 +1110,61 @@ alter table public.sacrificio_ratos enable row level security;
 alter table public.sacrificio_ratos force row level security;
 drop policy if exists "Membros veem os ratos do sacrifício" on public.sacrificio_ratos;
 create policy "Membros veem os ratos do sacrifício" on public.sacrificio_ratos for select
-  using (public.eh_membro_projeto(public.sac_projeto(sacrificio_id)) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(public.sac_projeto(sacrificio_id))
+    or public.is_orientador()
+    or public.eh_designado_sacrificio(sacrificio_id)
+  );
 drop policy if exists "Coautor gerencia os ratos do sacrifício" on public.sacrificio_ratos;
 create policy "Coautor gerencia os ratos do sacrifício" on public.sacrificio_ratos for all
-  using (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)))
-  with check (public.eh_coautor_projeto(public.sac_projeto(sacrificio_id)));
+  using (
+    public.eh_coautor_projeto(public.sac_projeto(sacrificio_id))
+    or public.eh_designado_sacrificio(sacrificio_id)
+  )
+  with check (
+    public.eh_coautor_projeto(public.sac_projeto(sacrificio_id))
+    or public.eh_designado_sacrificio(sacrificio_id)
+  );
 
 alter table public.sacrificio_rato_tecidos enable row level security;
 alter table public.sacrificio_rato_tecidos force row level security;
 drop policy if exists "Membros veem tecidos do rato" on public.sacrificio_rato_tecidos;
 create policy "Membros veem tecidos do rato" on public.sacrificio_rato_tecidos for select
-  using (public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.is_orientador()
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  );
 drop policy if exists "Coautor gerencia tecidos do rato" on public.sacrificio_rato_tecidos;
 create policy "Coautor gerencia tecidos do rato" on public.sacrificio_rato_tecidos for all
-  using (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)))
-  with check (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)));
+  using (
+    public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  )
+  with check (
+    public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  );
 
 alter table public.sacrificio_aliquotas enable row level security;
 alter table public.sacrificio_aliquotas force row level security;
 drop policy if exists "Membros veem alíquotas" on public.sacrificio_aliquotas;
 create policy "Membros veem alíquotas" on public.sacrificio_aliquotas for select
-  using (public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)) or public.is_orientador());
+  using (
+    public.eh_membro_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.is_orientador()
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  );
 drop policy if exists "Coautor gerencia alíquotas" on public.sacrificio_aliquotas;
 create policy "Coautor gerencia alíquotas" on public.sacrificio_aliquotas for all
-  using (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)))
-  with check (public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id)));
+  using (
+    public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  )
+  with check (
+    public.eh_coautor_projeto(public.sac_projeto_do_rato(sacrificio_rato_id))
+    or public.eh_designado_sacrificio_do_rato(sacrificio_rato_id)
+  );
 
 -- Trava da alíquota confirmada: peso e volume não mudam mais.
 create or replace function public.travar_aliquota_confirmada()

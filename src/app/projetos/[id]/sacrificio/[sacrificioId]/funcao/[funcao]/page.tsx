@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { FUNCOES_SACRIFICIO, rotuloFuncao } from "@/lib/sacrificio";
+import { FUNCOES_SACRIFICIO, FUNCAO_ESCOPO, rotuloFuncao } from "@/lib/sacrificio";
+import { carregarDia } from "@/lib/sacrificioDados";
+import DiaSacrificio from "../../DiaSacrificio";
 
 type Sacrificio = {
   id: string;
@@ -10,7 +12,11 @@ type Sacrificio = {
   leva: number | null;
   status: string;
   data: string | null;
-  projetos: { nome: string } | null;
+  projetos: {
+    nome: string;
+    numero_levas: number | null;
+    finalizado: boolean;
+  } | null;
 };
 type Designado = { profile_id: string; profiles: { nome: string } | null };
 type Membro = { profile_id: string; papel: "coautor" | "ajudante" };
@@ -22,44 +28,60 @@ export default async function PaginaFuncaoSacrificio({
 }) {
   const { id, sacrificioId, funcao } = await params;
   const funcMeta = FUNCOES_SACRIFICIO.find((f) => f.valor === funcao);
-  if (!funcMeta) notFound();
+  const escopo = FUNCAO_ESCOPO[funcao];
+  if (!funcMeta || !escopo) notFound();
 
   const usuario = await getUsuarioAtual();
   const supabase = await createClient();
 
   const { data: sacrificio } = await supabase
     .from("sacrificios")
-    .select("id, projeto_id, leva, status, data, projetos:projeto_id(nome)")
+    .select(
+      "id, projeto_id, leva, status, data, projetos:projeto_id(nome, numero_levas, finalizado)"
+    )
     .eq("id", sacrificioId)
     .eq("projeto_id", id)
     .maybeSingle()
     .returns<Sacrificio>();
   if (!sacrificio) notFound();
 
-  // Colegas designados a esta função (todos preenchem a mesma aba).
-  const { data: designados } = await supabase
-    .from("sacrificio_funcoes")
-    .select("profile_id, profiles:profile_id(nome)")
-    .eq("sacrificio_id", sacrificioId)
-    .eq("funcao", funcao)
-    .returns<Designado[]>();
+  const [{ data: designados }, { data: membros }] = await Promise.all([
+    supabase
+      .from("sacrificio_funcoes")
+      .select("profile_id, profiles:profile_id(nome)")
+      .eq("sacrificio_id", sacrificioId)
+      .eq("funcao", funcao)
+      .returns<Designado[]>(),
+    supabase
+      .from("projeto_membros")
+      .select("profile_id, papel")
+      .eq("projeto_id", id)
+      .returns<Membro[]>(),
+  ]);
 
   const souDesignado = (designados ?? []).some(
     (d) => d.profile_id === usuario?.id
   );
-
-  // Coautor/orientador podem abrir a aba de qualquer função para acompanhar.
-  const { data: membros } = await supabase
-    .from("projeto_membros")
-    .select("profile_id, papel")
-    .eq("projeto_id", id)
-    .returns<Membro[]>();
   const souCoautor = (membros ?? []).some(
     (m) => m.papel === "coautor" && m.profile_id === usuario?.id
   );
   const souOrientador = usuario?.papel === "orientador";
-
   if (!souDesignado && !souCoautor && !souOrientador) notFound();
+
+  const { roster, ratos, ratosErro } = await carregarDia(
+    supabase,
+    id,
+    sacrificioId,
+    sacrificio.leva,
+    sacrificio.projetos?.numero_levas ?? 1
+  );
+
+  const finalizado = sacrificio.projetos?.finalizado ?? false;
+  // Preenche quem é designado a esta função (ou coautor); orientador só observa.
+  const podeRegistrar =
+    (souDesignado || souCoautor) &&
+    sacrificio.status !== "concluido" &&
+    !finalizado;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -81,7 +103,7 @@ export default async function PaginaFuncaoSacrificio({
         {sacrificio.status}
       </p>
 
-      <section className="mt-8">
+      <section className="mt-6">
         <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft">
           Equipe desta função
         </p>
@@ -100,19 +122,30 @@ export default async function PaginaFuncaoSacrificio({
             ))
           )}
         </div>
+        <p className="mt-2 text-xs leading-relaxed text-ink-soft">
+          O que você preencher e confirmar aqui aparece na hora para o
+          coautor/orientador na aba geral e para os colegas desta mesma função.
+        </p>
       </section>
 
-      <div className="mt-8 rounded border border-dashed border-rule bg-paper-raised p-4">
-        <p className="text-sm text-ink">
-          O preenchimento ao vivo desta função é liberado na próxima atualização.
+      {ratosErro && (
+        <p className="mt-4 rounded border border-alerta/50 bg-alerta/10 p-3 text-sm text-alerta">
+          Não foi possível carregar os ratos deste sacrifício. Detalhe técnico:{" "}
+          {ratosErro}
         </p>
-        <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-          Aqui vai entrar o formulário específico de{" "}
-          <span className="text-ink">{rotuloFuncao(funcao).toLowerCase()}</span>
-          {" "}— o que você preencher e confirmar aparece na hora para o
-          coautor/orientador na aba geral, e para os colegas desta mesma função.
-        </p>
-      </div>
+      )}
+
+      <DiaSacrificio
+        projetoId={id}
+        sacrificioId={sacrificio.id}
+        podeRegistrar={podeRegistrar}
+        podeEncerrar={false}
+        status={sacrificio.status}
+        roster={roster}
+        ratos={ratos}
+        secoes={escopo.secoes}
+        orgaosVisiveis={escopo.orgaos}
+      />
     </main>
   );
 }
