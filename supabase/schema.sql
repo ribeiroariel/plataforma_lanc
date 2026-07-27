@@ -46,7 +46,11 @@ alter table public.profiles force row level security;
 -- alimenta o carrossel público "quem somos" na página inicial. O e-mail
 -- fica de fora da leitura pública (só quem usa a chave de serviço enxerga).
 revoke select on public.profiles from anon, authenticated;
-grant select (id, nome, papel, aprovado, pode_exportar_dados, foto_url, apresentacao, created_at)
+-- ATENÇÃO: mantenha esta lista de colunas SEMPRE em sincronia com o que
+-- getUsuarioAtual/proxy leem de profiles. `pode_aprovar_cadastros` estava
+-- faltando aqui — rodar o schema inteiro revogava a leitura dessa coluna e
+-- derrubava o login (todo usuário aparecia deslogado). Ver src/lib/supabase/profile.ts.
+grant select (id, nome, papel, aprovado, pode_exportar_dados, pode_aprovar_cadastros, foto_url, apresentacao, created_at)
   on public.profiles to anon, authenticated;
 
 drop policy if exists "Perfis são públicos para leitura" on public.profiles;
