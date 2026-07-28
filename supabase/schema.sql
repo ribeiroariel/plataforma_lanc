@@ -294,10 +294,20 @@ create table if not exists public.projeto_testes (
   -- só mostra os ratos dessa leva.
   leva integer,
   status text not null default 'pendente' check (status in ('pendente', 'concluido')),
+  -- Metadados da leitura (para a planilha de transparência dos dados brutos):
+  -- aparelho usado e horário de início/término da leitura no equipamento.
+  -- Horários em texto (valor literal digitado, ex.: "2026-07-27T14:30") para
+  -- não sofrer com fuso — é transparência, o registrado é o que aparece.
+  aparelho_leitura text,
+  leitura_inicio text,
+  leitura_fim text,
   created_at timestamptz not null default now()
 );
 
 alter table public.projeto_testes add column if not exists leva integer;
+alter table public.projeto_testes add column if not exists aparelho_leitura text;
+alter table public.projeto_testes add column if not exists leitura_inicio text;
+alter table public.projeto_testes add column if not exists leitura_fim text;
 
 -- Ajudantes de um teste designado: além do responsável (que registra os
 -- resultados), outras pessoas que fazem o teste junto e também o veem em
