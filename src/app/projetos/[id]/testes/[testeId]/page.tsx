@@ -7,6 +7,7 @@ import { configDoTeste } from "@/lib/tiposTeste";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 import { listarFotosCaderno } from "@/lib/actions/fotos-caderno";
 import RegistroResultado from "./RegistroResultado";
+import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
 
 type ProjetoTeste = {
@@ -16,6 +17,9 @@ type ProjetoTeste = {
   status: "pendente" | "concluido";
   responsavel_id: string;
   leva: number | null;
+  aparelho_leitura: string | null;
+  leitura_inicio: string | null;
+  leitura_fim: string | null;
 };
 
 type Resultado = {
@@ -41,7 +45,9 @@ export default async function PaginaResultado({
     await Promise.all([
       supabase
         .from("projeto_testes")
-        .select("id, projeto_id, teste_slug, status, responsavel_id, leva")
+        .select(
+          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho_leitura, leitura_inicio, leitura_fim"
+        )
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
         .maybeSingle()
@@ -137,6 +143,15 @@ export default async function PaginaResultado({
         resultadosExistentes={resultados ?? []}
         podeRegistrar={souResponsavel}
         podeAlterarStatus={souResponsavel || souCoautor}
+      />
+
+      <MetadadosLeitura
+        projetoId={projetoId}
+        projetoTesteId={projetoTeste.id}
+        aparelho={projetoTeste.aparelho_leitura}
+        inicio={projetoTeste.leitura_inicio}
+        fim={projetoTeste.leitura_fim}
+        podeEditar={souResponsavel || souCoautor}
       />
 
       <FotosCaderno

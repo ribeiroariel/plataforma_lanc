@@ -170,14 +170,24 @@ export default async function DetalheProjeto({
             <p className="mt-1 text-ink-soft">{projeto.descricao}</p>
           )}
         </div>
-        {usuario?.pode_exportar_dados && (
-          <a
-            href={`/api/exportar/${projeto.id}`}
-            className="shrink-0 rounded bg-absorbance px-4 py-2 text-sm text-paper transition-colors hover:bg-ink"
-          >
-            ↓ Exportar para o R
-          </a>
-        )}
+        <div className="flex shrink-0 flex-col gap-2">
+          {(souCoautor || souOrientador || usuario?.pode_exportar_dados) && (
+            <a
+              href={`/api/exportar-transparencia/${projeto.id}`}
+              className="rounded border border-absorbance px-4 py-2 text-center text-sm text-absorbance transition-colors hover:bg-absorbance hover:text-paper"
+            >
+              ↓ Dados brutos (transparência)
+            </a>
+          )}
+          {usuario?.pode_exportar_dados && (
+            <a
+              href={`/api/exportar/${projeto.id}`}
+              className="rounded bg-absorbance px-4 py-2 text-center text-sm text-paper transition-colors hover:bg-ink"
+            >
+              ↓ Exportar para o R
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">

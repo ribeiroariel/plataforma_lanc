@@ -3,6 +3,36 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+// Metadados da leitura de um teste designado (aparelho + horário de início/fim
+// da leitura no equipamento). Usados na planilha de transparência dos dados
+// brutos. Editável pelo responsável ou coautor (a policy de update de
+// projeto_testes garante). Não trava — pode corrigir depois.
+export async function salvarMetadadosLeitura(dados: {
+  projetoId: string;
+  projetoTesteId: string;
+  aparelho: string | null;
+  inicio: string | null;
+  fim: string | null;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("projeto_testes")
+    .update({
+      aparelho_leitura: dados.aparelho?.trim() || null,
+      leitura_inicio: dados.inicio || null,
+      leitura_fim: dados.fim || null,
+    })
+    .eq("id", dados.projetoTesteId);
+
+  if (error) {
+    return { erro: "Não foi possível salvar os metadados: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
 export async function salvarResultado(dados: {
   projetoId: string;
   projetoTesteId: string;
