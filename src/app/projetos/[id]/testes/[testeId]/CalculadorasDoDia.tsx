@@ -6,7 +6,12 @@ import {
   protocoloDoSlug,
   type ReagenteConsumo,
 } from "@/lib/protocoloEnsaio";
-import { nomeRecipiente } from "@/lib/recipientes";
+import {
+  ehRecipiente,
+  fatorRecipiente,
+  nomeRecipiente,
+  type Recipiente,
+} from "@/lib/recipientes";
 import { INPUT_SM } from "@/lib/estilos";
 
 function fmtVol(ul: number): string {
@@ -15,23 +20,6 @@ function fmtVol(ul: number): string {
     return `${(ul / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} mL`;
   }
   return `${ul.toLocaleString("pt-BR", { maximumFractionDigits: ul < 10 ? 2 : 0 })} µL`;
-}
-
-function LinhaReagente({ r, total }: { r: ReagenteConsumo; total: number }) {
-  return (
-    <tr className="border-b border-rule/60 align-top">
-      <td className="py-1 pr-4 text-ink">
-        {r.nome}
-        {r.obs && <span className="block text-xs text-ink-soft">{r.obs}</span>}
-      </td>
-      <td className="whitespace-nowrap py-1 pr-4 font-mono text-xs text-ink-soft">
-        {fmtVol(r.ulPorAmostra)}/amostra
-      </td>
-      <td className="whitespace-nowrap py-1 text-right font-mono tabular-nums text-ink">
-        {fmtVol(total)}
-      </td>
-    </tr>
-  );
 }
 
 export default function CalculadorasDoDia({
@@ -69,14 +57,16 @@ export default function CalculadorasDoDia({
     );
   }
 
-  const estoque = protocolo.reagentes.filter((r) => r.origem === "estoque");
-  const dia = protocolo.reagentes.filter((r) => r.origem === "dia");
-  // Margem de +10% (convenção do manual: dimensionar 10% a mais do necessário).
-  const total = (r: ReagenteConsumo) => (Number.isFinite(n) ? r.ulPorAmostra * n * 1.1 : NaN);
+  // Sem recipiente definido, mostra na base microplaca 96 (1×) para ensaios que
+  // escalam; para os de tubo fixo o recipiente não muda os volumes.
+  const rec: Recipiente | null = ehRecipiente(recipiente) ? recipiente : null;
+  const fator = protocolo.escala ? fatorRecipiente(rec ?? "microplaca_96") : 1;
 
-  const modoAtual = recipiente
-    ? protocolo.modos.find((m) => m.recipiente === recipiente)
-    : undefined;
+  const volAmostra = (r: ReagenteConsumo) => r.ulBase * fator;
+  const totalUl = (r: ReagenteConsumo) =>
+    Number.isFinite(n) ? volAmostra(r) * n * 1.1 : NaN;
+
+  const temDia = protocolo.reagentes.some((r) => r.origem === "dia");
 
   return (
     <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
@@ -84,11 +74,13 @@ export default function CalculadorasDoDia({
         Reagentes do dia
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-        Volumes por amostra vindos do protocolo do manual (não de um fator), com
-        +10% de margem. Ajuste o nº de amostras se incluir brancos/curva extras.
-        {modoAtual
-          ? ` Recipiente: ${nomeRecipiente(modoAtual.recipiente)} — ${fmtVol(modoAtual.volumeTotalUl)}/amostra.`
-          : " Escolha o recipiente na preparação acima para fixar o modo de leitura."}
+        Volumes por amostra vindos do protocolo do manual, com +10% de margem.
+        Ajuste o nº de amostras se incluir brancos/curva extras.{" "}
+        {protocolo.escala
+          ? rec
+            ? `Recipiente: ${nomeRecipiente(rec)} (${fator}×).`
+            : "Escolha o recipiente na preparação acima — mostrando na base microplaca 96 (1×)."
+          : "Reação em tubo de volume fixo — não muda com o recipiente."}
       </p>
 
       <label className="mb-4 flex w-fit flex-col gap-1 text-xs text-ink-soft">
@@ -107,51 +99,60 @@ export default function CalculadorasDoDia({
           Informe um número de amostras válido (inteiro maior que zero).
         </p>
       ) : (
-        <div className="flex flex-col gap-5">
-          {estoque.length > 0 && (
-            <div>
-              <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
-                Estoque a consumir hoje (já prontos) — total p/ {n} amostra(s)
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <tbody>
-                    {estoque.map((r, i) => (
-                      <LinhaReagente key={i} r={r} total={total(r)} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {dia.length > 0 && (
-            <div>
-              <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
-                Preparar no dia — total a consumir p/ {n} amostra(s)
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <tbody>
-                    {dia.map((r, i) => (
-                      <LinhaReagente key={i} r={r} total={total(r)} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-1 text-xs text-ink-soft">
-                Como preparar cada um (receita/massa) está na página do protocolo:{" "}
-                <Link
-                  href={`/testes/${slug}`}
-                  className="text-absorbance hover:text-ink"
-                >
-                  /testes/{slug}
-                </Link>
-                .
-              </p>
-            </div>
-          )}
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                <th className="py-1 pr-4 font-medium">Reagente</th>
+                <th className="py-1 pr-4 font-medium">µL/amostra</th>
+                <th className="py-1 text-right font-medium">Total ({n} + 10%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {protocolo.reagentes.map((r, i) => (
+                <tr key={i} className="border-b border-rule/60 align-top">
+                  <td className="py-1 pr-4 text-ink">
+                    <span className="inline-flex items-center gap-2">
+                      {r.nome}
+                      <span
+                        className={
+                          r.origem === "dia"
+                            ? "rounded-full bg-reagent/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-reagent"
+                            : "rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-soft"
+                        }
+                      >
+                        {r.origem === "dia" ? "preparar no dia" : "estoque"}
+                      </span>
+                    </span>
+                    {(r.obs || r.soBranco) && (
+                      <span className="block text-xs text-ink-soft">
+                        {r.soBranco ? "Só no branco. " : ""}
+                        {r.obs ?? ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap py-1 pr-4 font-mono text-xs text-ink-soft">
+                    {fmtVol(volAmostra(r))}
+                  </td>
+                  <td className="whitespace-nowrap py-1 text-right font-mono tabular-nums text-ink">
+                    {fmtVol(totalUl(r))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      {temDia && (
+        <p className="mt-3 text-xs text-ink-soft">
+          Como preparar os reagentes marcados “preparar no dia” (receita/massa)
+          está na página do protocolo:{" "}
+          <Link href={`/testes/${slug}`} className="text-absorbance hover:text-ink">
+            /testes/{slug}
+          </Link>
+          .
+        </p>
       )}
     </div>
   );
