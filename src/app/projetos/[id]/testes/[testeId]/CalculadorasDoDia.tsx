@@ -69,8 +69,19 @@ export default function CalculadorasDoDia({
       : fatorRecipiente(recEfetivo);
 
   const volAmostra = (r: ReagenteConsumo) => r.ulBase * fator;
+  // Quando há um branco para cada amostra, reagentes usados em amostra E branco
+  // ("ambos") são consumidos em 2× o nº de amostras.
+  const tubosPorAmostra = (r: ReagenteConsumo) =>
+    protocolo.brancoParaCadaAmostra && (r.escopo ?? "ambos") === "ambos" ? 2 : 1;
   const totalUl = (r: ReagenteConsumo) =>
-    Number.isFinite(n) ? volAmostra(r) * n * 1.1 : NaN;
+    Number.isFinite(n) ? volAmostra(r) * n * tubosPorAmostra(r) * 1.1 : NaN;
+
+  const rotuloEscopo = (r: ReagenteConsumo) => {
+    if (!protocolo.brancoParaCadaAmostra) return null;
+    if (r.escopo === "amostra") return "só amostra";
+    if (r.escopo === "branco") return "só branco";
+    return "amostra + branco (2×)";
+  };
 
   const temDia = protocolo.reagentes.some((r) => r.origem === "dia");
 
@@ -112,7 +123,9 @@ export default function CalculadorasDoDia({
               <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
                 <th className="py-1 pr-4 font-medium">Reagente</th>
                 <th className="py-1 pr-4 font-medium">µL/amostra</th>
-                <th className="py-1 text-right font-medium">Total ({n} + 10%)</th>
+                <th className="py-1 text-right font-medium">
+                  Total ({n} amostra{protocolo.brancoParaCadaAmostra ? " + branco" : ""} + 10%)
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -130,12 +143,14 @@ export default function CalculadorasDoDia({
                       >
                         {r.origem === "dia" ? "preparar no dia" : "estoque"}
                       </span>
+                      {rotuloEscopo(r) && (
+                        <span className="rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-soft">
+                          {rotuloEscopo(r)}
+                        </span>
+                      )}
                     </span>
-                    {(r.obs || r.soBranco) && (
-                      <span className="block text-xs text-ink-soft">
-                        {r.soBranco ? "Só no branco. " : ""}
-                        {r.obs ?? ""}
-                      </span>
+                    {r.obs && (
+                      <span className="block text-xs text-ink-soft">{r.obs}</span>
                     )}
                   </td>
                   <td className="whitespace-nowrap py-1 pr-4 font-mono text-xs text-ink-soft">
