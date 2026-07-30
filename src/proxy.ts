@@ -46,6 +46,7 @@ export async function proxy(request: NextRequest) {
   const isCompartilhadaRoute =
     path.startsWith("/projetos") ||
     path.startsWith("/testes") ||
+    path.startsWith("/reagentes") ||
     path.startsWith("/meus-testes") ||
     path.startsWith("/minhas-funcoes") ||
     path.startsWith("/perfil");

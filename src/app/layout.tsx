@@ -51,13 +51,15 @@ export default async function RootLayout({
       { href: "/meus-testes", rotulo: "Meus testes" },
       { href: "/minhas-funcoes", rotulo: "Minhas funções" },
       { href: "/projetos", rotulo: "Projetos" },
-      { href: "/testes", rotulo: "Protocolos" }
+      { href: "/testes", rotulo: "Protocolos" },
+      { href: "/reagentes", rotulo: "Reagentes" }
     );
   } else if (usuario?.papel === "orientador") {
     navPrincipal.push(
       { href: "/orientador", rotulo: "Painel" },
       { href: "/projetos", rotulo: "Projetos" },
-      { href: "/testes", rotulo: "Protocolos" }
+      { href: "/testes", rotulo: "Protocolos" },
+      { href: "/reagentes", rotulo: "Reagentes" }
     );
   }
   // Aba de aprovação de cadastros: só para quem pode (orientadora ou Ariel).
