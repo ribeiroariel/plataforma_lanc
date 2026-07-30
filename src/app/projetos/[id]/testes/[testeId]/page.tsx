@@ -10,6 +10,7 @@ import { ehAparelho, ehRecipiente, nomeAparelho } from "@/lib/recipientes";
 import RegistroResultado from "./RegistroResultado";
 import PreparacaoTeste from "./PreparacaoTeste";
 import CalculadorasDoDia from "./CalculadorasDoDia";
+import ChecklistProcedimento, { type EstadoPasso } from "./ChecklistProcedimento";
 import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
 
@@ -36,6 +37,13 @@ type Resultado = {
   confirmado: boolean;
 };
 
+type PassoRegistro = {
+  passo_id: string;
+  feito: boolean;
+  feito_em: string | null;
+  feito_por: string | null;
+};
+
 export default async function PaginaResultado({
   params,
 }: {
@@ -45,7 +53,7 @@ export default async function PaginaResultado({
   const supabase = await createClient();
   const usuario = await getUsuarioAtual();
 
-  const [{ data: projetoTeste }, { data: projeto }, { data: grupos }, { data: membros }, { data: resultados }] =
+  const [{ data: projetoTeste }, { data: projeto }, { data: grupos }, { data: membros }, { data: resultados }, { data: passos }] =
     await Promise.all([
       supabase
         .from("projeto_testes")
@@ -76,6 +84,11 @@ export default async function PaginaResultado({
         .select("rato, grupo_id, leituras, valor_calculado, dentro_do_padrao, observacoes, confirmado")
         .eq("projeto_teste_id", testeId)
         .returns<Resultado[]>(),
+      supabase
+        .from("projeto_teste_passos")
+        .select("passo_id, feito, feito_em, feito_por")
+        .eq("projeto_teste_id", testeId)
+        .returns<PassoRegistro[]>(),
     ]);
 
   if (!projetoTeste) notFound();
@@ -116,6 +129,31 @@ export default async function PaginaResultado({
 
   const fotosCaderno = await listarFotosCaderno(projetoTeste.id);
 
+  // Estado do checklist do procedimento: mapa passo_id -> {feito, quem, quando}.
+  const idsFeitores = Array.from(
+    new Set(
+      (passos ?? [])
+        .map((p) => p.feito_por)
+        .filter((v): v is string => Boolean(v))
+    )
+  );
+  const nomesPorId = new Map<string, string>();
+  if (idsFeitores.length > 0) {
+    const { data: perfis } = await supabase
+      .from("profiles")
+      .select("id, nome")
+      .in("id", idsFeitores);
+    for (const p of perfis ?? []) nomesPorId.set(p.id, p.nome);
+  }
+  const estadoPassos: Record<string, EstadoPasso> = {};
+  for (const p of passos ?? []) {
+    estadoPassos[p.passo_id] = {
+      feito: p.feito,
+      porNome: p.feito_por ? nomesPorId.get(p.feito_por) ?? null : null,
+      em: p.feito_em,
+    };
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link
@@ -155,6 +193,15 @@ export default async function PaginaResultado({
         recipiente={
           ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
         }
+      />
+
+      <ChecklistProcedimento
+        projetoId={projetoId}
+        projetoTesteId={projetoTeste.id}
+        slug={projetoTeste.teste_slug}
+        nRoster={roster.length}
+        estado={estadoPassos}
+        podeMarcar={souResponsavel || souCoautor}
       />
 
       <RegistroResultado

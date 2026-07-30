@@ -81,6 +81,39 @@ export async function salvarMetadadosLeitura(dados: {
   return { sucesso: true };
 }
 
+// Marca (ou desmarca) um passo do checklist do procedimento. Grava quem e quando
+// confirmou. Compartilhado por quem executa o teste (responsável + ajudantes) e
+// coautor — a policy de projeto_teste_passos garante. Reversível (desmarcar).
+export async function marcarPasso(dados: {
+  projetoId: string;
+  projetoTesteId: string;
+  passoId: string;
+  feito: boolean;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Você precisa estar logado." };
+
+  const { error } = await supabase.from("projeto_teste_passos").upsert(
+    {
+      projeto_teste_id: dados.projetoTesteId,
+      passo_id: dados.passoId,
+      feito: dados.feito,
+      feito_por: dados.feito ? user.id : null,
+      feito_em: dados.feito ? new Date().toISOString() : null,
+    },
+    { onConflict: "projeto_teste_id,passo_id" }
+  );
+  if (error) {
+    return { erro: "Não foi possível salvar o passo: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
 export async function salvarResultado(dados: {
   projetoId: string;
   projetoTesteId: string;
