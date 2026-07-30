@@ -723,6 +723,48 @@ create policy "Coautor gerencia ajudantes"
   using (public.eh_coautor_do_teste(projeto_teste_id))
   with check (public.eh_coautor_do_teste(projeto_teste_id));
 
+-- Checklist do procedimento passo a passo (Fatia 3 da aba de teste processual):
+-- o ESTADO de cada passo (feito/por/quando) fica aqui; a DEFINIÇÃO dos passos
+-- está no código (src/lib/procedimentos.ts), chaveada por passo_id estável.
+-- Compartilhado por quem executa o teste (responsável + ajudantes), coautor e
+-- orientadora — o mesmo conjunto de quem vê/registra o resultado.
+create table if not exists public.projeto_teste_passos (
+  id uuid primary key default gen_random_uuid(),
+  projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
+  passo_id text not null,
+  feito boolean not null default false,
+  feito_por uuid references public.profiles (id),
+  feito_em timestamptz,
+  unique (projeto_teste_id, passo_id)
+);
+
+alter table public.projeto_teste_passos enable row level security;
+alter table public.projeto_teste_passos force row level security;
+
+drop policy if exists "Executor, coautor e orientadora veem os passos" on public.projeto_teste_passos;
+create policy "Executor, coautor e orientadora veem os passos"
+  on public.projeto_teste_passos
+  for select
+  using (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
+
+drop policy if exists "Executor e coautor marcam passos" on public.projeto_teste_passos;
+create policy "Executor e coautor marcam passos"
+  on public.projeto_teste_passos
+  for all
+  using (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+  )
+  with check (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+  );
+
 create table if not exists public.resultados_teste (
   id uuid primary key default gen_random_uuid(),
   projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
