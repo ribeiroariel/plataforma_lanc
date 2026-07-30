@@ -12,7 +12,7 @@ function Aviso() {
   let texto: string | null = null;
   if (params.get("cadastro") === "ok") {
     texto =
-      "Conta criada. Confirme seu e-mail (verifique a caixa de entrada e o spam) para poder entrar.";
+      "Conta criada. Já pode entrar com seu e-mail e senha — o acesso é liberado após a aprovação da coordenação do laboratório.";
   } else if (params.get("senha") === "ok") {
     texto = "Senha alterada. Entre com a nova senha.";
   } else if (params.get("erro") === "link") {
