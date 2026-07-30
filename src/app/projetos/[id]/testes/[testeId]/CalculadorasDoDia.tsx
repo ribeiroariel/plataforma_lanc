@@ -58,9 +58,15 @@ export default function CalculadorasDoDia({
   }
 
   // Sem recipiente definido, mostra na base microplaca 96 (1×) para ensaios que
-  // escalam; para os de tubo fixo o recipiente não muda os volumes.
+  // escalam; para os de tubo fixo o recipiente não muda os volumes. Ensaios com
+  // fator próprio (ex.: carboniladas) usam esse; senão, o fator global.
   const rec: Recipiente | null = ehRecipiente(recipiente) ? recipiente : null;
-  const fator = protocolo.escala ? fatorRecipiente(rec ?? "microplaca_96") : 1;
+  const recEfetivo = rec ?? "microplaca_96";
+  const fator = !protocolo.escala
+    ? 1
+    : protocolo.fatores
+      ? protocolo.fatores[recEfetivo] ?? 1
+      : fatorRecipiente(recEfetivo);
 
   const volAmostra = (r: ReagenteConsumo) => r.ulBase * fator;
   const totalUl = (r: ReagenteConsumo) =>

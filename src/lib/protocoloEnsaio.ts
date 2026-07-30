@@ -38,6 +38,12 @@ export type ModoLeitura = {
 export type ProtocoloEnsaio = {
   /** true = volumes multiplicam pelo fator do recipiente; false = tubo fixo. */
   escala: boolean;
+  /**
+   * Fator por recipiente específico deste ensaio, quando ele NÃO segue o fator
+   * global de recipientes.ts. Ex.: carboniladas é feito em eppendorf e a leitura
+   * em cubeta padrão usa só 2× a microplaca (não 10×). Ausente = usa o global.
+   */
+  fatores?: Partial<Record<Recipiente, number>>;
   modos: ModoLeitura[];
   reagentes: ReagenteConsumo[];
   obs?: string;
@@ -141,7 +147,12 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
   {
     prefixos: ["carboniladas"],
     protocolo: {
-      escala: false,
+      // Ensaio feito inteiro em eppendorf (1,5–2,0 mL); o Ariel reduz os volumes
+      // conforme a leitura. Base = microplaca 96; cubeta padrão usa o DOBRO
+      // (não o 10× global). Números da cubeta padrão vêm do manual; a microplaca
+      // é metade deles.
+      escala: true,
+      fatores: { microplaca_96: 1, cubeta_padrao: 2 },
       modos: [
         { aparelho: INFINITE, recipiente: "microplaca_96" },
         { aparelho: UVVIS, recipiente: "cubeta_padrao" },
@@ -150,15 +161,15 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
         {
           nome: "HCl 2 M",
           origem: "estoque",
-          ulBase: 400,
+          ulBase: 200,
           soBranco: true,
           obs: "no branco (no lugar do DNPH) e para zerar a leitura.",
         },
-        { nome: "DNPH 10 mM", origem: "dia", ulBase: 400 },
-        { nome: "TCA 20%", origem: "dia", ulBase: 500 },
-        { nome: "Etanol P.A.", origem: "estoque", ulBase: 1500, obs: "3 lavagens de 500 µL." },
-        { nome: "Acetato de etila", origem: "estoque", ulBase: 1500, obs: "3 lavagens de 500 µL." },
-        { nome: "Guanidina 6 M", origem: "dia", ulBase: 600 },
+        { nome: "DNPH 10 mM", origem: "dia", ulBase: 200 },
+        { nome: "TCA 20%", origem: "dia", ulBase: 250 },
+        { nome: "Etanol P.A.", origem: "estoque", ulBase: 750, obs: "3 lavagens." },
+        { nome: "Acetato de etila", origem: "estoque", ulBase: 750, obs: "3 lavagens." },
+        { nome: "Guanidina 6 M", origem: "dia", ulBase: 300 },
       ],
     },
   },
