@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { testes as catalogoTestes } from "@/lib/testes";
 import { configDoTeste } from "@/lib/tiposTeste";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
+import { ehAparelho, nomeAparelhoEn } from "@/lib/recipientes";
 
 // Exportação de TRANSPARÊNCIA (≠ da exportação para o R em /api/exportar):
 // dados brutos de leitura, formato estilo Tecan, em inglês, para anexar quando
@@ -15,6 +16,7 @@ type ProjetoTeste = {
   teste_slug: string;
   responsavel_id: string;
   leva: number | null;
+  aparelho: string | null;
   aparelho_leitura: string | null;
   leitura_inicio: string | null;
   leitura_fim: string | null;
@@ -109,7 +111,7 @@ export async function GET(
       supabase
         .from("projeto_testes")
         .select(
-          "id, teste_slug, responsavel_id, leva, aparelho_leitura, leitura_inicio, leitura_fim"
+          "id, teste_slug, responsavel_id, leva, aparelho, aparelho_leitura, leitura_inicio, leitura_fim"
         )
         .eq("projeto_id", projetoId)
         .returns<ProjetoTeste[]>(),
@@ -187,7 +189,12 @@ export async function GET(
     const meta: (string | number)[][] = [
       ["Assay", nomeEnsaioEn(pt.teste_slug)],
       ["Tissue / matrix", TECIDO_EN[tecidoDe(pt.teste_slug)] ?? tecidoDe(pt.teste_slug)],
-      ["Instrument", pt.aparelho_leitura ?? "—"],
+      [
+        "Instrument",
+        (ehAparelho(pt.aparelho) ? nomeAparelhoEn(pt.aparelho) : null) ??
+          pt.aparelho_leitura ??
+          "—",
+      ],
       ["Reading start", pt.leitura_inicio ? pt.leitura_inicio.replace("T", " ") : "—"],
       ["Reading end", pt.leitura_fim ? pt.leitura_fim.replace("T", " ") : "—"],
       ["Result unit", config?.unidadeResultado || "—"],

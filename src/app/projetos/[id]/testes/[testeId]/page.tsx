@@ -6,7 +6,9 @@ import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/tes
 import { configDoTeste } from "@/lib/tiposTeste";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 import { listarFotosCaderno } from "@/lib/actions/fotos-caderno";
+import { ehAparelho, ehRecipiente, nomeAparelho } from "@/lib/recipientes";
 import RegistroResultado from "./RegistroResultado";
+import PreparacaoTeste from "./PreparacaoTeste";
 import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
 
@@ -17,7 +19,8 @@ type ProjetoTeste = {
   status: "pendente" | "concluido";
   responsavel_id: string;
   leva: number | null;
-  aparelho_leitura: string | null;
+  aparelho: string | null;
+  recipiente: string | null;
   leitura_inicio: string | null;
   leitura_fim: string | null;
 };
@@ -46,7 +49,7 @@ export default async function PaginaResultado({
       supabase
         .from("projeto_testes")
         .select(
-          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho_leitura, leitura_inicio, leitura_fim"
+          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim"
         )
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
@@ -134,6 +137,16 @@ export default async function PaginaResultado({
         </p>
       )}
 
+      <PreparacaoTeste
+        projetoId={projetoId}
+        projetoTesteId={projetoTeste.id}
+        aparelho={ehAparelho(projetoTeste.aparelho) ? projetoTeste.aparelho : null}
+        recipiente={
+          ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
+        }
+        podeEditar={souResponsavel || souCoautor}
+      />
+
       <RegistroResultado
         projetoId={projetoId}
         projetoTesteId={projetoTeste.id}
@@ -148,7 +161,11 @@ export default async function PaginaResultado({
       <MetadadosLeitura
         projetoId={projetoId}
         projetoTesteId={projetoTeste.id}
-        aparelho={projetoTeste.aparelho_leitura}
+        aparelhoLabel={
+          ehAparelho(projetoTeste.aparelho)
+            ? nomeAparelho(projetoTeste.aparelho)
+            : ""
+        }
         inicio={projetoTeste.leitura_inicio}
         fim={projetoTeste.leitura_fim}
         podeEditar={souResponsavel || souCoautor}
