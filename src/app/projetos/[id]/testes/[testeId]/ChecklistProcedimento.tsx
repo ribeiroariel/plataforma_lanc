@@ -40,28 +40,34 @@ function fmtVol(ul: number): string {
 }
 
 // Receita de um reagente preparado no dia, escalada para n amostras — mostrada
-// dentro do passo de preparo, para preparar sem sair da aba.
+// dentro do passo de preparo, para preparar sem sair da aba. Quando o reagente é
+// usado na amostra E no branco de cada amostra (dobra), prepara-se para 2n tubos.
 function ReceitaReagente({
   slug,
   nome,
   n,
+  dobra,
 }: {
   slug: string;
   nome: string;
   n: number;
+  dobra?: boolean;
 }) {
+  const nTubos = dobra ? n * 2 : n;
   const reagente = useMemo(() => {
     const ensaio = ensaioDiaDoSlug(slug);
-    if (!ensaio || !Number.isFinite(n)) return null;
-    return escalarEnsaioDia(ensaio, n).find((r) => r.nome === nome) ?? null;
-  }, [slug, nome, n]);
+    if (!ensaio || !Number.isFinite(nTubos)) return null;
+    return escalarEnsaioDia(ensaio, nTubos).find((r) => r.nome === nome) ?? null;
+  }, [slug, nome, nTubos]);
 
   if (!reagente) return null;
 
   return (
     <div className="mt-2 rounded border border-reagent/30 bg-reagent/[0.04] p-2">
       <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-reagent">
-        Preparar para {n} amostra(s){reagente.tipo === "escala" ? " (+10%)" : ""}
+        Preparar para {nTubos} tubo(s)
+        {dobra ? ` (${n} amostras + ${n} brancos)` : " (1 por amostra)"}
+        {reagente.tipo === "escala" ? " (+10%)" : ""}
       </p>
       {reagente.tipo === "escala" && reagente.componentesEscalados && (
         <table className="w-full border-collapse text-sm">
@@ -98,8 +104,8 @@ function ReceitaReagente({
           )}
           {reagente.necessarioUl != null && (
             <p className="mt-1 text-xs text-ink-soft">
-              Necessário p/ {n} amostra(s): {fmtVol(reagente.necessarioUl)} — prepare
-              ao menos a receita mínima (não escala pra baixo).
+              Necessário p/ {nTubos} tubo(s): {fmtVol(reagente.necessarioUl)} —
+              prepare ao menos a receita mínima (não escala pra baixo).
             </p>
           )}
         </>
@@ -238,7 +244,12 @@ export default function ChecklistProcedimento({
                     </span>
                   )}
                   {p.reagenteDia && (
-                    <ReceitaReagente slug={slug} nome={p.reagenteDia} n={n} />
+                    <ReceitaReagente
+                      slug={slug}
+                      nome={p.reagenteDia}
+                      n={n}
+                      dobra={p.dobraBranco}
+                    />
                   )}
                   {feito && (st?.porNome || st?.em) && (
                     <span className="mt-0.5 block font-mono text-[11px] text-ink-soft">

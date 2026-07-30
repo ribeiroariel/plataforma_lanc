@@ -25,8 +25,13 @@ export type ReagenteConsumo = {
   origem: "estoque" | "dia";
   /** Volume por amostra na microplaca 96 (1×), em µL. */
   ulBase: number;
-  /** Consumido só no branco (informativo). */
-  soBranco?: boolean;
+  /**
+   * Em quais tubos o reagente entra. Só importa quando o ensaio tem um branco
+   * para cada amostra (`brancoParaCadaAmostra`): "ambos" (default) → consumo
+   * dobra (amostra + branco); "amostra" ou "branco" → consumo em 1× o nº de
+   * amostras.
+   */
+  escopo?: "amostra" | "branco" | "ambos";
   obs?: string;
 };
 
@@ -44,6 +49,12 @@ export type ProtocoloEnsaio = {
    * em cubeta padrão usa só 2× a microplaca (não 10×). Ausente = usa o global.
    */
   fatores?: Partial<Record<Recipiente, number>>;
+  /**
+   * O ensaio processa um branco para CADA amostra (não um branco único da
+   * sessão). Nesse caso, reagentes de escopo "ambos" são consumidos em 2× o nº
+   * de amostras. Ex.: carboniladas, sulfidrilas.
+   */
+  brancoParaCadaAmostra?: boolean;
   modos: ModoLeitura[];
   reagentes: ReagenteConsumo[];
   obs?: string;
@@ -139,7 +150,7 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
         { nome: "SDS 8,1%", origem: "estoque", ulBase: 20 },
         { nome: "Ácido acético 20% pH 3,5", origem: "estoque", ulBase: 600 },
         { nome: "TBA 0,8%", origem: "estoque", ulBase: 600 },
-        { nome: "KCl 1,15%", origem: "estoque", ulBase: 200, soBranco: true },
+        { nome: "KCl 1,15%", origem: "estoque", ulBase: 200, escopo: "branco" },
         { nome: "Água ultrapura (milli-Q)", origem: "estoque", ulBase: 280 },
       ],
     },
@@ -153,6 +164,7 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
       // é metade deles.
       escala: true,
       fatores: { microplaca_96: 1, cubeta_padrao: 2 },
+      brancoParaCadaAmostra: true,
       modos: [
         { aparelho: INFINITE, recipiente: "microplaca_96" },
         { aparelho: UVVIS, recipiente: "cubeta_padrao" },
@@ -162,14 +174,26 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
           nome: "HCl 2 M",
           origem: "estoque",
           ulBase: 200,
-          soBranco: true,
+          escopo: "branco",
           obs: "no branco (no lugar do DNPH) e para zerar a leitura.",
         },
-        { nome: "DNPH 10 mM", origem: "dia", ulBase: 200 },
-        { nome: "TCA 20%", origem: "dia", ulBase: 250 },
-        { nome: "Etanol P.A.", origem: "estoque", ulBase: 750, obs: "3 lavagens." },
-        { nome: "Acetato de etila", origem: "estoque", ulBase: 750, obs: "3 lavagens." },
-        { nome: "Guanidina 6 M", origem: "dia", ulBase: 300 },
+        { nome: "DNPH 10 mM", origem: "dia", ulBase: 200, escopo: "amostra" },
+        { nome: "TCA 20%", origem: "dia", ulBase: 250, escopo: "ambos" },
+        {
+          nome: "Etanol P.A.",
+          origem: "estoque",
+          ulBase: 750,
+          escopo: "ambos",
+          obs: "3 lavagens.",
+        },
+        {
+          nome: "Acetato de etila",
+          origem: "estoque",
+          ulBase: 750,
+          escopo: "ambos",
+          obs: "3 lavagens.",
+        },
+        { nome: "Guanidina 6 M", origem: "dia", ulBase: 300, escopo: "ambos" },
       ],
     },
   },
