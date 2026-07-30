@@ -9,6 +9,7 @@ import { listarFotosCaderno } from "@/lib/actions/fotos-caderno";
 import { ehAparelho, ehRecipiente, nomeAparelho } from "@/lib/recipientes";
 import RegistroResultado from "./RegistroResultado";
 import PreparacaoTeste from "./PreparacaoTeste";
+import CalculadorasDoDia from "./CalculadorasDoDia";
 import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
 
@@ -140,11 +141,20 @@ export default async function PaginaResultado({
       <PreparacaoTeste
         projetoId={projetoId}
         projetoTesteId={projetoTeste.id}
+        slug={projetoTeste.teste_slug}
         aparelho={ehAparelho(projetoTeste.aparelho) ? projetoTeste.aparelho : null}
         recipiente={
           ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
         }
         podeEditar={souResponsavel || souCoautor}
+      />
+
+      <CalculadorasDoDia
+        slug={projetoTeste.teste_slug}
+        nRoster={roster.length}
+        recipiente={
+          ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
+        }
       />
 
       <RegistroResultado
