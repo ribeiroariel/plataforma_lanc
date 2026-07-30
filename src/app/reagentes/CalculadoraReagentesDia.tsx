@@ -7,6 +7,13 @@ import {
   type ReagenteDiaEscalado,
 } from "@/lib/reagentesDia";
 import type { Componente } from "@/lib/reagentes";
+import { protocoloDoSlug } from "@/lib/protocoloEnsaio";
+import {
+  RECIPIENTES,
+  fatorRecipiente,
+  nomeRecipiente,
+  type Recipiente,
+} from "@/lib/recipientes";
 import { INPUT_SM } from "@/lib/estilos";
 
 function fmtQtd(v: number): string {
@@ -64,18 +71,39 @@ function Badge({ tipo }: { tipo: ReagenteDiaEscalado["tipo"] }) {
 export default function CalculadoraReagentesDia() {
   const [nome, setNome] = useState(ENSAIOS_DIA[0].nome);
   const [amostras, setAmostras] = useState("10");
+  const [recipiente, setRecipiente] = useState<Recipiente | "">("");
 
   const ensaio = ENSAIOS_DIA.find((e) => e.nome === nome) ?? ENSAIOS_DIA[0];
+
+  // Protocolo do ensaio (via o slug representativo) para saber se escala com o
+  // recipiente e quais recipientes/fatores usar.
+  const protocolo = useMemo(
+    () => protocoloDoSlug(ensaio.slugPrefixos[0] ?? ""),
+    [ensaio]
+  );
+  const escalaPorRecipiente = Boolean(protocolo?.escala);
+  const recipientesDoEnsaio = protocolo?.modos.map((m) => m.recipiente) ?? [];
 
   const n = useMemo(() => {
     const v = parseInt(amostras, 10);
     return Number.isFinite(v) && v > 0 ? v : NaN;
   }, [amostras]);
 
+  // Fator do recipiente escolhido (1 se o ensaio não escala ou nada escolhido).
+  const fator = useMemo(() => {
+    if (!escalaPorRecipiente || !recipiente) return 1;
+    return protocolo?.fatores?.[recipiente] ?? fatorRecipiente(recipiente);
+  }, [escalaPorRecipiente, recipiente, protocolo]);
+
   const reagentes = useMemo(
-    () => (Number.isFinite(n) ? escalarEnsaioDia(ensaio, n) : null),
-    [ensaio, n]
+    () => (Number.isFinite(n) ? escalarEnsaioDia(ensaio, n * fator) : null),
+    [ensaio, n, fator]
   );
+
+  function trocarEnsaio(novo: string) {
+    setNome(novo);
+    setRecipiente(""); // recipientes válidos mudam com o ensaio
+  }
 
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
@@ -94,7 +122,7 @@ export default function CalculadoraReagentesDia() {
           Ensaio
           <select
             value={nome}
-            onChange={(e) => setNome(e.target.value)}
+            onChange={(e) => trocarEnsaio(e.target.value)}
             className={`${INPUT_SM} w-full`}
           >
             {ENSAIOS_DIA.map((e) => (
@@ -115,7 +143,32 @@ export default function CalculadoraReagentesDia() {
             className={`${INPUT_SM} w-24`}
           />
         </label>
+
+        {escalaPorRecipiente && (
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            Recipiente
+            <select
+              value={recipiente}
+              onChange={(e) => setRecipiente(e.target.value as Recipiente | "")}
+              className={`${INPUT_SM} w-44`}
+            >
+              <option value="">Microplaca 96 (1×)</option>
+              {RECIPIENTES.filter((r) => recipientesDoEnsaio.includes(r.valor)).map(
+                (r) => (
+                  <option key={r.valor} value={r.valor}>
+                    {nomeRecipiente(r.valor)} ({protocolo?.fatores?.[r.valor] ?? r.fator}×)
+                  </option>
+                )
+              )}
+            </select>
+          </label>
+        )}
       </div>
+      {escalaPorRecipiente && recipiente && fator !== 1 && (
+        <p className="mt-2 font-mono text-[11px] text-ink-soft">
+          Volumes ajustados para {nomeRecipiente(recipiente)} ({fator}× a microplaca 96).
+        </p>
+      )}
 
       {reagentes ? (
         <div className="mt-4 flex flex-col gap-4">
