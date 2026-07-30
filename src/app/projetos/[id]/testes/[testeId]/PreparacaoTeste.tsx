@@ -12,17 +12,20 @@ import {
   type Aparelho,
   type Recipiente,
 } from "@/lib/recipientes";
+import { aparelhosDoSlug, recipientesDoSlug } from "@/lib/protocoloEnsaio";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 export default function PreparacaoTeste({
   projetoId,
   projetoTesteId,
+  slug,
   aparelho,
   recipiente,
   podeEditar,
 }: {
   projetoId: string;
   projetoTesteId: string;
+  slug: string;
   aparelho: Aparelho | null;
   recipiente: Recipiente | null;
   podeEditar: boolean;
@@ -34,13 +37,32 @@ export default function PreparacaoTeste({
   const [ap, setAp] = useState<Aparelho | "">(aparelho ?? "");
   const [rec, setRec] = useState<Recipiente | "">(recipiente ?? "");
 
-  const recipientesDisponiveis = ap ? RECIPIENTES_POR_APARELHO[ap] : [];
+  // Quando o ensaio está catalogado no manual, só oferece os aparelhos e
+  // recipientes que ele descreve; senão (vazio), libera tudo pelo aparelho.
+  const aparelhosPermitidos = aparelhosDoSlug(slug);
+  const recipientesPermitidos = recipientesDoSlug(slug);
+  const aparelhosVisiveis = APARELHOS.filter(
+    (a) => aparelhosPermitidos.length === 0 || aparelhosPermitidos.includes(a.valor)
+  );
+
+  const recipientesDisponiveis = ap
+    ? RECIPIENTES_POR_APARELHO[ap].filter(
+        (r) => recipientesPermitidos.length === 0 || recipientesPermitidos.includes(r)
+      )
+    : [];
 
   function trocarAparelho(valor: Aparelho | "") {
     setAp(valor);
-    // Se o recipiente atual não serve para o novo aparelho, zera.
-    if (valor === "" || !RECIPIENTES_POR_APARELHO[valor].includes(rec as Recipiente)) {
-      setRec("");
+    const permitidos =
+      valor === ""
+        ? []
+        : RECIPIENTES_POR_APARELHO[valor].filter(
+            (r) => recipientesPermitidos.length === 0 || recipientesPermitidos.includes(r)
+          );
+    // Se o recipiente atual não serve para o novo aparelho, zera. Se sobrou só
+    // um recipiente possível, já seleciona.
+    if (!permitidos.includes(rec as Recipiente)) {
+      setRec(permitidos.length === 1 ? permitidos[0] : "");
     }
   }
 
@@ -87,10 +109,12 @@ export default function PreparacaoTeste({
         Preparação — antes de começar
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-        Escolha o aparelho de leitura e o recipiente. O recipiente muda o volume
-        de reagente e de amostra por poço/tubo, então recalcula as quantidades do
-        dia (microplaca 96 = base; 24 poços = 6×; microcubeta = 3×; cubeta padrão
-        = 10×). O aparelho também entra no cabeçalho da planilha de transparência.
+        Escolha o aparelho de leitura e o recipiente. O recipiente define o modo
+        de leitura do ensaio (e os volumes de reagente do dia, logo abaixo). O
+        aparelho também entra no cabeçalho da planilha de transparência.
+        {recipientesPermitidos.length > 0
+          ? " As opções abaixo são as que o manual descreve para este ensaio."
+          : ""}
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -101,7 +125,7 @@ export default function PreparacaoTeste({
             className={`${INPUT_SM} w-72`}
           >
             <option value="">Selecione…</option>
-            {APARELHOS.map((a) => (
+            {aparelhosVisiveis.map((a) => (
               <option key={a.valor} value={a.valor}>
                 {a.rotulo}
               </option>
@@ -120,7 +144,7 @@ export default function PreparacaoTeste({
             {RECIPIENTES.filter((r) => recipientesDisponiveis.includes(r.valor)).map(
               (r) => (
                 <option key={r.valor} value={r.valor}>
-                  {r.rotulo} ({r.fator}×)
+                  {r.rotulo}
                 </option>
               )
             )}
@@ -137,8 +161,7 @@ export default function PreparacaoTeste({
       </div>
       {!definido && (
         <p className="mt-2 text-xs text-ink-soft">
-          Enquanto o recipiente não estiver definido, as calculadoras de reagente
-          usam a microplaca 96 (1×) como base.
+          Defina o recipiente para fixar os volumes de reagente do dia.
         </p>
       )}
       {salvo && (
