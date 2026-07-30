@@ -199,6 +199,7 @@ export default async function PaginaResultado({
         projetoId={projetoId}
         projetoTesteId={projetoTeste.id}
         slug={projetoTeste.teste_slug}
+        nRoster={roster.length}
         estado={estadoPassos}
         podeMarcar={souResponsavel || souCoautor}
       />

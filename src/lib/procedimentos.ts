@@ -18,12 +18,36 @@ export type PassoProcedimento = {
   texto: string;
   obs?: string;
   critico?: boolean;
+  /**
+   * Nome de um reagente preparado no dia (em ENSAIOS_DIA de reagentesDia.ts) cuja
+   * RECEITA (quanto pesar / como preparar, escalada por nº de amostras) é mostrada
+   * dentro deste passo — para preparar a solução sem sair da aba e dar o check.
+   */
+  reagenteDia?: string;
 };
 
 const PROCEDIMENTOS: { prefixos: string[]; passos: PassoProcedimento[] }[] = [
   {
     prefixos: ["carboniladas"],
     passos: [
+      {
+        id: "carbonil-prep-dnph",
+        texto: "Preparar o DNPH 10 mM em HCl 2 M (no escuro).",
+        reagenteDia: "DNPH 10 mM em HCl 2 M",
+        critico: true,
+        obs: "Fotossensível e mutagênico — frasco âmbar/papel alumínio, capela, EPI.",
+      },
+      {
+        id: "carbonil-prep-tca",
+        texto: "Preparar o TCA 20% (m/v).",
+        reagenteDia: "TCA 20% (m/v)",
+        obs: "Dissolver e completar q.s.p. — nunca pesar no volume final.",
+      },
+      {
+        id: "carbonil-prep-guanidina",
+        texto: "Preparar a guanidina 6 M (em tampão fosfato de potássio pH 2,3).",
+        reagenteDia: "Guanidina 6 M",
+      },
       {
         id: "carbonil-qc-dnph",
         texto:

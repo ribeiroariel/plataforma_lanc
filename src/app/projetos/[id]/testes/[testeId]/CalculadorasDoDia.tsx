@@ -77,16 +77,17 @@ export default function CalculadorasDoDia({
   return (
     <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
       <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-absorbance">
-        Reagentes do dia
+        Consumo de reagentes
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-        Volumes por amostra vindos do protocolo do manual, com +10% de margem.
-        Ajuste o nº de amostras se incluir brancos/curva extras.{" "}
+        Quanto de cada reagente o ensaio consome, por amostra e no total (com +10%
+        de margem). Os volumes vêm do protocolo do manual. Ajuste o nº de amostras
+        se incluir brancos ou curva-padrão.{" "}
         {protocolo.escala
           ? rec
-            ? `Recipiente: ${nomeRecipiente(rec)} (${fator}×).`
-            : "Escolha o recipiente na preparação acima — mostrando na base microplaca 96 (1×)."
-          : "Reação em tubo de volume fixo — não muda com o recipiente."}
+            ? `Recipiente: ${nomeRecipiente(rec)} — os volumes já estão ajustados a ele (${fator}× a microplaca 96).`
+            : "Defina o recipiente na preparação acima; por ora, os volumes estão na base microplaca 96 (1×)."
+          : "Ensaio feito em tubo de volume fixo — o consumo não muda com o recipiente."}
       </p>
 
       <label className="mb-4 flex w-fit flex-col gap-1 text-xs text-ink-soft">
@@ -152,8 +153,9 @@ export default function CalculadorasDoDia({
 
       {temDia && (
         <p className="mt-3 text-xs text-ink-soft">
-          Como preparar os reagentes marcados “preparar no dia” (receita/massa)
-          está na página do protocolo:{" "}
+          Esta tabela é só o consumo. Como preparar os reagentes marcados “preparar
+          no dia” (quanto pesar, como fazer) aparece nos passos de preparo do
+          checklist abaixo — ou no protocolo completo em{" "}
           <Link href={`/testes/${slug}`} className="text-absorbance hover:text-ink">
             /testes/{slug}
           </Link>
