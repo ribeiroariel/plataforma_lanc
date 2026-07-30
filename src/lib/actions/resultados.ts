@@ -2,15 +2,64 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  ehAparelho,
+  ehRecipiente,
+  RECIPIENTES_POR_APARELHO,
+  type Aparelho,
+  type Recipiente,
+} from "@/lib/recipientes";
 
-// Metadados da leitura de um teste designado (aparelho + horário de início/fim
-// da leitura no equipamento). Usados na planilha de transparência dos dados
-// brutos. Editável pelo responsável ou coautor (a policy de update de
-// projeto_testes garante). Não trava — pode corrigir depois.
-export async function salvarMetadadosLeitura(dados: {
+// Preparação do teste, escolhida antes de começar: aparelho de leitura e
+// recipiente. O recipiente tem um fator de volume que escala as calculadoras de
+// reagente do dia, e o aparelho vira o "Instrument" da planilha de
+// transparência. Editável pelo responsável ou coautor (a policy de update de
+// projeto_testes garante). Ambos podem ser limpos (null) para recomeçar.
+export async function salvarPreparacaoTeste(dados: {
   projetoId: string;
   projetoTesteId: string;
   aparelho: string | null;
+  recipiente: string | null;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const aparelho: Aparelho | null = ehAparelho(dados.aparelho)
+    ? dados.aparelho
+    : null;
+  const recipiente: Recipiente | null = ehRecipiente(dados.recipiente)
+    ? dados.recipiente
+    : null;
+
+  // Coerência aparelho × recipiente: o recipiente precisa ser compatível com o
+  // aparelho escolhido (senão o fator/leitura não fazem sentido).
+  if (
+    aparelho &&
+    recipiente &&
+    !RECIPIENTES_POR_APARELHO[aparelho].includes(recipiente)
+  ) {
+    return { erro: "Esse recipiente não é compatível com o aparelho escolhido." };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("projeto_testes")
+    .update({ aparelho, recipiente })
+    .eq("id", dados.projetoTesteId);
+
+  if (error) {
+    return { erro: "Não foi possível salvar a preparação: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
+// Metadados da leitura de um teste designado (horário de início/fim da leitura
+// no equipamento). Usados na planilha de transparência dos dados brutos. O
+// aparelho não entra aqui — vem da preparação estruturada (salvarPreparacaoTeste).
+// Editável pelo responsável ou coautor. Não trava — pode corrigir depois.
+export async function salvarMetadadosLeitura(dados: {
+  projetoId: string;
+  projetoTesteId: string;
   inicio: string | null;
   fim: string | null;
 }): Promise<{ erro: string } | { sucesso: true }> {
@@ -19,7 +68,6 @@ export async function salvarMetadadosLeitura(dados: {
   const { error } = await supabase
     .from("projeto_testes")
     .update({
-      aparelho_leitura: dados.aparelho?.trim() || null,
       leitura_inicio: dados.inicio || null,
       leitura_fim: dados.fim || null,
     })

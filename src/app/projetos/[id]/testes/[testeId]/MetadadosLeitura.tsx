@@ -8,14 +8,14 @@ import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 export default function MetadadosLeitura({
   projetoId,
   projetoTesteId,
-  aparelho,
+  aparelhoLabel,
   inicio,
   fim,
   podeEditar,
 }: {
   projetoId: string;
   projetoTesteId: string;
-  aparelho: string | null;
+  aparelhoLabel: string;
   inicio: string | null;
   fim: string | null;
   podeEditar: boolean;
@@ -24,7 +24,6 @@ export default function MetadadosLeitura({
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
-  const [ap, setAp] = useState(aparelho ?? "");
   const [ini, setIni] = useState(inicio ?? "");
   const [f, setF] = useState(fim ?? "");
 
@@ -35,7 +34,6 @@ export default function MetadadosLeitura({
       const res = await salvarMetadadosLeitura({
         projetoId,
         projetoTesteId,
-        aparelho: ap,
         inicio: ini,
         fim: f,
       });
@@ -54,7 +52,7 @@ export default function MetadadosLeitura({
           Leitura
         </p>
         <p>
-          Aparelho: <span className="text-ink">{aparelho || "—"}</span>
+          Aparelho: <span className="text-ink">{aparelhoLabel || "—"}</span>
         </p>
         <p>
           Início: <span className="text-ink">{inicio || "—"}</span> · Término:{" "}
@@ -70,20 +68,12 @@ export default function MetadadosLeitura({
         Leitura (para a planilha de transparência)
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-        Aparelho e horário da leitura no equipamento. Entram no cabeçalho da
-        planilha de dados brutos que se exporta na página do projeto.
+        Horário de início e término da leitura no equipamento. Entram no cabeçalho
+        da planilha de dados brutos que se exporta na página do projeto. O aparelho
+        vem da preparação acima
+        {aparelhoLabel ? ` (${aparelhoLabel})` : ""}.
       </p>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs text-ink-soft">
-          Aparelho de leitura
-          <input
-            type="text"
-            value={ap}
-            onChange={(e) => setAp(e.target.value)}
-            placeholder="Ex.: Tecan Infinite 200 Pro"
-            className={`${INPUT_SM} w-56`}
-          />
-        </label>
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
           Início da leitura
           <input

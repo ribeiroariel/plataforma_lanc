@@ -305,6 +305,14 @@ create table if not exists public.projeto_testes (
   aparelho_leitura text,
   leitura_inicio text,
   leitura_fim text,
+  -- Aparelho de leitura (estruturado) e recipiente escolhidos antes de começar
+  -- o teste. Dirigem as calculadoras de reagente do dia (o recipiente tem um
+  -- fator de volume) e o "Instrument" da planilha de transparência. null até o
+  -- bolsista escolher. Ver src/lib/recipientes.ts.
+  aparelho text check (aparelho in ('infinite_200pro', 'uv_vis')),
+  recipiente text check (
+    recipiente in ('microplaca_96', 'microplaca_24', 'microcubeta', 'cubeta_padrao')
+  ),
   created_at timestamptz not null default now()
 );
 
@@ -312,6 +320,23 @@ alter table public.projeto_testes add column if not exists leva integer;
 alter table public.projeto_testes add column if not exists aparelho_leitura text;
 alter table public.projeto_testes add column if not exists leitura_inicio text;
 alter table public.projeto_testes add column if not exists leitura_fim text;
+alter table public.projeto_testes add column if not exists aparelho text;
+alter table public.projeto_testes add column if not exists recipiente text;
+
+-- Checks das colunas novas de forma idempotente (add column if not exists não
+-- aplica o check em bancos que já tinham a tabela).
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'projeto_testes_aparelho_check') then
+    alter table public.projeto_testes
+      add constraint projeto_testes_aparelho_check
+      check (aparelho in ('infinite_200pro', 'uv_vis'));
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'projeto_testes_recipiente_check') then
+    alter table public.projeto_testes
+      add constraint projeto_testes_recipiente_check
+      check (recipiente in ('microplaca_96', 'microplaca_24', 'microcubeta', 'cubeta_padrao'));
+  end if;
+end $$;
 
 -- Ajudantes de um teste designado: além do responsável (que registra os
 -- resultados), outras pessoas que fazem o teste junto e também o veem em
