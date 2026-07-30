@@ -159,15 +159,15 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["carboniladas"],
     protocolo: {
       // Ensaio feito inteiro em eppendorf (1,5–2,0 mL); o Ariel reduz os volumes
-      // conforme a leitura. Base = microplaca 96; cubeta padrão usa o DOBRO
-      // (não o 10× global). Números da cubeta padrão vêm do manual; a microplaca
-      // é metade deles.
+      // conforme a leitura. Base = microplaca 96; a MICROCUBETA usa o DOBRO. A
+      // cubeta normal NÃO é usada no carboniladas — não há sobrenadante suficiente
+      // para o volume dela.
       escala: true,
-      fatores: { microplaca_96: 1, cubeta_padrao: 2 },
+      fatores: { microplaca_96: 1, microcubeta: 2 },
       brancoParaCadaAmostra: true,
       modos: [
         { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
+        { aparelho: UVVIS, recipiente: "microcubeta" },
       ],
       reagentes: [
         {

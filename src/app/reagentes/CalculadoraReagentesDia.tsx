@@ -83,22 +83,27 @@ export default function CalculadoraReagentesDia() {
   );
   const escalaPorRecipiente = Boolean(protocolo?.escala);
   const recipientesDoEnsaio = protocolo?.modos.map((m) => m.recipiente) ?? [];
+  // Recipiente efetivo: o escolhido, se for válido para este ensaio; senão o
+  // primeiro que o ensaio oferece (evita estado inválido ao trocar de ensaio).
+  const recEfetivo: Recipiente | "" =
+    recipiente && recipientesDoEnsaio.includes(recipiente)
+      ? recipiente
+      : recipientesDoEnsaio[0] ?? "";
 
   const n = useMemo(() => {
     const v = parseInt(amostras, 10);
     return Number.isFinite(v) && v > 0 ? v : NaN;
   }, [amostras]);
 
-  // Fator do recipiente escolhido (1 se o ensaio não escala ou nada escolhido).
-  const fator = useMemo(() => {
-    if (!escalaPorRecipiente || !recipiente) return 1;
-    return protocolo?.fatores?.[recipiente] ?? fatorRecipiente(recipiente);
-  }, [escalaPorRecipiente, recipiente, protocolo]);
+  // Fator do recipiente efetivo (1 se o ensaio não escala).
+  const fator =
+    !escalaPorRecipiente || !recEfetivo
+      ? 1
+      : protocolo?.fatores?.[recEfetivo] ?? fatorRecipiente(recEfetivo);
 
-  const reagentes = useMemo(
-    () => (Number.isFinite(n) ? escalarEnsaioDia(ensaio, n * fator) : null),
-    [ensaio, n, fator]
-  );
+  const reagentes = Number.isFinite(n)
+    ? escalarEnsaioDia(ensaio, n * fator)
+    : null;
 
   function trocarEnsaio(novo: string) {
     setNome(novo);
@@ -148,11 +153,10 @@ export default function CalculadoraReagentesDia() {
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
             Recipiente
             <select
-              value={recipiente}
+              value={recEfetivo}
               onChange={(e) => setRecipiente(e.target.value as Recipiente | "")}
               className={`${INPUT_SM} w-44`}
             >
-              <option value="">Microplaca 96 (1×)</option>
               {RECIPIENTES.filter((r) => recipientesDoEnsaio.includes(r.valor)).map(
                 (r) => (
                   <option key={r.valor} value={r.valor}>
@@ -164,9 +168,9 @@ export default function CalculadoraReagentesDia() {
           </label>
         )}
       </div>
-      {escalaPorRecipiente && recipiente && fator !== 1 && (
+      {escalaPorRecipiente && recEfetivo && fator !== 1 && (
         <p className="mt-2 font-mono text-[11px] text-ink-soft">
-          Volumes ajustados para {nomeRecipiente(recipiente)} ({fator}× a microplaca 96).
+          Volumes ajustados para {nomeRecipiente(recEfetivo)} ({fator}× a microplaca 96).
         </p>
       )}
 
