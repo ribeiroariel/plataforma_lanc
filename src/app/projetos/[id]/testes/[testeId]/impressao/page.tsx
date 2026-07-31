@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
@@ -218,80 +219,97 @@ export default async function PaginaImpressao({
         <BotaoImprimir />
       </div>
 
-      {/* Folha para o caderno de experimentos */}
-      <div className="text-neutral-900">
-        <header className="mb-4 border-b-2 border-neutral-800 pb-3">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-neutral-600">
-            LANC — Laboratório de Neurociências e Comportamento · FURB
-          </p>
-          <h1 className="mt-1 font-display text-2xl leading-tight text-neutral-900">
-            {metadados[1].valor} — {metadados[2].valor}
-          </h1>
+      {/* Folha para o caderno de experimentos — tipografia científica (serif),
+          fonte compacta para caber em menos páginas. */}
+      <div className="font-display text-[11px] leading-snug text-neutral-900">
+        <header className="mb-3 flex items-center gap-3 border-b-2 border-neutral-800 pb-2.5">
+          <Image
+            src="/logo-lanc.jpg"
+            alt="Logo do LANC"
+            width={48}
+            height={48}
+            unoptimized
+            priority
+            className="h-11 w-11 shrink-0 rounded-full object-cover"
+          />
+          <div>
+            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-600">
+              LANC — Laboratório de Neurociências e Comportamento · FURB
+            </p>
+            <h1 className="mt-0.5 font-display text-lg font-medium leading-tight text-neutral-900">
+              {metadados[1].valor} — {metadados[2].valor}
+            </h1>
+          </div>
         </header>
 
-        <dl className="mb-5 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-3">
+        <dl className="mb-3 grid grid-cols-3 gap-x-5 gap-y-1 sm:grid-cols-4">
           {metadados.map((m) => (
             <div key={m.rotulo} className="flex flex-col">
-              <dt className="font-mono text-[10px] uppercase tracking-wide text-neutral-500">
+              <dt className="font-mono text-[8px] uppercase tracking-wide text-neutral-500">
                 {m.rotulo}
               </dt>
-              <dd className="text-neutral-900">{m.valor}</dd>
+              <dd className="text-[11px] text-neutral-900">{m.valor}</dd>
             </div>
           ))}
         </dl>
 
-        <table className="w-full border-collapse text-sm">
+        <p className="mb-1.5 text-[10px] italic text-neutral-600">
+          Tabela 1. Leituras registradas por animal — {metadados[1].valor} (
+          {metadados[2].valor}). Projeto {metadados[0].valor}.
+        </p>
+
+        <table className="w-full border-collapse text-[10px]">
           <thead>
-            <tr className="border-b-2 border-neutral-800 text-left">
-              <th className="py-1.5 pr-3 font-medium">Nº</th>
-              {temLevas && <th className="py-1.5 pr-3 font-medium">Leva</th>}
-              <th className="py-1.5 pr-3 font-medium">Grupo</th>
+            <tr className="border-t-2 border-b border-neutral-800 text-left align-bottom">
+              <th className="py-1 pr-2.5 font-semibold">Nº</th>
+              {temLevas && <th className="py-1 pr-2.5 font-semibold">Leva</th>}
+              <th className="py-1 pr-2.5 font-semibold">Grupo</th>
               {colunas.map((c) => (
-                <th key={c.key} className="py-1.5 pr-3 font-medium">
+                <th key={c.key} className="py-1 pr-2.5 text-right font-semibold">
                   {c.label}
                 </th>
               ))}
               {config.familia !== "simples" && (
-                <th className="py-1.5 pr-3 font-medium">
+                <th className="py-1 pr-2.5 text-right font-semibold">
                   Valor{config.unidadeResultado ? ` (${config.unidadeResultado})` : ""}
                 </th>
               )}
-              <th className="py-1.5 pr-3 font-medium">QC</th>
-              <th className="py-1.5 font-medium">Observação</th>
+              <th className="py-1 pr-2.5 font-semibold">QC</th>
+              <th className="py-1 font-semibold">Observação</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="[&>tr:last-child>td]:border-b-2 [&>tr:last-child>td]:border-neutral-800">
             {roster.map((r) => {
               const res = porRato.get(String(r.numero));
               const cols = (res?.leituras?.colunas ?? {}) as Record<string, unknown>;
               return (
-                <tr key={r.numero} className="border-b border-neutral-300">
-                  <td className="py-1.5 pr-3 font-mono">{r.numero}</td>
-                  {temLevas && <td className="py-1.5 pr-3 font-mono">{r.leva}</td>}
-                  <td className="py-1.5 pr-3 whitespace-nowrap">{r.grupoNome}</td>
+                <tr key={r.numero}>
+                  <td className="py-[3px] pr-2.5 tabular-nums">{r.numero}</td>
+                  {temLevas && <td className="py-[3px] pr-2.5 tabular-nums">{r.leva}</td>}
+                  <td className="py-[3px] pr-2.5 whitespace-nowrap">{r.grupoNome}</td>
                   {colunas.map((c) => {
                     const v = cols[c.key];
                     return (
-                      <td key={c.key} className="py-1.5 pr-3 font-mono tabular-nums">
+                      <td key={c.key} className="py-[3px] pr-2.5 text-right tabular-nums">
                         {typeof v === "number" || typeof v === "string" ? String(v) : "—"}
                       </td>
                     );
                   })}
                   {config.familia !== "simples" && (
-                    <td className="py-1.5 pr-3 font-mono tabular-nums">
+                    <td className="py-[3px] pr-2.5 text-right tabular-nums">
                       {res?.valor_calculado != null
                         ? res.valor_calculado.toFixed(config.familia === "curva" ? 3 : 4)
                         : "—"}
                     </td>
                   )}
-                  <td className="py-1.5 pr-3">
+                  <td className="py-[3px] pr-2.5">
                     {res?.dentro_do_padrao == null
                       ? "—"
                       : res.dentro_do_padrao
                       ? "ok"
                       : "fora"}
                   </td>
-                  <td className="py-1.5">{res?.observacoes ?? ""}</td>
+                  <td className="py-[3px]">{res?.observacoes ?? ""}</td>
                 </tr>
               );
             })}
@@ -299,13 +317,13 @@ export default async function PaginaImpressao({
         </table>
 
         {config.familia === "simples" && (
-          <p className="mt-3 max-w-2xl text-xs leading-relaxed text-neutral-600">
+          <p className="mt-2 max-w-2xl text-[9px] leading-relaxed text-neutral-600">
             Absorbâncias brutas. A normalização por proteína e o fator de diluição
             são aplicados depois, na análise dos dados (R).
           </p>
         )}
 
-        <p className="mt-6 border-t border-neutral-300 pt-3 font-mono text-[10px] text-neutral-500">
+        <p className="mt-4 border-t border-neutral-300 pt-2 font-mono text-[9px] text-neutral-500">
           Impresso da plataforma LANC em {dataHora(new Date().toISOString())}. Colar
           no caderno de experimentos.
         </p>

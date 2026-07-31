@@ -14,11 +14,12 @@
   --color-paper: #ffffff;
   --color-paper-raised: #faf9f6;
   --color-rule: #e7e2d8;
-  /* signal: vermelho-tijolo editorial (estilo NEJM), harmoniza com o bege
-     da logo do laboratório. É o acento das superfícies públicas/editoriais
-     (eyebrows, réguas, chamadas). "absorbance" (azul) fica reservado para
-     dados científicos: gráficos, links dentro da área logada. */
-  --color-signal: #9c2b23;
+  /* signal: verde do LANC, tirado da logo do laboratório (versão mais funda
+     que a da marca para o texto branco da faixa do cabeçalho continuar legível).
+     É o acento das superfícies públicas/editoriais (eyebrows, réguas, chamadas).
+     "absorbance" (azul) fica reservado para dados científicos: gráficos, links
+     dentro da área logada. */
+  --color-signal: #157a43;
   --color-absorbance: #24427a;
   --color-reagent: #a8721b;
   --color-pyrogallol: #5b3b82;
@@ -34,7 +35,7 @@
   --color-paper: #15130f;
   --color-paper-raised: #1d1a14;
   --color-rule: #35301f;
-  --color-signal: #d98177;
+  --color-signal: #6fc192;
   --color-absorbance: #7fa0e0;
   --color-reagent: #e0ac52;
   --color-pyrogallol: #b593de;
@@ -51,7 +52,7 @@
     --color-paper: #15130f;
     --color-paper-raised: #1d1a14;
     --color-rule: #35301f;
-    --color-signal: #d98177;
+    --color-signal: #6fc192;
     --color-absorbance: #7fa0e0;
     --color-reagent: #e0ac52;
     --color-pyrogallol: #b593de;
@@ -105,6 +106,11 @@ body {
     color: #000;
   }
   @page {
-    margin: 14mm;
+    margin: 12mm;
+  }
+  /* Garante que a logo e as réguas da tabela saiam na impressão. */
+  img {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }
