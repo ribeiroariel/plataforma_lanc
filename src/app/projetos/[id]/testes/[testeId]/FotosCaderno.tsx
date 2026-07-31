@@ -55,12 +55,13 @@ export default function FotosCaderno({
   return (
     <section className="mt-10">
       <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-        Fotos do caderno (transparência)
+        Foto da tabela colada no caderno
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-        Registro fotográfico da tabela feita à mão no caderno de bancada.
-        Opcional — serve só como fonte auditável; as absorbâncias válidas são as
-        digitadas acima. Visível para a equipe do projeto e a orientadora.
+        Depois de imprimir a tabela e colá-la no caderno de experimentos, anexe
+        aqui uma foto da página com a tabela já colada. Serve como registro
+        auditável de que o resultado foi para o caderno. Visível para a equipe do
+        projeto e a orientadora.
       </p>
 
       {fotos.length > 0 && (

@@ -313,6 +313,14 @@ create table if not exists public.projeto_testes (
   recipiente text check (
     recipiente in ('microplaca_96', 'microplaca_24', 'microcubeta', 'cubeta_padrao')
   ),
+  -- Encerramento do teste: uma vez encerrado, NADA mais pode ser modificado
+  -- (preparação, checklist, tabela de resultados, metadados). É irreversível —
+  -- não há caminho de "reabrir". Depois de encerrar, libera a impressão da
+  -- tabela (PDF) para colar no caderno de experimentos e o anexo da foto dessa
+  -- tabela colada. Guardado quem encerrou e quando.
+  encerrado boolean not null default false,
+  encerrado_por uuid references public.profiles (id),
+  encerrado_em timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -322,6 +330,9 @@ alter table public.projeto_testes add column if not exists leitura_inicio text;
 alter table public.projeto_testes add column if not exists leitura_fim text;
 alter table public.projeto_testes add column if not exists aparelho text;
 alter table public.projeto_testes add column if not exists recipiente text;
+alter table public.projeto_testes add column if not exists encerrado boolean not null default false;
+alter table public.projeto_testes add column if not exists encerrado_por uuid references public.profiles (id);
+alter table public.projeto_testes add column if not exists encerrado_em timestamptz;
 
 -- Checks das colunas novas de forma idempotente (add column if not exists não
 -- aplica o check em bancos que já tinham a tabela).
@@ -870,6 +881,67 @@ drop trigger if exists travar_confirmado on public.resultados_teste;
 create trigger travar_confirmado
   before update on public.resultados_teste
   for each row execute function public.travar_resultado_confirmado();
+
+-- ── Encerramento do teste: imutabilidade garantida no banco ──────────────────
+-- Uma vez o teste encerrado, nada mais pode ser gravado nele. Isso dá lastro à
+-- promessa da aba: a orientadora cola a tabela impressa no caderno confiando que
+-- o que está no sistema é final e não muda mais.
+create or replace function public.projeto_teste_esta_encerrado(p_projeto_teste_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select encerrado from public.projeto_testes where id = p_projeto_teste_id),
+    false
+  );
+$$;
+
+-- Bloqueia gravação (insert/update) em resultados/passos de um teste encerrado.
+-- DELETE fica de fora de propósito: a exclusão de um projeto inteiro apaga os
+-- testes em cascata, e um BEFORE DELETE aqui abortaria essa exclusão.
+create or replace function public.bloquear_se_teste_encerrado()
+returns trigger
+language plpgsql
+as $$
+begin
+  if public.projeto_teste_esta_encerrado(NEW.projeto_teste_id) then
+    raise exception 'Teste encerrado: não é possível alterar seus dados.';
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists bloquear_encerrado_resultados on public.resultados_teste;
+create trigger bloquear_encerrado_resultados
+  before insert or update on public.resultados_teste
+  for each row execute function public.bloquear_se_teste_encerrado();
+
+drop trigger if exists bloquear_encerrado_passos on public.projeto_teste_passos;
+create trigger bloquear_encerrado_passos
+  before insert or update on public.projeto_teste_passos
+  for each row execute function public.bloquear_se_teste_encerrado();
+
+-- A própria designação fica congelada depois de encerrada. A transição
+-- false→true (o ato de encerrar) é a única mudança permitida — não há "reabrir".
+create or replace function public.travar_teste_encerrado()
+returns trigger
+language plpgsql
+as $$
+begin
+  if OLD.encerrado then
+    raise exception 'Teste encerrado: a designação não pode mais ser alterada.';
+  end if;
+  return NEW;
+end;
+$$;
+
+drop trigger if exists travar_encerrado on public.projeto_testes;
+create trigger travar_encerrado
+  before update on public.projeto_testes
+  for each row execute function public.travar_teste_encerrado();
 
 -- ----------------------------------------------------------------------------
 -- FOTOS DE PERFIL (Storage) — pro carrossel público "quem somos"

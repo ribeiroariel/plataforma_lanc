@@ -305,6 +305,47 @@ export async function confirmarCelula(dados: {
   return { sucesso: true };
 }
 
+// Encerra o teste de forma IRREVERSÍVEL: depois disso, nada mais pode ser
+// gravado (o banco bloqueia via triggers bloquear_encerrado_* e travar_encerrado).
+// Só então a aba libera a impressão da tabela (PDF, para colar no caderno de
+// experimentos) e o anexo da foto dessa tabela colada. Quem encerra tem que ser
+// responsável ou coautor (a policy de update de projeto_testes garante).
+export async function encerrarTeste(
+  projetoId: string,
+  projetoTesteId: string
+): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Você precisa estar logado." };
+
+  const { data: pt } = await supabase
+    .from("projeto_testes")
+    .select("encerrado")
+    .eq("id", projetoTesteId)
+    .maybeSingle();
+  if (pt?.encerrado) return { erro: "Este teste já está encerrado." };
+
+  const { error } = await supabase
+    .from("projeto_testes")
+    .update({
+      encerrado: true,
+      encerrado_por: user.id,
+      encerrado_em: new Date().toISOString(),
+      status: "concluido",
+    })
+    .eq("id", projetoTesteId);
+
+  if (error) {
+    return { erro: "Não foi possível encerrar o teste: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${projetoId}/testes/${projetoTesteId}`);
+  revalidatePath(`/projetos/${projetoId}`);
+  return { sucesso: true };
+}
+
 export async function definirStatusTeste(
   projetoId: string,
   projetoTesteId: string,

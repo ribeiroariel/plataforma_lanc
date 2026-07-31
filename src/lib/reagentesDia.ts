@@ -155,8 +155,8 @@ export const ENSAIOS_DIA: EnsaioDia[] = [
         nome: "DTT 3 mM",
         tipo: "escala",
         componentesBase10: [
-          { nome: "DTT", quantidade: 0.00046, unidade: "g" },
-          { nome: "Tampão TRIS 50 mM pH 9,0 (q.s.p.)", quantidade: 1.0, unidade: "mL" },
+          { nome: "DTT", quantidade: 0.00051, unidade: "g" },
+          { nome: "Tampão TRIS 50 mM pH 9,0 (q.s.p.)", quantidade: 1.1, unidade: "mL" },
         ],
         consumoPorAmostraUl: 100,
         obs: "Oxida rápido no ar — preparar imediatamente antes do uso e manter em gelo.",
@@ -165,11 +165,11 @@ export const ENSAIOS_DIA: EnsaioDia[] = [
         nome: "DTNB 3 mM em tampão acetato pH 5,0",
         tipo: "escala",
         componentesBase10: [
-          { nome: "DTNB", quantidade: 0.00119, unidade: "g" },
-          { nome: "Tampão acetato 50 mM pH 5,0 (q.s.p.)", quantidade: 1.0, unidade: "mL" },
+          { nome: "DTNB", quantidade: 0.00262, unidade: "g" },
+          { nome: "Tampão acetato 50 mM pH 5,0 (q.s.p.)", quantidade: 2.2, unidade: "mL" },
         ],
-        consumoPorAmostraUl: 100,
-        obs: "Frasco com papel alumínio.",
+        consumoPorAmostraUl: 200,
+        obs: "Frasco com papel alumínio. Usado nas DUAS determinações (tióis totais + tióis livres), 100 µL em cada → prepare o dobro (por isso o lote de 2,2 mL para 10 amostras).",
       },
       {
         nome: "Arsenito de sódio",

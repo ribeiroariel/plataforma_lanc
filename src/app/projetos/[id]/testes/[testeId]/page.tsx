@@ -13,6 +13,7 @@ import CalculadorasDoDia from "./CalculadorasDoDia";
 import ChecklistProcedimento, { type EstadoPasso } from "./ChecklistProcedimento";
 import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
+import EncerramentoTeste from "./EncerramentoTeste";
 
 type ProjetoTeste = {
   id: string;
@@ -25,6 +26,9 @@ type ProjetoTeste = {
   recipiente: string | null;
   leitura_inicio: string | null;
   leitura_fim: string | null;
+  encerrado: boolean;
+  encerrado_por: string | null;
+  encerrado_em: string | null;
 };
 
 type Resultado = {
@@ -58,7 +62,7 @@ export default async function PaginaResultado({
       supabase
         .from("projeto_testes")
         .select(
-          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim"
+          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em"
         )
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
@@ -127,14 +131,19 @@ export default async function PaginaResultado({
     );
   }
 
+  const encerrado = projetoTeste.encerrado === true;
+  const podeEditar = (souResponsavel || souCoautor) && !encerrado;
+
   const fotosCaderno = await listarFotosCaderno(projetoTeste.id);
 
   // Estado do checklist do procedimento: mapa passo_id -> {feito, quem, quando}.
+  // Inclui quem encerrou o teste, para nomear no bloco de encerramento.
   const idsFeitores = Array.from(
     new Set(
-      (passos ?? [])
-        .map((p) => p.feito_por)
-        .filter((v): v is string => Boolean(v))
+      [
+        ...(passos ?? []).map((p) => p.feito_por),
+        projetoTeste.encerrado_por,
+      ].filter((v): v is string => Boolean(v))
     )
   );
   const nomesPorId = new Map<string, string>();
@@ -184,7 +193,7 @@ export default async function PaginaResultado({
         recipiente={
           ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
         }
-        podeEditar={souResponsavel || souCoautor}
+        podeEditar={podeEditar}
       />
 
       <CalculadorasDoDia
@@ -201,7 +210,7 @@ export default async function PaginaResultado({
         slug={projetoTeste.teste_slug}
         nRoster={roster.length}
         estado={estadoPassos}
-        podeMarcar={souResponsavel || souCoautor}
+        podeMarcar={podeEditar}
       />
 
       <RegistroResultado
@@ -211,8 +220,8 @@ export default async function PaginaResultado({
         config={config}
         roster={roster}
         resultadosExistentes={resultados ?? []}
-        podeRegistrar={souResponsavel}
-        podeAlterarStatus={souResponsavel || souCoautor}
+        podeRegistrar={souResponsavel && !encerrado}
+        podeAlterarStatus={podeEditar}
       />
 
       <MetadadosLeitura
@@ -225,15 +234,32 @@ export default async function PaginaResultado({
         }
         inicio={projetoTeste.leitura_inicio}
         fim={projetoTeste.leitura_fim}
-        podeEditar={souResponsavel || souCoautor}
+        podeEditar={podeEditar}
       />
 
-      <FotosCaderno
+      <EncerramentoTeste
         projetoId={projetoId}
         projetoTesteId={projetoTeste.id}
-        fotos={fotosCaderno}
-        podeAnexar={souResponsavel}
+        encerrado={encerrado}
+        encerradoPorNome={
+          projetoTeste.encerrado_por
+            ? nomesPorId.get(projetoTeste.encerrado_por) ?? null
+            : null
+        }
+        encerradoEm={projetoTeste.encerrado_em}
+        podeEncerrar={souResponsavel || souCoautor}
       />
+
+      {/* A foto da tabela colada no caderno só faz sentido depois de encerrar
+          e imprimir — por isso aparece só aqui, junto do encerramento. */}
+      {encerrado && (
+        <FotosCaderno
+          projetoId={projetoId}
+          projetoTesteId={projetoTeste.id}
+          fotos={fotosCaderno}
+          podeAnexar={souResponsavel}
+        />
+      )}
     </main>
   );
 }
