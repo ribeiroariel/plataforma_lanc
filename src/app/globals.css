@@ -90,3 +90,21 @@ body {
   background: var(--color-absorbance);
   color: var(--color-paper);
 }
+
+/* Impressão (tabela do teste encerrado para colar no caderno de experimentos):
+   esconde o cabeçalho/rodapé do site e qualquer elemento marcado com
+   data-noprint (ex.: o botão "Imprimir"), deixando só a folha limpa. */
+@media print {
+  body > header,
+  body > footer,
+  [data-noprint] {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
