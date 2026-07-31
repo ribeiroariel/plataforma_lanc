@@ -94,7 +94,9 @@ export default async function MeusTestes() {
             {papel === "responsavel" ? "responsável" : "ajudante"}
           </span>
           <span className="font-mono text-xs uppercase text-signal">
-            {papel === "responsavel" ? "Registrar →" : "Ver →"}
+            {papel === "responsavel" && row.status !== "concluido"
+              ? "Registrar →"
+              : "Ver →"}
           </span>
         </div>
       </Link>

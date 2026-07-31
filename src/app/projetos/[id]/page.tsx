@@ -354,7 +354,9 @@ export default async function DetalheProjeto({
                       href={`/projetos/${projeto.id}/testes/${t.id}`}
                       className="rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-absorbance"
                     >
-                      {souResponsavel ? "Registrar resultado" : "Ver"}
+                      {souResponsavel && t.status !== "concluido"
+                        ? "Registrar resultado"
+                        : "Ver resultados"}
                     </Link>
                   )}
                 </div>
