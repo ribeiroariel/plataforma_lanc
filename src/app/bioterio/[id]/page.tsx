@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import type { CaixaRow, TratamentoRow } from "@/lib/bioterio";
+import type { CaixaRow, ProcedimentoRow } from "@/lib/bioterio";
 import Bioterio from "./Bioterio";
 
 type Projeto = { id: string; nome: string; especie: string | null };
@@ -18,7 +18,7 @@ export default async function PaginaBioterioProjeto({
   if (!usuario) redirect("/login");
   const supabase = await createClient();
 
-  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: tratamentos }] =
+  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: procedimentos }] =
     await Promise.all([
       supabase
         .from("projetos")
@@ -38,17 +38,18 @@ export default async function PaginaBioterioProjeto({
         .eq("projeto_id", id),
       supabase
         .from("bioterio_caixas")
-        .select("id, numero, grupo_id, num_ratos, peso_medio_g, mortos")
+        .select("id, grupo_id, num_ratos, ordem, pesos, mortos")
         .eq("projeto_id", id)
-        .order("numero", { ascending: true })
+        .order("ordem", { ascending: true })
         .returns<CaixaRow[]>(),
       supabase
-        .from("bioterio_tratamentos")
+        .from("bioterio_procedimentos")
         .select(
-          "id, grupo_id, inducao_ativa, inducao_doenca, inducao_substancia, inducao_via, inducao_dose, tratamento_ativa, tratamento_substancia, tratamento_via, tratamento_dose, tratamento_dias, tratamento_inicio"
+          "id, tipo, doenca, substancia, dose_valor, dose_unidade, concentracao, via, dias, inicio, caixa_ids, ordem"
         )
         .eq("projeto_id", id)
-        .returns<TratamentoRow[]>(),
+        .order("ordem", { ascending: true })
+        .returns<ProcedimentoRow[]>(),
     ]);
 
   if (!projeto) notFound();
@@ -72,7 +73,7 @@ export default async function PaginaBioterioProjeto({
         especie={projeto.especie}
         grupos={grupos ?? []}
         caixas={caixas ?? []}
-        tratamentos={tratamentos ?? []}
+        procedimentos={procedimentos ?? []}
         podeEditar={souMembro}
       />
     </main>

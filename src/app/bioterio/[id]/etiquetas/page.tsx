@@ -2,7 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { siglaVia, type CaixaRow, type TratamentoRow } from "@/lib/bioterio";
+import {
+  siglaVia,
+  textoDose,
+  numeracaoCaixas,
+  type CaixaRow,
+  type ProcedimentoRow,
+} from "@/lib/bioterio";
 import BotaoImprimir from "./BotaoImprimir";
 
 type Projeto = { id: string; nome: string; especie: string | null };
@@ -14,15 +20,12 @@ function unidadeAnimal(especie: string | null): string {
   return "animais";
 }
 
-function linhaProcedimento(
-  substancia: string | null,
-  dose: string | null,
-  via: string | null
-): string {
+function linhaProc(p: ProcedimentoRow): string {
   const partes: string[] = [];
-  if (substancia) partes.push(substancia);
+  if (p.substancia) partes.push(p.substancia);
+  const dose = textoDose(p.dose_valor, p.dose_unidade);
   if (dose) partes.push(`— ${dose}`);
-  if (via) partes.push(`(${siglaVia(via)})`);
+  if (p.via) partes.push(`(${siglaVia(p.via)})`);
   return partes.join(" ") || "—";
 }
 
@@ -36,24 +39,23 @@ export default async function PaginaEtiquetas({
   if (!usuario) redirect("/login");
   const supabase = await createClient();
 
-  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: tratamentos }] =
+  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: procedimentos }] =
     await Promise.all([
       supabase.from("projetos").select("id, nome, especie").eq("id", id).maybeSingle().returns<Projeto>(),
       supabase.from("projeto_grupos").select("id, nome").eq("projeto_id", id).returns<Grupo[]>(),
       supabase.from("projeto_membros").select("profile_id").eq("projeto_id", id),
       supabase
         .from("bioterio_caixas")
-        .select("id, numero, grupo_id, num_ratos, peso_medio_g, mortos")
+        .select("id, grupo_id, num_ratos, ordem, pesos, mortos")
         .eq("projeto_id", id)
-        .order("numero", { ascending: true })
+        .order("ordem", { ascending: true })
         .returns<CaixaRow[]>(),
       supabase
-        .from("bioterio_tratamentos")
-        .select(
-          "id, grupo_id, inducao_ativa, inducao_doenca, inducao_substancia, inducao_via, inducao_dose, tratamento_ativa, tratamento_substancia, tratamento_via, tratamento_dose, tratamento_dias, tratamento_inicio"
-        )
+        .from("bioterio_procedimentos")
+        .select("id, tipo, doenca, substancia, dose_valor, dose_unidade, concentracao, via, dias, inicio, caixa_ids, ordem")
         .eq("projeto_id", id)
-        .returns<TratamentoRow[]>(),
+        .order("ordem", { ascending: true })
+        .returns<ProcedimentoRow[]>(),
     ]);
 
   if (!projeto) notFound();
@@ -61,8 +63,14 @@ export default async function PaginaEtiquetas({
   if (!souMembro && usuario.papel !== "orientador") notFound();
 
   const nomeGrupo = new Map((grupos ?? []).map((g) => [g.id, g.nome]));
-  const tratPorGrupo = new Map((tratamentos ?? []).map((t) => [t.grupo_id, t]));
   const unidade = unidadeAnimal(projeto.especie);
+  const numeros = numeracaoCaixas(caixas ?? []);
+  const procs = procedimentos ?? [];
+
+  const inducaoDe = (caixaId: string) =>
+    procs.find((p) => p.tipo === "inducao" && (p.caixa_ids ?? []).includes(caixaId));
+  const tratamentoDe = (caixaId: string) =>
+    procs.find((p) => p.tipo === "tratamento" && (p.caixa_ids ?? []).includes(caixaId));
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
@@ -80,8 +88,9 @@ export default async function PaginaEtiquetas({
         <p className="text-sm text-ink-soft">Nenhuma caixa criada ainda.</p>
       ) : (
         <div className="grid grid-cols-2 gap-3 text-black">
-          {(caixas ?? []).map((c) => {
-            const t = tratPorGrupo.get(c.grupo_id);
+          {(caixas ?? []).map((c, i) => {
+            const ind = inducaoDe(c.id);
+            const trat = tratamentoDe(c.id);
             return (
               <div
                 key={c.id}
@@ -92,28 +101,24 @@ export default async function PaginaEtiquetas({
                   Grupo {nomeGrupo.get(c.grupo_id) ?? "?"}
                 </p>
                 <p className="mb-2 text-center text-sm">
-                  caixa {c.numero} ( {c.num_ratos} {unidade} )
+                  caixa {numeros[i]} ( {c.num_ratos} {unidade} )
                 </p>
-                {t?.inducao_ativa && (
+                {ind && (
                   <div className="mb-2">
-                    <p className="text-sm font-bold">TRATAMENTO 1 (indução)</p>
-                    <p className="text-sm leading-snug">
-                      - {linhaProcedimento(t.inducao_substancia, t.inducao_dose, t.inducao_via)}
-                    </p>
+                    <p className="text-sm font-bold">INDUÇÃO</p>
+                    <p className="text-sm leading-snug">- {linhaProc(ind)}</p>
                   </div>
                 )}
-                {t?.tratamento_ativa && (
+                {trat && (
                   <div>
                     <p className="text-sm font-bold">
-                      TRATAMENTO 2 ({t.tratamento_dias ?? "?"} DIAS)
+                      TRATAMENTO{trat.dias ? ` (${trat.dias} DIAS)` : ""}
                     </p>
-                    <p className="text-sm leading-snug">
-                      - {linhaProcedimento(t.tratamento_substancia, t.tratamento_dose, t.tratamento_via)}
-                    </p>
+                    <p className="text-sm leading-snug">- {linhaProc(trat)}</p>
                   </div>
                 )}
-                {!t?.inducao_ativa && !t?.tratamento_ativa && (
-                  <p className="text-sm text-neutral-500">Tratamento não definido.</p>
+                {!ind && !trat && (
+                  <p className="text-sm text-neutral-500">Procedimento não definido.</p>
                 )}
               </div>
             );

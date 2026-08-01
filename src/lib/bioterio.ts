@@ -1,5 +1,5 @@
 // Procedimentos de biotério: constantes e helpers para caixas dos ratos,
-// tratamentos/induções e a montagem das etiquetas das gaiolas.
+// procedimentos (indução/tratamento), cálculo de dose e etiquetas das gaiolas.
 
 export const DOENCAS: { valor: string; rotulo: string }[] = [
   { valor: "dm1", rotulo: "DM1" },
@@ -11,6 +11,14 @@ export const VIAS: { valor: string; rotulo: string; sigla: string }[] = [
   { valor: "ip", rotulo: "Intraperitoneal", sigla: "i.p." },
   { valor: "sc", rotulo: "Subcutânea", sigla: "s.c." },
   { valor: "gavagem", rotulo: "Gavagem", sigla: "gavagem" },
+];
+
+// Unidades de dose. mg/kg usa a concentração (mg/mL) para chegar ao volume;
+// mL/kg é direto; mL/animal é volume fixo (não usa peso).
+export const UNIDADES_DOSE: { valor: string; rotulo: string; usaConcentracao: boolean; usaPeso: boolean }[] = [
+  { valor: "mg/kg", rotulo: "mg/kg", usaConcentracao: true, usaPeso: true },
+  { valor: "mL/kg", rotulo: "mL/kg", usaConcentracao: false, usaPeso: true },
+  { valor: "mL/animal", rotulo: "mL/animal", usaConcentracao: false, usaPeso: false },
 ];
 
 export function rotuloDoenca(v: string | null | undefined): string {
@@ -28,52 +36,104 @@ export function limiteCaixa(especie: string | null | undefined): number {
   return especie === "camundongo" ? 8 : 5; // rato (ou não definido) = 5
 }
 
-/**
- * Dose em mL por animal = (dose em mg/kg × peso em kg) ÷ concentração em mg/mL.
- * Retorna null se faltar dado ou a concentração for zero.
- */
-export function doseMlPorAnimal(
-  pesoG: number | null,
-  doseMgKg: number | null,
-  concentracaoMgMl: number | null
-): number | null {
-  if (pesoG == null || doseMgKg == null || concentracaoMgMl == null) return null;
-  if (concentracaoMgMl <= 0 || pesoG <= 0) return null;
-  const pesoKg = pesoG / 1000;
-  return (doseMgKg * pesoKg) / concentracaoMgMl;
+export function media(pesos: number[]): number | null {
+  const v = pesos.filter((p) => Number.isFinite(p) && p > 0);
+  if (v.length === 0) return null;
+  return v.reduce((a, c) => a + c, 0) / v.length;
 }
 
-// Tipos partilhados entre server e client.
+/** Desvio-padrão amostral (n−1). Null se menos de 2 valores. */
+export function desvioPadrao(pesos: number[]): number | null {
+  const v = pesos.filter((p) => Number.isFinite(p) && p > 0);
+  if (v.length < 2) return null;
+  const m = v.reduce((a, c) => a + c, 0) / v.length;
+  const s2 = v.reduce((a, c) => a + (c - m) ** 2, 0) / (v.length - 1);
+  return Math.sqrt(s2);
+}
+
+/**
+ * Volume (mL) por animal a partir do peso médio da caixa, dose, unidade e
+ * concentração. Retorna null se faltar dado.
+ */
+export function doseMlPorAnimal(
+  pesoMedioG: number | null,
+  doseValor: number | null,
+  unidade: string | null,
+  concentracao: number | null
+): number | null {
+  if (doseValor == null) return null;
+  if (unidade === "mL/animal") return doseValor;
+  if (pesoMedioG == null || pesoMedioG <= 0) return null;
+  const kg = pesoMedioG / 1000;
+  if (unidade === "mL/kg") return doseValor * kg;
+  if (unidade === "mg/kg") {
+    if (concentracao == null || concentracao <= 0) return null;
+    return (doseValor * kg) / concentracao;
+  }
+  return null;
+}
+
+/** Descrição textual da dose (para etiqueta/resumo), ex.: "150 mg/kg". */
+export function textoDose(
+  doseValor: number | null,
+  unidade: string | null
+): string {
+  if (doseValor == null || !unidade) return "";
+  return `${doseValor.toLocaleString("pt-BR", { maximumFractionDigits: 3 })} ${unidade}`;
+}
+
+/**
+ * Numeração de exibição das caixas (na ordem dada). Caixas do mesmo grupo em
+ * sequência recebem sufixo: 3, 3.1, 3.2. Um grupo novo incrementa a base.
+ */
+export function numeracaoCaixas(caixas: { grupo_id: string }[]): string[] {
+  const out: string[] = [];
+  let base = 0;
+  let sub = 0;
+  let prev: string | null = null;
+  for (const c of caixas) {
+    if (prev === null || c.grupo_id !== prev) {
+      base += 1;
+      sub = 0;
+      out.push(String(base));
+    } else {
+      sub += 1;
+      out.push(`${base}.${sub}`);
+    }
+    prev = c.grupo_id;
+  }
+  return out;
+}
+
 export type CaixaRow = {
   id: string;
-  numero: number;
   grupo_id: string;
   num_ratos: number;
-  peso_medio_g: number | null;
+  ordem: number | null;
+  pesos: number[] | null;
   mortos: number;
 };
-export type TratamentoRow = {
+
+export type ProcedimentoRow = {
   id: string;
-  grupo_id: string;
-  inducao_ativa: boolean;
-  inducao_doenca: string | null;
-  inducao_substancia: string | null;
-  inducao_via: string | null;
-  inducao_dose: string | null;
-  tratamento_ativa: boolean;
-  tratamento_substancia: string | null;
-  tratamento_via: string | null;
-  tratamento_dose: string | null;
-  tratamento_dias: number | null;
-  tratamento_inicio: string | null;
+  tipo: "inducao" | "tratamento";
+  doenca: string | null;
+  substancia: string | null;
+  dose_valor: number | null;
+  dose_unidade: string | null;
+  concentracao: number | null;
+  via: string | null;
+  dias: number | null;
+  inicio: string | null;
+  caixa_ids: string[] | null;
+  ordem: number | null;
 };
 
-/** Dias restantes de tratamento (a partir de hoje), ou null se sem dados. */
-export function diasRestantes(t: TratamentoRow): number | null {
-  if (!t.tratamento_ativa || !t.tratamento_dias || !t.tratamento_inicio) return null;
-  const inicio = new Date(t.tratamento_inicio).getTime();
+/** Dias restantes de um tratamento a partir de hoje, ou null. */
+export function diasRestantes(p: ProcedimentoRow): number | null {
+  if (p.tipo !== "tratamento" || !p.dias || !p.inicio) return null;
+  const inicio = new Date(p.inicio).getTime();
   if (Number.isNaN(inicio)) return null;
-  const fim = inicio + t.tratamento_dias * 24 * 3600 * 1000;
-  const rest = Math.ceil((fim - Date.now()) / (24 * 3600 * 1000));
-  return Math.max(0, rest);
+  const fim = inicio + p.dias * 24 * 3600 * 1000;
+  return Math.max(0, Math.ceil((fim - Date.now()) / (24 * 3600 * 1000)));
 }

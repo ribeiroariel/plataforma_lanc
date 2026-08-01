@@ -1846,3 +1846,44 @@ drop policy if exists "Membros gerenciam os tratamentos" on public.bioterio_trat
 create policy "Membros gerenciam os tratamentos" on public.bioterio_tratamentos for all
   using (public.eh_membro_projeto(projeto_id))
   with check (public.eh_membro_projeto(projeto_id));
+
+-- ── Biotério v2: ordem/pesos nas caixas + procedimentos gerais ──────────────
+-- `ordem` para arrastar e reordenar; a numeração de exibição (3, 3.1 para caixas
+-- do mesmo grupo em sequência) é derivada da ordem no app. `pesos` é o peso de
+-- cada rato da caixa (média e DP calculados no app, e usados no cálculo da dose).
+alter table public.bioterio_caixas add column if not exists ordem integer;
+alter table public.bioterio_caixas add column if not exists pesos numeric[] not null default '{}';
+-- Semeia a ordem a partir do numero antigo, para caixas já existentes.
+update public.bioterio_caixas set ordem = numero where ordem is null;
+
+-- Procedimentos gerais (indução ou tratamento): um procedimento define a
+-- substância, a dose (valor + unidade) e as caixas que o recebem. O volume em mL
+-- é calculado no app a partir do peso médio de cada caixa.
+--   dose_unidade: 'mg/kg' (usa concentracao mg/mL) | 'mL/kg' | 'mL/animal'
+create table if not exists public.bioterio_procedimentos (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  tipo text not null check (tipo in ('inducao', 'tratamento')),
+  doenca text,            -- dm1 | dm2 | depressao (indução)
+  substancia text,
+  dose_valor numeric,
+  dose_unidade text,      -- mg/kg | mL/kg | mL/animal
+  concentracao numeric,   -- mg/mL, quando a dose é em mg/kg
+  via text,               -- ip | sc | gavagem
+  dias integer,           -- só tratamento
+  inicio date,            -- só tratamento
+  caixa_ids uuid[] not null default '{}',
+  ordem integer,
+  atualizado_por uuid references public.profiles (id),
+  atualizado_em timestamptz not null default now()
+);
+
+alter table public.bioterio_procedimentos enable row level security;
+alter table public.bioterio_procedimentos force row level security;
+drop policy if exists "Membros veem os procedimentos" on public.bioterio_procedimentos;
+create policy "Membros veem os procedimentos" on public.bioterio_procedimentos for select
+  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+drop policy if exists "Membros gerenciam os procedimentos" on public.bioterio_procedimentos;
+create policy "Membros gerenciam os procedimentos" on public.bioterio_procedimentos for all
+  using (public.eh_membro_projeto(projeto_id))
+  with check (public.eh_membro_projeto(projeto_id));
