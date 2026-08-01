@@ -54,7 +54,8 @@ export default async function RootLayout({
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" },
       { href: "/reagentes", rotulo: "Reagentes" },
-      { href: "/estoque", rotulo: "Estoque" }
+      { href: "/estoque", rotulo: "Estoque" },
+      { href: "/laboratorio", rotulo: "Laboratório" }
     );
   } else if (usuario?.papel === "orientador") {
     navPrincipal.push(
@@ -66,9 +67,12 @@ export default async function RootLayout({
       { href: "/estoque", rotulo: "Estoque" }
     );
   }
-  // Aba de aprovação de cadastros: só para quem pode (orientadora ou Ariel).
+  // Abas de gestão: só para quem pode (orientadora ou Ariel).
   if (podeAprovarCadastros(usuario)) {
-    navPrincipal.push({ href: "/cadastros", rotulo: "Cadastros" });
+    navPrincipal.push(
+      { href: "/pedidos", rotulo: "Pedidos" },
+      { href: "/cadastros", rotulo: "Cadastros" }
+    );
   }
 
   return (

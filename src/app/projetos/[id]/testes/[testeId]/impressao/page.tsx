@@ -27,6 +27,7 @@ type ProjetoTeste = {
   encerrado: boolean;
   encerrado_por: string | null;
   encerrado_em: string | null;
+  consideracoes: string | null;
 };
 
 type Resultado = {
@@ -93,7 +94,7 @@ export default async function PaginaImpressao({
       supabase
         .from("projeto_testes")
         .select(
-          "id, projeto_id, teste_slug, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em"
+          "id, projeto_id, teste_slug, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em, consideracoes"
         )
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
@@ -335,6 +336,17 @@ export default async function PaginaImpressao({
             Absorbâncias brutas. A normalização por proteína e o fator de diluição
             são aplicados depois, na análise dos dados (R).
           </p>
+        )}
+
+        {projetoTeste.consideracoes && (
+          <div className="mt-3">
+            <p className="font-mono text-[9px] uppercase tracking-wide text-neutral-500">
+              Considerações
+            </p>
+            <p className="max-w-2xl whitespace-pre-wrap text-[11px] text-neutral-800">
+              {projetoTeste.consideracoes}
+            </p>
+          </div>
         )}
 
         <p className="mt-4 border-t border-neutral-300 pt-2 font-mono text-[9px] text-neutral-500">

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { reagentesConhecidos } from "@/lib/protocoloEnsaio";
 import GestaoEstoque, { type ItemEstoque } from "./GestaoEstoque";
+import NovoPedido from "./NovoPedido";
 
 export default async function PaginaEstoque() {
   const usuario = await getUsuarioAtual();
@@ -11,7 +12,7 @@ export default async function PaginaEstoque() {
   const supabase = await createClient();
   const { data: itens } = await supabase
     .from("reagentes_estoque")
-    .select("id, nome, tipo, quantidade_ml, minimo_ml, localizacao, obs, atualizado_em")
+    .select("id, nome, categoria, quantidade, unidade, minimo, localizacao, obs, atualizado_em")
     .order("nome", { ascending: true })
     .returns<ItemEstoque[]>();
 
@@ -32,6 +33,8 @@ export default async function PaginaEstoque() {
       </p>
 
       <GestaoEstoque itens={itens ?? []} catalogo={catalogo} podeEditar={true} />
+
+      <NovoPedido />
     </main>
   );
 }
