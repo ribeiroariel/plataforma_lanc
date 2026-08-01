@@ -64,9 +64,12 @@ export default async function RootLayout({
       { href: "/estoque", rotulo: "Estoque" }
     );
   }
-  // Aba de aprovação de cadastros: só para quem pode (orientadora ou Ariel).
+  // Abas de gestão: só para quem pode (orientadora ou Ariel).
   if (podeAprovarCadastros(usuario)) {
-    navPrincipal.push({ href: "/cadastros", rotulo: "Cadastros" });
+    navPrincipal.push(
+      { href: "/pedidos", rotulo: "Pedidos" },
+      { href: "/cadastros", rotulo: "Cadastros" }
+    );
   }
 
   return (

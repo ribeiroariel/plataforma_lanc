@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { protocoloDoSlug, type ReagenteConsumo } from "@/lib/protocoloEnsaio";
 import { ehRecipiente, fatorRecipiente } from "@/lib/recipientes";
 import { registrarConsumoReal } from "@/lib/actions/estoque";
-import { fmtMl } from "@/lib/estoque";
+import { fmtQuantidade } from "@/lib/estoque";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 type Props = {
@@ -85,8 +85,8 @@ export default function ConsumoReal({
       let msg = "✓ registrado";
       if (res.semItemNoEstoque) {
         msg += " — essa solução não está no estoque (sem baixa). Cadastre em Estoque.";
-      } else if (res.estoqueBaixoMl != null) {
-        msg += ` — estoque baixo: ${fmtMl(res.estoqueBaixoMl)} restantes.`;
+      } else if (res.estoqueBaixo != null) {
+        msg += ` — estoque baixo: ${fmtQuantidade(res.estoqueBaixo.quantidade, res.estoqueBaixo.unidade)} restantes.`;
       } else {
         msg += " — estoque baixado.";
       }
@@ -122,7 +122,7 @@ export default function ConsumoReal({
               <tr key={r.nome} className="border-b border-rule/60 align-top">
                 <td className="py-1.5 pr-4 text-ink">{r.nome}</td>
                 <td className="whitespace-nowrap py-1.5 pr-4 font-mono text-xs text-ink-soft">
-                  {fmtMl(estimadoUl(r) / 1000)}
+                  {fmtQuantidade(estimadoUl(r) / 1000, "mL")}
                 </td>
                 <td className="py-1.5 pr-4">
                   <input

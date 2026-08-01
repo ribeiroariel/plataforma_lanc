@@ -81,6 +81,25 @@ export async function salvarMetadadosLeitura(dados: {
   return { sucesso: true };
 }
 
+// Considerações gerais do teste (texto livre sobre como foi o ensaio). Editável
+// por responsável/coautor; trava depois do encerramento (trigger no banco).
+export async function salvarConsideracoesTeste(dados: {
+  projetoId: string;
+  projetoTesteId: string;
+  consideracoes: string;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("projeto_testes")
+    .update({ consideracoes: dados.consideracoes.trim() || null })
+    .eq("id", dados.projetoTesteId);
+  if (error) {
+    return { erro: "Não foi possível salvar as considerações: " + error.message };
+  }
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
 // Marca (ou desmarca) um passo do checklist do procedimento. Grava quem e quando
 // confirmou. Compartilhado por quem executa o teste (responsável + ajudantes) e
 // coautor — a policy de projeto_teste_passos garante. Reversível (desmarcar).
