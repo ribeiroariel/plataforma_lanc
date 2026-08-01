@@ -1668,3 +1668,68 @@ drop trigger if exists bloquear_encerrado_consumo on public.consumo_real;
 create trigger bloquear_encerrado_consumo
   before insert or update on public.consumo_real
   for each row execute function public.bloquear_se_teste_encerrado();
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Procedimentos de biotério: caixas dos ratos + tratamentos/induções por grupo
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Cada caixa (gaiola) tem um grupo e um nº de animais; a etiqueta é gerada a
+-- partir disso + o tratamento do grupo. Caixas do mesmo grupo compartilham o
+-- tratamento (a etiqueta repete por caixa). `mortos` acompanha a sobrevivência
+-- durante o tratamento.
+create table if not exists public.bioterio_caixas (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  numero integer not null,
+  grupo_id uuid not null references public.projeto_grupos (id),
+  num_ratos integer not null default 0,
+  peso_medio_g numeric,
+  mortos integer not null default 0,
+  criado_por uuid references public.profiles (id),
+  criado_em timestamptz not null default now(),
+  unique (projeto_id, numero)
+);
+
+-- Tratamento por (projeto, grupo): indução (TRATAMENTO 1) + tratamento
+-- (TRATAMENTO 2, com nº de dias).
+create table if not exists public.bioterio_tratamentos (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  grupo_id uuid not null references public.projeto_grupos (id),
+  inducao_ativa boolean not null default false,
+  inducao_doenca text,      -- dm1 | dm2 | depressao
+  inducao_substancia text,
+  inducao_via text,         -- ip | sc | gavagem
+  inducao_dose text,
+  tratamento_ativa boolean not null default false,
+  tratamento_substancia text,
+  tratamento_via text,
+  tratamento_dose text,
+  tratamento_dias integer,
+  tratamento_inicio date,
+  atualizado_por uuid references public.profiles (id),
+  atualizado_em timestamptz not null default now(),
+  unique (projeto_id, grupo_id)
+);
+
+do $$ begin
+  alter table public.bioterio_caixas enable row level security;
+  alter table public.bioterio_caixas force row level security;
+  alter table public.bioterio_tratamentos enable row level security;
+  alter table public.bioterio_tratamentos force row level security;
+end $$;
+
+drop policy if exists "Membros veem as caixas" on public.bioterio_caixas;
+create policy "Membros veem as caixas" on public.bioterio_caixas for select
+  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+drop policy if exists "Membros gerenciam as caixas" on public.bioterio_caixas;
+create policy "Membros gerenciam as caixas" on public.bioterio_caixas for all
+  using (public.eh_membro_projeto(projeto_id))
+  with check (public.eh_membro_projeto(projeto_id));
+
+drop policy if exists "Membros veem os tratamentos" on public.bioterio_tratamentos;
+create policy "Membros veem os tratamentos" on public.bioterio_tratamentos for select
+  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+drop policy if exists "Membros gerenciam os tratamentos" on public.bioterio_tratamentos;
+create policy "Membros gerenciam os tratamentos" on public.bioterio_tratamentos for all
+  using (public.eh_membro_projeto(projeto_id))
+  with check (public.eh_membro_projeto(projeto_id));

@@ -50,6 +50,7 @@ export default async function RootLayout({
     navPrincipal.push(
       { href: "/meus-testes", rotulo: "Meus testes" },
       { href: "/minhas-funcoes", rotulo: "Minhas funções" },
+      { href: "/bioterio", rotulo: "Biotério" },
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" },
       { href: "/reagentes", rotulo: "Reagentes" },
@@ -58,6 +59,7 @@ export default async function RootLayout({
   } else if (usuario?.papel === "orientador") {
     navPrincipal.push(
       { href: "/orientador", rotulo: "Painel" },
+      { href: "/bioterio", rotulo: "Biotério" },
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" },
       { href: "/reagentes", rotulo: "Reagentes" },
