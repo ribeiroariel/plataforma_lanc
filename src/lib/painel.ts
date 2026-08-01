@@ -31,7 +31,6 @@ export type MetricasBolsista = {
   sacrificios: number;
   reagentesPreparados: number;
   tempoMedioExecMin: number | null;
-  pontuacao: number;
 };
 
 // Famílias de ensaio (para o gráfico de tempo médio por tipo).
@@ -88,13 +87,7 @@ export function temposPorTipo(
 
 const DIAS_90 = 90 * 24 * 3600 * 1000;
 
-/**
- * Calcula as métricas por bolsista e a pontuação do ranking.
- * Pesos (equilibrados, ajustáveis): nº de testes 30%, testes nos últimos 3
- * meses 30%, eficiência (tempo médio de execução, menor = melhor) 20%,
- * reagentes preparados 20%. Cada componente é normalizado 0–100 pelo maior
- * valor entre os bolsistas.
- */
+/** Calcula as métricas por bolsista (para a tabela e os gráficos comparativos). */
 export function calcularMetricas(dados: {
   bolsistas: { id: string; nome: string }[];
   membros: MembroBruto[];
@@ -153,28 +146,6 @@ export function calcularMetricas(dados: {
     };
   });
 
-  // Normalização para o ranking.
-  const maxTestes = Math.max(1, ...base.map((m) => m.testesConcluidos));
-  const max3m = Math.max(1, ...base.map((m) => m.testes3Meses));
-  const maxReag = Math.max(1, ...base.map((m) => m.reagentesPreparados));
-  const temposValidos = base
-    .map((m) => m.tempoMedioExecMin)
-    .filter((d): d is number => d != null && d > 0);
-  const minTempo = temposValidos.length > 0 ? Math.min(...temposValidos) : null;
-
-  const comPontuacao = base.map((m) => {
-    const nTestes = (m.testesConcluidos / maxTestes) * 100;
-    const n3m = (m.testes3Meses / max3m) * 100;
-    const nReag = (m.reagentesPreparados / maxReag) * 100;
-    // Eficiência: mais rápido = mais pontos. Sem tempo registrado = neutro (50).
-    const efic =
-      m.tempoMedioExecMin != null && m.tempoMedioExecMin > 0 && minTempo != null
-        ? (minTempo / m.tempoMedioExecMin) * 100
-        : 50;
-    const pontuacao =
-      0.3 * nTestes + 0.3 * n3m + 0.2 * efic + 0.2 * nReag;
-    return { ...m, pontuacao: Math.round(pontuacao * 10) / 10 };
-  });
-
-  return comPontuacao.sort((a, b) => b.pontuacao - a.pontuacao);
+  // Ordena por testes concluídos (mais ativo primeiro) — sem ranking pontuado.
+  return base.sort((a, b) => b.testesConcluidos - a.testesConcluidos);
 }
