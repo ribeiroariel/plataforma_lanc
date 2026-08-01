@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,12 +14,27 @@ import type { MetricasBolsista } from "@/lib/painel";
 
 type TempoTipo = { tipo: string; mediaMin: number; n: number };
 
+// Cores de dados, da paleta científica do LANC (química dos ensaios).
+const AZUL = "var(--color-absorbance)";
+const VERDE = "var(--color-signal)";
+const AMBAR = "var(--color-reagent)";
+const VIOLETA = "var(--color-pyrogallol)";
+
 const tooltipStyle = {
   background: "var(--color-paper-raised)",
   border: "1px solid var(--color-rule)",
-  borderRadius: 4,
+  borderRadius: 6,
   fontSize: 12,
+  boxShadow: "0 4px 16px rgb(0 0 0 / 0.08)",
 };
+const tickMono = { fontSize: 11, fill: "var(--color-ink-soft)" };
+const gridProps = {
+  vertical: false as const,
+  strokeDasharray: "2 4",
+  stroke: "var(--color-rule)",
+};
+const cursorSuave = { fill: "var(--color-ink)", fillOpacity: 0.04 };
+const RADIUS: [number, number, number, number] = [4, 4, 0, 0];
 
 function primeiroNome(nome: string): string {
   return nome.split(" ")[0];
@@ -31,143 +47,169 @@ export default function PainelDebora({
   metricas: MetricasBolsista[];
   temposPorTipo: TempoTipo[];
 }) {
-  const porNome = (mapa: (m: MetricasBolsista) => number, chave: string) =>
+  const dado = (mapa: (m: MetricasBolsista) => number, chave: string) =>
     metricas.map((m) => ({ nome: primeiroNome(m.nome), [chave]: mapa(m) }));
 
   return (
-    <section className="mt-12 flex flex-col gap-10">
-      {/* Tabela por bolsista */}
-      <div>
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-signal">
-          Bolsistas
+    <div className="mt-14 flex flex-col gap-14">
+      {/* ── Equipe ── */}
+      <section>
+        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-signal">
+          Equipe
         </p>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border border-rule">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
-                <th className="py-2 pr-3 font-normal">Bolsista</th>
-                <th className="py-2 pr-3 font-normal">Projetos</th>
-                <th className="py-2 pr-3 font-normal">Testes concl.</th>
-                <th className="py-2 pr-3 font-normal">Pendentes</th>
-                <th className="py-2 pr-3 font-normal">Últ. 3 meses</th>
-                <th className="py-2 pr-3 font-normal">Horas lab</th>
-                <th className="py-2 pr-3 font-normal">Sacrifícios</th>
-                <th className="py-2 font-normal">Reag. prep.</th>
+              <tr className="border-b border-rule bg-paper-raised text-left font-mono text-[10px] uppercase tracking-[0.08em] text-ink-soft">
+                <th className="py-2.5 pl-4 pr-3 font-normal">Bolsista</th>
+                <th className="py-2.5 pr-3 text-right font-normal">Proj.</th>
+                <th className="py-2.5 pr-3 text-right font-normal">Concl.</th>
+                <th className="py-2.5 pr-3 text-right font-normal">Pend.</th>
+                <th className="py-2.5 pr-3 text-right font-normal">3 meses</th>
+                <th className="py-2.5 pr-3 text-right font-normal">Horas</th>
+                <th className="py-2.5 pr-3 text-right font-normal">Sacr.</th>
+                <th className="py-2.5 pr-4 text-right font-normal">Reag.</th>
               </tr>
             </thead>
             <tbody>
-              {metricas.map((m) => (
-                <tr key={m.id} className="border-b border-rule/60">
-                  <td className="py-1.5 pr-3 text-ink">{m.nome}</td>
-                  <td className="py-1.5 pr-3 font-mono tabular-nums text-ink-soft">{m.projetos}</td>
-                  <td className="py-1.5 pr-3 font-mono tabular-nums text-ink">{m.testesConcluidos}</td>
-                  <td className="py-1.5 pr-3 font-mono tabular-nums text-reagent">{m.testesPendentes}</td>
-                  <td className="py-1.5 pr-3 font-mono tabular-nums text-ink-soft">{m.testes3Meses}</td>
-                  <td className="py-1.5 pr-3 font-mono tabular-nums text-ink-soft">{m.horasLab}</td>
-                  <td className="py-1.5 pr-3 font-mono tabular-nums text-ink-soft">{m.sacrificios}</td>
-                  <td className="py-1.5 font-mono tabular-nums text-ink-soft">{m.reagentesPreparados}</td>
+              {metricas.map((m, i) => (
+                <tr
+                  key={m.id}
+                  className={i % 2 === 1 ? "bg-paper-raised/40" : ""}
+                >
+                  <td className="py-2.5 pl-4 pr-3 font-medium text-ink">{m.nome}</td>
+                  <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-ink-soft">{m.projetos}</td>
+                  <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-ink">{m.testesConcluidos}</td>
+                  <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-reagent">{m.testesPendentes || "—"}</td>
+                  <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-ink-soft">{m.testes3Meses}</td>
+                  <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-ink-soft">{m.horasLab}</td>
+                  <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-ink-soft">{m.sacrificios}</td>
+                  <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-ink-soft">{m.reagentesPreparados}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      {/* Gráficos comparativos entre todos os bolsistas */}
-      <div>
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      {/* ── Comparativos ── */}
+      <section>
+        <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.16em] text-signal">
           Comparativos
         </p>
+        <p className="mb-5 max-w-2xl text-xs leading-relaxed text-ink-soft">
+          Como a equipe se distribui — testes, horas de bancada e produção.
+          Horas e reagentes vêm das sessões de laboratório; o tempo de execução,
+          dos horários de leitura de cada teste.
+        </p>
+
         {metricas.length === 0 ? (
-          <p className="text-sm text-ink-soft">Sem bolsistas para comparar ainda.</p>
+          <p className="text-sm text-ink-soft">Sem dados para comparar ainda.</p>
         ) : (
-          <div className="grid gap-8 lg:grid-cols-2">
-            <Grafico titulo="Testes por bolsista (concluídos + pendentes)">
-              <BarChart data={metricas.map((m) => ({ nome: primeiroNome(m.nome), Concluídos: m.testesConcluidos, Pendentes: m.testesPendentes }))}>
-                <CartesianGrid stroke="var(--color-rule)" />
-                <XAxis dataKey="nome" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="Concluídos" stackId="a" fill="var(--color-absorbance)" />
-                <Bar dataKey="Pendentes" stackId="a" fill="var(--color-reagent)" />
+          <div className="grid gap-5 lg:grid-cols-2">
+            <ChartCard titulo="Testes por bolsista" legenda>
+              <BarChart
+                data={metricas.map((m) => ({
+                  nome: primeiroNome(m.nome),
+                  Concluídos: m.testesConcluidos,
+                  Pendentes: m.testesPendentes,
+                }))}
+                margin={{ top: 4, right: 8, left: -12, bottom: 0 }}
+              >
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "var(--color-rule)" }} tick={tickMono} />
+                <YAxis tickLine={false} axisLine={false} tick={tickMono} allowDecimals={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} cursor={cursorSuave} />
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-mono)" }}
+                />
+                <Bar dataKey="Concluídos" stackId="a" fill={AZUL} maxBarSize={44} />
+                <Bar dataKey="Pendentes" stackId="a" fill={AMBAR} radius={RADIUS} maxBarSize={44} />
               </BarChart>
-            </Grafico>
+            </ChartCard>
 
-            <Grafico titulo="Testes nos últimos 3 meses">
-              <BarChart data={porNome((m) => m.testes3Meses, "valor")}>
-                <CartesianGrid stroke="var(--color-rule)" />
-                <XAxis dataKey="nome" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="valor" name="Testes (3 m)" fill="var(--color-absorbance)" />
+            <ChartCard titulo="Testes nos últimos 3 meses" cor={AZUL}>
+              <BarChart data={dado((m) => m.testes3Meses, "valor")} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "var(--color-rule)" }} tick={tickMono} />
+                <YAxis tickLine={false} axisLine={false} tick={tickMono} allowDecimals={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} cursor={cursorSuave} />
+                <Bar dataKey="valor" name="Testes (3 m)" fill={AZUL} radius={RADIUS} maxBarSize={44} />
               </BarChart>
-            </Grafico>
+            </ChartCard>
 
-            <Grafico titulo="Horas no laboratório">
-              <BarChart data={porNome((m) => m.horasLab, "horas")}>
-                <CartesianGrid stroke="var(--color-rule)" />
-                <XAxis dataKey="nome" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="horas" name="Horas" fill="var(--color-signal)" />
+            <ChartCard titulo="Horas no laboratório" cor={VERDE}>
+              <BarChart data={dado((m) => m.horasLab, "horas")} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "var(--color-rule)" }} tick={tickMono} />
+                <YAxis tickLine={false} axisLine={false} tick={tickMono} width={28} />
+                <Tooltip contentStyle={tooltipStyle} cursor={cursorSuave} />
+                <Bar dataKey="horas" name="Horas" fill={VERDE} radius={RADIUS} maxBarSize={44} />
               </BarChart>
-            </Grafico>
+            </ChartCard>
 
-            <Grafico titulo="Sacrifícios (participações)">
-              <BarChart data={porNome((m) => m.sacrificios, "valor")}>
-                <CartesianGrid stroke="var(--color-rule)" />
-                <XAxis dataKey="nome" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="valor" name="Sacrifícios" fill="var(--color-pyrogallol)" />
+            <ChartCard titulo="Sacrifícios (participações)" cor={VIOLETA}>
+              <BarChart data={dado((m) => m.sacrificios, "valor")} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "var(--color-rule)" }} tick={tickMono} />
+                <YAxis tickLine={false} axisLine={false} tick={tickMono} allowDecimals={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} cursor={cursorSuave} />
+                <Bar dataKey="valor" name="Sacrifícios" fill={VIOLETA} radius={RADIUS} maxBarSize={44} />
               </BarChart>
-            </Grafico>
+            </ChartCard>
 
-            <Grafico titulo="Reagentes preparados">
-              <BarChart data={porNome((m) => m.reagentesPreparados, "valor")}>
-                <CartesianGrid stroke="var(--color-rule)" />
-                <XAxis dataKey="nome" stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="valor" name="Reagentes" fill="var(--color-reagent)" />
+            <ChartCard titulo="Reagentes preparados" cor={AMBAR}>
+              <BarChart data={dado((m) => m.reagentesPreparados, "valor")} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "var(--color-rule)" }} tick={tickMono} />
+                <YAxis tickLine={false} axisLine={false} tick={tickMono} allowDecimals={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} cursor={cursorSuave} />
+                <Bar dataKey="valor" name="Reagentes" fill={AMBAR} radius={RADIUS} maxBarSize={44} />
               </BarChart>
-            </Grafico>
+            </ChartCard>
 
             {temposPorTipo.length > 0 && (
-              <Grafico titulo="Tempo médio de execução por tipo de teste (min)">
-                <BarChart data={temposPorTipo}>
-                  <CartesianGrid stroke="var(--color-rule)" />
-                  <XAxis dataKey="tipo" stroke="var(--color-ink-soft)" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                  <YAxis stroke="var(--color-ink-soft)" tick={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="mediaMin" name="Média (min)" fill="var(--color-pyrogallol)" />
+              <ChartCard titulo="Tempo médio de execução por tipo (min)" cor={AZUL}>
+                <BarChart data={temposPorTipo} margin={{ top: 4, right: 8, left: -12, bottom: 18 }}>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="tipo" tickLine={false} axisLine={{ stroke: "var(--color-rule)" }} tick={{ ...tickMono, fontSize: 10 }} interval={0} angle={-22} textAnchor="end" height={48} />
+                  <YAxis tickLine={false} axisLine={false} tick={tickMono} width={28} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={cursorSuave} />
+                  <Bar dataKey="mediaMin" name="Média (min)" fill={AZUL} radius={RADIUS} maxBarSize={40} />
                 </BarChart>
-              </Grafico>
+              </ChartCard>
             )}
           </div>
         )}
-        <p className="mt-3 max-w-2xl text-[11px] leading-relaxed text-ink-soft">
-          Horas no lab e reagentes preparados vêm das sessões de laboratório; o
-          tempo de execução, dos horários de leitura registrados em cada teste.
-        </p>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 
-function Grafico({
+function ChartCard({
   titulo,
+  cor,
+  legenda,
   children,
 }: {
   titulo: string;
+  cor?: string;
+  legenda?: boolean;
   children: React.ReactElement;
 }) {
   return (
-    <div>
-      <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-        {titulo}
-      </p>
-      <div className="h-56 w-full rounded border border-rule bg-paper-raised p-2">
+    <div className="rounded-lg border border-rule bg-paper-raised p-4">
+      <div className="mb-3 flex items-center gap-2">
+        {cor && !legenda && (
+          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: cor }} />
+        )}
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-soft">
+          {titulo}
+        </p>
+      </div>
+      <div className="h-56 w-full">
         <ResponsiveContainer>{children}</ResponsiveContainer>
       </div>
     </div>
