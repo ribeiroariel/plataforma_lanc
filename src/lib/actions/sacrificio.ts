@@ -101,15 +101,11 @@ export async function salvarSobrevivencia(dados: {
   const supabase = await createClient();
   if (dados.linhas.length === 0) return { sucesso: true };
 
-  const excluidoSemMotivo = dados.linhas.find(
-    (l) => !l.sobreviveu && !(l.motivo && l.motivo.trim())
-  );
-  if (excluidoSemMotivo) {
-    return {
-      erro: `Rato ${excluidoSemMotivo.rato}: informe a justificativa da exclusão.`,
-    };
-  }
-
+  // A justificativa da exclusão é opcional. Antes ela era obrigatória e, como o
+  // upsert é um lote único, um rato excluído sem motivo abortava a gravação de
+  // TODOS os ratos — inclusive os sobreviventes — e a fila de contagem nunca era
+  // semeada (as etapas seguintes ficavam vazias). Agora sempre semeia; o motivo
+  // fica registrado quando informado.
   const paraUpsert = dados.linhas.map((l) => ({
     sacrificio_id: dados.sacrificioId,
     rato: l.rato,

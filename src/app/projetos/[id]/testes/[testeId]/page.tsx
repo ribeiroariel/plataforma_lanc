@@ -14,6 +14,7 @@ import ChecklistProcedimento, { type EstadoPasso } from "./ChecklistProcedimento
 import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
 import EncerramentoTeste from "./EncerramentoTeste";
+import ConsumoReal from "./ConsumoReal";
 
 type ProjetoTeste = {
   id: string;
@@ -136,6 +137,18 @@ export default async function PaginaResultado({
 
   const fotosCaderno = await listarFotosCaderno(projetoTeste.id);
 
+  // Consumo real já registrado (reagente -> volume real em µL), para a seção de
+  // baixa de estoque no fim do teste.
+  const { data: consumoRows } = await supabase
+    .from("consumo_real")
+    .select("reagente_nome, volume_real_ul")
+    .eq("projeto_teste_id", projetoTeste.id)
+    .returns<{ reagente_nome: string; volume_real_ul: number | null }[]>();
+  const consumoExistente: Record<string, number | null> = {};
+  for (const c of consumoRows ?? []) {
+    consumoExistente[c.reagente_nome] = c.volume_real_ul;
+  }
+
   // Estado do checklist do procedimento: mapa passo_id -> {feito, quem, quando}.
   // Inclui quem encerrou o teste, para nomear no bloco de encerramento.
   const idsFeitores = Array.from(
@@ -235,6 +248,18 @@ export default async function PaginaResultado({
         inicio={projetoTeste.leitura_inicio}
         fim={projetoTeste.leitura_fim}
         podeEditar={podeEditar}
+      />
+
+      <ConsumoReal
+        projetoId={projetoId}
+        projetoTesteId={projetoTeste.id}
+        slug={projetoTeste.teste_slug}
+        nRoster={roster.length}
+        recipiente={
+          ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
+        }
+        existentes={consumoExistente}
+        podeRegistrar={podeEditar}
       />
 
       <EncerramentoTeste

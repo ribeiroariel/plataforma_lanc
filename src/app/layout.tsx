@@ -52,14 +52,16 @@ export default async function RootLayout({
       { href: "/minhas-funcoes", rotulo: "Minhas funções" },
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" },
-      { href: "/reagentes", rotulo: "Reagentes" }
+      { href: "/reagentes", rotulo: "Reagentes" },
+      { href: "/estoque", rotulo: "Estoque" }
     );
   } else if (usuario?.papel === "orientador") {
     navPrincipal.push(
       { href: "/orientador", rotulo: "Painel" },
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" },
-      { href: "/reagentes", rotulo: "Reagentes" }
+      { href: "/reagentes", rotulo: "Reagentes" },
+      { href: "/estoque", rotulo: "Estoque" }
     );
   }
   // Aba de aprovação de cadastros: só para quem pode (orientadora ou Ariel).

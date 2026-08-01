@@ -26,7 +26,7 @@ async function gravarVersao(
   const [{ data: projeto }, { data: grupos }] = await Promise.all([
     supabase
       .from("projetos")
-      .select("nome, descricao, numero_levas")
+      .select("nome, descricao, numero_levas, especie, linhagem")
       .eq("id", projetoId)
       .maybeSingle(),
     supabase
@@ -52,6 +52,9 @@ export async function criarProjeto(
   const nome = String(formData.get("nome") ?? "").trim();
   const descricao = String(formData.get("descricao") ?? "").trim();
   const numeroLevas = parseInt(String(formData.get("numeroLevas") ?? ""), 10);
+  const especieRaw = String(formData.get("especie") ?? "").trim();
+  const especie = especieRaw === "rato" || especieRaw === "camundongo" ? especieRaw : null;
+  const linhagem = String(formData.get("linhagem") ?? "").trim() || null;
 
   if (!nome) {
     return { erro: "Dê um nome ao projeto." };
@@ -99,6 +102,15 @@ export async function criarProjeto(
     return { erro: "Não foi possível criar o projeto: " + error.message };
   }
 
+  // Espécie/linhagem não vão pela RPC criar_projeto (assinatura fixa) — gravadas
+  // logo depois, no projeto recém-criado.
+  if (especie || linhagem) {
+    await supabase
+      .from("projetos")
+      .update({ especie, linhagem })
+      .eq("id", data);
+  }
+
   redirect(`/projetos/${data}`);
 }
 
@@ -112,6 +124,9 @@ export async function editarProjeto(
   const nome = String(formData.get("nome") ?? "").trim();
   const descricao = String(formData.get("descricao") ?? "").trim();
   const numeroLevas = parseInt(String(formData.get("numeroLevas") ?? ""), 10);
+  const especieRaw = String(formData.get("especie") ?? "").trim();
+  const especie = especieRaw === "rato" || especieRaw === "camundongo" ? especieRaw : null;
+  const linhagem = String(formData.get("linhagem") ?? "").trim() || null;
   const nota = String(formData.get("nota") ?? "").trim();
 
   if (!nome) return { erro: "Dê um nome ao projeto." };
@@ -161,6 +176,8 @@ export async function editarProjeto(
       nome,
       descricao: descricao || null,
       numero_levas: numeroLevas,
+      especie,
+      linhagem,
       tecidos: tecidosDoForm(formData),
     })
     .eq("id", projetoId);

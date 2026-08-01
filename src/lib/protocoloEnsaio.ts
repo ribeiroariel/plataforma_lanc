@@ -269,3 +269,23 @@ export function aparelhosDoSlug(slug: string): Aparelho[] {
   const p = protocoloDoSlug(slug);
   return p ? Array.from(new Set(p.modos.map((m) => m.aparelho))) : [];
 }
+
+/**
+ * Catálogo de reagentes/soluções conhecidos dos protocolos (nome + se é de
+ * estoque ou preparado no dia), sem repetição. Serve para a aba de estoque já
+ * vir com as soluções conhecidas e para casar o nome no abate do consumo real.
+ */
+export function reagentesConhecidos(): { nome: string; origem: "estoque" | "dia" }[] {
+  const vistos = new Map<string, "estoque" | "dia">();
+  for (const { protocolo } of PROTOCOLOS) {
+    for (const r of protocolo.reagentes) {
+      // Se aparece como estoque em algum ensaio, prevalece "estoque".
+      const atual = vistos.get(r.nome);
+      if (atual === "estoque") continue;
+      vistos.set(r.nome, r.origem);
+    }
+  }
+  return Array.from(vistos.entries())
+    .map(([nome, origem]) => ({ nome, origem }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}

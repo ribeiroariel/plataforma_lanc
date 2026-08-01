@@ -101,7 +101,7 @@ export default async function PaginaImpressao({
         .returns<ProjetoTeste>(),
       supabase
         .from("projetos")
-        .select("nome, numero_levas")
+        .select("nome, numero_levas, especie, linhagem")
         .eq("id", projetoId)
         .maybeSingle(),
       supabase
@@ -191,6 +191,20 @@ export default async function PaginaImpressao({
         : projetoTeste.teste_slug,
     },
     { rotulo: "Tecido / matriz", valor: teste ? nomeTecido(teste.tecido) : "—" },
+    {
+      rotulo: "Modelo animal",
+      valor:
+        [
+          projeto?.especie === "camundongo"
+            ? "Camundongo"
+            : projeto?.especie === "rato"
+            ? "Rato"
+            : null,
+          projeto?.linhagem,
+        ]
+          .filter(Boolean)
+          .join(" ") || "—",
+    },
     { rotulo: "Leva", valor: projetoTeste.leva ? String(projetoTeste.leva) : "todas" },
     { rotulo: "Responsável", valor: nomePessoa.get(projetoTeste.responsavel_id) ?? "—" },
     { rotulo: "Aparelho", valor: aparelhoLabel },

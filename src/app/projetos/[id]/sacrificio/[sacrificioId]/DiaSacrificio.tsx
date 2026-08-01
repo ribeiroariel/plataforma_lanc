@@ -230,7 +230,8 @@ export default function DiaSacrificio({
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
           Desmarque os ratos que não entram no sacrifício (morreram, adoeceram,
-          etc.) e justifique. Salvar gera a fila de contagem abaixo.
+          etc.) — a justificativa é opcional, mas ajuda no registro. Salvar gera
+          a fila de contagem abaixo.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -239,7 +240,7 @@ export default function DiaSacrificio({
                 <th className="py-2 pr-3 font-normal">Nº</th>
                 <th className="py-2 pr-3 font-normal">Grupo</th>
                 <th className="py-2 pr-3 font-normal">Sobreviveu</th>
-                <th className="py-2 font-normal">Justificativa (se excluído)</th>
+                <th className="py-2 font-normal">Justificativa (opcional)</th>
               </tr>
             </thead>
             <tbody>
