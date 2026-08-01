@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type TesteRow = {
   id: string;
@@ -84,15 +87,9 @@ export default async function MeusTestes() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span
-            className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
-              papel === "responsavel"
-                ? "bg-absorbance/12 text-absorbance"
-                : "bg-ink/5 text-ink-soft"
-            }`}
-          >
+          <Badge tom={papel === "responsavel" ? "info" : "neutro"}>
             {papel === "responsavel" ? "responsável" : "ajudante"}
-          </span>
+          </Badge>
           <span className="font-mono text-xs uppercase text-signal">
             {papel === "responsavel" && row.status !== "concluido"
               ? "Registrar →"
@@ -105,21 +102,18 @@ export default async function MeusTestes() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
-        Bancada
-      </p>
-      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-        Meus testes
-      </h1>
-      <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-        Testes designados a você (como responsável ou ajudante), de todos os
-        projetos.
-      </p>
+      <PageHeader
+        eyebrow="Bancada"
+        titulo="Meus testes"
+        descricao="Testes designados a você (como responsável ou ajudante), de todos os projetos."
+      />
 
       {itens.length === 0 && (
-        <p className="mt-8 text-sm text-ink-soft">
-          Nenhum teste designado a você por enquanto.
-        </p>
+        <EmptyState
+          className="mt-8"
+          titulo="Nenhum teste designado a você por enquanto"
+          descricao="Quando um coautor designar um ensaio a você, ele aparece aqui — pendente ou concluído."
+        />
       )}
 
       {pendentes.length > 0 && (

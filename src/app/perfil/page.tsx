@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import PerfilForm from "./PerfilForm";
 import TrocarSenha from "./TrocarSenha";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 
 export default async function PaginaPerfil() {
   const usuario = await getUsuarioAtual();
@@ -10,24 +12,24 @@ export default async function PaginaPerfil() {
 
   return (
     <main className="mx-auto max-w-lg px-4 py-10 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
-        Perfil
-      </p>
-      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-        Meu perfil
-      </h1>
-      <p className="mt-2 mb-8 text-sm leading-relaxed text-ink-soft">
-        Foto e apresentação aparecem no carrossel público &quot;Quem
-        somos&quot; da página inicial
-        {!usuario.aprovado && " assim que seu cadastro for aprovado"}.
-      </p>
+      <PageHeader
+        eyebrow="Perfil"
+        titulo="Meu perfil"
+        descricao={
+          <>
+            Foto e apresentação aparecem no carrossel público &quot;Quem
+            somos&quot; da página inicial
+            {!usuario.aprovado && " assim que seu cadastro for aprovado"}.
+          </>
+        }
+      />
 
-      <PerfilForm usuario={usuario} />
+      <div className="mt-8">
+        <PerfilForm usuario={usuario} />
+      </div>
 
       <section className="mt-12 border-t border-rule pt-8">
-        <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          Segurança
-        </h2>
+        <SectionTitle className="mb-4">Segurança</SectionTitle>
         <TrocarSenha />
       </section>
     </main>

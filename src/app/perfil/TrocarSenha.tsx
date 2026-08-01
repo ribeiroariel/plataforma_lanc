@@ -45,7 +45,7 @@ export default function TrocarSenha() {
         </p>
       )}
       {estado && "sucesso" in estado && (
-        <p className="text-sm text-green-700 dark:text-green-400">
+        <p className="text-sm text-sucesso">
           Senha alterada.
         </p>
       )}

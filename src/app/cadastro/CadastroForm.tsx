@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { cadastrar } from "@/lib/actions/auth";
 import { CampoSenha } from "@/components/auth/CampoSenha";
 import { MedidorForcaSenha } from "@/components/auth/MedidorForcaSenha";
+import { INPUT, BOTAO_PRIMARIO } from "@/lib/estilos";
 
 export function CadastroForm() {
   const [estado, formAction, pendente] = useActionState(cadastrar, undefined);
@@ -21,12 +22,7 @@ export function CadastroForm() {
     <form action={formAction} className="mt-8 flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm text-ink">
         Nome
-        <input
-          type="text"
-          name="nome"
-          required
-          className="rounded border border-rule bg-paper-raised px-3 py-2 text-ink focus:border-absorbance focus:outline-none"
-        />
+        <input type="text" name="nome" required className={INPUT} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-ink">
@@ -37,7 +33,7 @@ export function CadastroForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded border border-rule bg-paper-raised px-3 py-2 text-ink focus:border-absorbance focus:outline-none"
+          className={INPUT}
         />
       </label>
 
@@ -50,7 +46,7 @@ export function CadastroForm() {
             required
             value={confirmarEmail}
             onChange={(e) => setConfirmarEmail(e.target.value)}
-            className="rounded border border-rule bg-paper-raised px-3 py-2 text-ink focus:border-absorbance focus:outline-none"
+            className={INPUT}
           />
         </label>
         {emailsNaoConferem && (
@@ -93,7 +89,7 @@ export function CadastroForm() {
       <button
         type="submit"
         disabled={pendente || !podeEnviar}
-        className="mt-2 rounded bg-absorbance px-4 py-2 text-paper hover:bg-ink disabled:opacity-50"
+        className={`mt-2 ${BOTAO_PRIMARIO}`}
       >
         {pendente ? "Criando conta..." : "Criar conta"}
       </button>

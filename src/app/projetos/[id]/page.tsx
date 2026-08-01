@@ -9,6 +9,10 @@ import FormularioMembro from "./FormularioMembro";
 import FormularioTeste from "./FormularioTeste";
 import FinalizarBotao from "./FinalizarBotao";
 import ExcluirProjetoBotao from "./ExcluirProjetoBotao";
+import { VoltarLink } from "@/components/ui/VoltarLink";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type Projeto = {
   id: string;
@@ -156,12 +160,9 @@ export default async function DetalheProjeto({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <Link
-        href={souOrientador ? "/orientador" : "/projetos"}
-        className="text-sm text-ink-soft hover:text-absorbance"
-      >
-        {souOrientador ? "← Painel da orientadora" : "← Meus projetos"}
-      </Link>
+      <VoltarLink href={souOrientador ? "/orientador" : "/projetos"}>
+        {souOrientador ? "Painel da orientadora" : "Meus projetos"}
+      </VoltarLink>
 
       <div className="mt-2 flex items-start justify-between gap-4">
         <div>
@@ -218,19 +219,15 @@ export default async function DetalheProjeto({
               .join(", ")}
           </span>
         )}
-        {projeto.finalizado && (
-          <span className="rounded-full bg-ink/5 px-2 py-0.5 uppercase tracking-wide text-ink-soft">
-            finalizado
-          </span>
-        )}
+        {projeto.finalizado && <Badge tom="neutro">finalizado</Badge>}
       </div>
 
       <div className="mt-4">
         <Link
           href={`/projetos/${projeto.id}/sacrificio`}
-          className="inline-block rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-signal"
+          className="inline-flex items-center gap-1.5 rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-absorbance hover:text-absorbance"
         >
-          Sacrifício →
+          Sacrifício <span aria-hidden="true">→</span>
         </Link>
       </div>
 
@@ -260,9 +257,7 @@ export default async function DetalheProjeto({
       )}
 
       <section className="mt-10">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          Grupos experimentais
-        </h2>
+        <SectionTitle>Grupos experimentais</SectionTitle>
         <div className="overflow-x-auto">
           <table className="text-sm">
             <thead>
@@ -300,9 +295,7 @@ export default async function DetalheProjeto({
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          Membros
-        </h2>
+        <SectionTitle contagem={membros?.length ?? 0}>Membros</SectionTitle>
         <div className="flex flex-col gap-2">
           {membros?.map((m, i) => (
             <div
@@ -310,15 +303,9 @@ export default async function DetalheProjeto({
               className="flex items-center justify-between rounded border border-rule bg-paper-raised px-3 py-2 text-sm"
             >
               <span className="text-ink">{m.profiles?.nome}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
-                  m.papel === "coautor"
-                    ? "bg-absorbance/12 text-absorbance"
-                    : "bg-ink/5 text-ink-soft"
-                }`}
-              >
+              <Badge tom={m.papel === "coautor" ? "info" : "neutro"}>
                 {m.papel === "coautor" ? "coautor" : "ajudante"}
-              </span>
+              </Badge>
             </div>
           ))}
         </div>
@@ -328,14 +315,20 @@ export default async function DetalheProjeto({
       </section>
 
       <section className="mt-10">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <SectionTitle contagem={testesDesignados?.length ?? 0}>
           Testes designados
-        </h2>
+        </SectionTitle>
         {(!testesDesignados || testesDesignados.length === 0) && (
-          <p className="text-sm text-ink-soft">
-            Nenhum teste designado ainda
-            {!souCoautor && !souOrientador && " (ou você não é responsável por nenhum aqui)"}.
-          </p>
+          <EmptyState
+            titulo="Nenhum teste designado ainda"
+            descricao={
+              !souCoautor && !souOrientador
+                ? "Você não é responsável por nenhum teste neste projeto."
+                : souCoautor
+                ? "Designe abaixo quais ensaios cada membro vai registrar."
+                : undefined
+            }
+          />
         )}
         <div className="flex flex-col gap-2">
           {testesDesignados?.map((t) => {
@@ -357,15 +350,9 @@ export default async function DetalheProjeto({
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
-                      t.status === "concluido"
-                        ? "bg-green-600/12 text-green-700 dark:text-green-400"
-                        : "bg-reagent/12 text-reagent"
-                    }`}
-                  >
+                  <Badge tom={t.status === "concluido" ? "sucesso" : "atencao"}>
                     {t.status === "concluido" ? "concluído" : "pendente"}
-                  </span>
+                  </Badge>
                   {podeAbrir && (
                     <Link
                       href={`/projetos/${projeto.id}/testes/${t.id}`}
@@ -393,9 +380,7 @@ export default async function DetalheProjeto({
 
       {versoes && versoes.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-            Histórico de alterações
-          </h2>
+          <SectionTitle>Histórico de alterações</SectionTitle>
           <ul className="flex flex-col gap-2 text-sm">
             {versoes.map((v) => (
               <li key={v.id} className="flex flex-wrap gap-x-3 text-ink-soft">

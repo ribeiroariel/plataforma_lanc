@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import { criarProjeto } from "@/lib/actions/projetos";
 import { TECIDOS_ANALISAVEIS, nomeTecido } from "@/lib/tecidos";
 import { INPUT, INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
+import { VoltarLink } from "@/components/ui/VoltarLink";
 
 type LinhaGrupo = { nome: string; ratos: string[] };
 
@@ -80,10 +80,11 @@ export default function NovoProjeto() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <Link href="/projetos" className="text-sm text-ink-soft hover:text-signal">
-        ← Meus projetos
-      </Link>
-      <h1 className="mt-2 font-display text-3xl leading-tight text-ink">
+      <VoltarLink href="/projetos">Meus projetos</VoltarLink>
+      <p className="mt-2 font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+        Pesquisa
+      </p>
+      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
         Novo projeto
       </h1>
 

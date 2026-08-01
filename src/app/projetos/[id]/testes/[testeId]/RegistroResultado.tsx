@@ -417,7 +417,7 @@ export default function RegistroResultado({
         <span
           className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
             status === "concluido"
-              ? "bg-green-600/12 text-green-700 dark:text-green-400"
+              ? "bg-sucesso/12 text-sucesso"
               : "bg-reagent/12 text-reagent"
           }`}
         >
@@ -499,7 +499,7 @@ export default function RegistroResultado({
                 <span className="text-alerta"> — fora do padrão. {config.qc.dica}</span>
               )}
               {qcSodOk === true && (
-                <span className="text-green-700 dark:text-green-400"> — dentro do padrão.</span>
+                <span className="text-sucesso"> — dentro do padrão.</span>
               )}
             </p>
           )}
@@ -533,7 +533,7 @@ export default function RegistroResultado({
                 <span className="text-alerta"> — abaixo de 0,99. {config.qc.dica}</span>
               )}
               {qcCurvaOk === true && (
-                <span className="text-green-700 dark:text-green-400"> — dentro do padrão.</span>
+                <span className="text-sucesso"> — dentro do padrão.</span>
               )}
             </p>
           )}
@@ -596,7 +596,7 @@ export default function RegistroResultado({
                             (conf ? (
                               <span
                                 title="célula confirmada"
-                                className="text-green-700 dark:text-green-400"
+                                className="text-sucesso"
                               >
                                 ✓
                               </span>
@@ -792,7 +792,7 @@ function AvisoQC({ ok, config }: { ok: boolean; config: ConfigTeste }) {
   return (
     <p
       className={`mt-2 text-xs ${
-        ok ? "text-green-700 dark:text-green-400" : "text-alerta"
+        ok ? "text-sucesso" : "text-alerta"
       }`}
     >
       {ok

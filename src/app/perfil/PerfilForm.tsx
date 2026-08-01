@@ -63,7 +63,7 @@ export default function PerfilForm({ usuario }: { usuario: Profile }) {
         </p>
       )}
       {estado && "sucesso" in estado && (
-        <p className="text-sm text-green-700 dark:text-green-400">
+        <p className="text-sm text-sucesso">
           Perfil atualizado.
         </p>
       )}

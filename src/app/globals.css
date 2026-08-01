@@ -24,6 +24,10 @@
   --color-reagent: #a8721b;
   --color-pyrogallol: #5b3b82;
   --color-alerta: #a8402f;
+  /* sucesso: verde de "concluído", da mesma família da logo, mas distinto do
+     signal (que carrega o papel editorial). Evita o green-600 cru do Tailwind
+     em pílulas de status. */
+  --color-sucesso: #1f7a4d;
 
   --background: var(--color-paper);
   --foreground: var(--color-ink);
@@ -40,6 +44,7 @@
   --color-reagent: #e0ac52;
   --color-pyrogallol: #b593de;
   --color-alerta: #d97862;
+  --color-sucesso: #5cbf8a;
 
   --background: var(--color-paper);
   --foreground: var(--color-ink);
@@ -57,6 +62,7 @@
     --color-reagent: #e0ac52;
     --color-pyrogallol: #b593de;
     --color-alerta: #d97862;
+    --color-sucesso: #5cbf8a;
 
     --background: var(--color-paper);
     --foreground: var(--color-ink);
@@ -74,6 +80,7 @@
   --color-reagent: var(--color-reagent);
   --color-pyrogallol: var(--color-pyrogallol);
   --color-alerta: var(--color-alerta);
+  --color-sucesso: var(--color-sucesso);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
@@ -90,6 +97,40 @@ body {
 ::selection {
   background: var(--color-absorbance);
   color: var(--color-paper);
+}
+
+/* Legibilidade de periódico: kerning e ligaduras no corpo do texto. */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Números tabulares e caixa nas fontes mono (dados de ensaio, datas, contagens)
+   ficam alinhados coluna a coluna sem precisar repetir a classe em toda tabela. */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco de teclado visível e com a cor de dados do laboratório (absorbance).
+   Substitui o outline-none dos inputs por um anel que só aparece na navegação
+   por teclado (:focus-visible), nunca no clique de mouse — piso de
+   acessibilidade exigido em todas as abas. */
+:where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--color-absorbance);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Respeita quem pede menos movimento: neutraliza transições e animações. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Impressão (tabela do teste encerrado para colar no caderno de experimentos):

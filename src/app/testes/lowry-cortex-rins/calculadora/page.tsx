@@ -188,7 +188,7 @@ export default function CalculadoraLowry() {
           <p
             className={`mb-4 inline-block rounded px-3 py-1 text-sm font-medium ${
               dentroDoPadrao
-                ? "bg-green-600/12 text-green-700 dark:text-green-400"
+                ? "bg-sucesso/12 text-sucesso"
                 : "bg-alerta/12 text-alerta"
             }`}
           >
