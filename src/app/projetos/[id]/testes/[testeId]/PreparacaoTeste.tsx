@@ -165,7 +165,7 @@ export default function PreparacaoTeste({
         </p>
       )}
       {salvo && (
-        <p className="mt-2 text-xs text-green-700 dark:text-green-400">Salvo.</p>
+        <p className="mt-2 text-xs text-sucesso">Salvo.</p>
       )}
       {erro && <p className="mt-2 text-sm text-alerta">{erro}</p>}
     </div>

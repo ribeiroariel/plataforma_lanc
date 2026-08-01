@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { testesPorTecido, nomeTecido, tituloSemTecido } from "@/lib/testes";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
+import { TestesNav } from "./TestesNav";
 
 export default async function LayoutTestes({
   children,
@@ -20,32 +20,21 @@ export default async function LayoutTestes({
     );
   }
 
-  const grupos = testesPorTecido();
+  const grupos = Array.from(testesPorTecido().entries()).map(
+    ([tecido, lista]) => ({
+      tecido,
+      nome: nomeTecido(tecido),
+      itens: lista.map((teste) => ({
+        slug: teste.slug,
+        titulo: tituloSemTecido(teste.titulo, tecido),
+      })),
+    })
+  );
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
-      <aside className="shrink-0 lg:w-64">
-        <nav className="flex flex-col gap-6 border-b border-rule pb-6 text-sm lg:border-b-0 lg:border-r lg:pr-6 lg:pb-0">
-          {Array.from(grupos.entries()).map(([tecido, lista]) => (
-            <div key={tecido}>
-              <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft">
-                {nomeTecido(tecido)}
-              </p>
-              <ul className="flex flex-col gap-1.5">
-                {lista.map((teste) => (
-                  <li key={teste.slug}>
-                    <Link
-                      href={`/testes/${teste.slug}`}
-                      className="text-ink-soft transition-colors hover:text-signal"
-                    >
-                      {tituloSemTecido(teste.titulo, tecido)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
+      <aside className="shrink-0 lg:sticky lg:top-28 lg:w-64 lg:self-start">
+        <TestesNav grupos={grupos} />
       </aside>
       <div className="min-w-0 flex-1">{children}</div>
     </div>

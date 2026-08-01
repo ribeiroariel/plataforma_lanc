@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { INPUT } from "@/lib/estilos";
 
 type Props = {
   name: string;
@@ -37,7 +38,7 @@ export function CampoSenha({
           required={required}
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-          className="w-full rounded border border-rule bg-paper-raised px-3 py-2 pr-10 text-ink focus:border-absorbance focus:outline-none"
+          className={`${INPUT} w-full pr-10`}
         />
         <button
           type="button"

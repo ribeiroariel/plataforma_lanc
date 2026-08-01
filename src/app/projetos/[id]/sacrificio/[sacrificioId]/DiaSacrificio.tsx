@@ -188,7 +188,7 @@ export default function DiaSacrificio({
         <div className="flex flex-wrap items-center gap-3 rounded border border-rule bg-paper-raised px-4 py-3">
           {concluido ? (
             <>
-              <span className="font-mono text-xs uppercase tracking-wide text-green-700 dark:text-green-400">
+              <span className="font-mono text-xs uppercase tracking-wide text-sucesso">
                 ● Sacrifício encerrado
               </span>
               <span className="text-xs text-ink-soft">
@@ -374,7 +374,7 @@ export default function DiaSacrificio({
                       key={r.id}
                       className="flex flex-wrap items-center gap-2 text-sm text-ink-soft"
                     >
-                      <span className="font-mono text-green-700 dark:text-green-400">
+                      <span className="font-mono text-sucesso">
                         #{r.ordem}
                       </span>
                       <span className="font-mono text-ink">Rato {r.rato}</span>
@@ -601,7 +601,7 @@ function PainelAliquotas({
                     {travado ? (
                       <span
                         title="alíquota confirmada"
-                        className="text-green-700 dark:text-green-400"
+                        className="text-sucesso"
                       >
                         🔒 confirmada
                       </span>
@@ -863,7 +863,7 @@ function PainelSeparacaoAliquotas({
                               {travado ? (
                                 <span
                                   title="alíquota confirmada"
-                                  className="text-green-700 dark:text-green-400"
+                                  className="text-sucesso"
                                 >
                                   🔒 confirmada
                                 </span>

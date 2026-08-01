@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { BOTAO_PRIMARIO } from "@/lib/estilos";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 type ProjetoResumo = {
   id: string;
@@ -23,47 +25,66 @@ export default async function ListaProjetos() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
-            {souOrientador ? "Acompanhamento" : "Pesquisa"}
-          </p>
-          <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-            {souOrientador ? "Todos os projetos" : "Meus projetos"}
-          </h1>
-        </div>
-        {!souOrientador && (
-          <Link href="/projetos/novo" className={`shrink-0 text-sm ${BOTAO_PRIMARIO}`}>
-            + Novo projeto
-          </Link>
-        )}
-      </div>
-
-      {(!projetos || projetos.length === 0) && (
-        <p className="mt-8 text-sm text-ink-soft">
-          {souOrientador
-            ? "Nenhum projeto criado ainda."
-            : "Você ainda não participa de nenhum projeto."}
-        </p>
-      )}
-
-      <ul className="mt-8 flex flex-col gap-3">
-        {projetos?.map((projeto) => (
-          <li key={projeto.id}>
-            <Link
-              href={`/projetos/${projeto.id}`}
-              className="block rounded border border-rule bg-paper-raised p-5 transition-colors hover:border-absorbance"
-            >
-              <p className="font-display text-lg text-ink">{projeto.nome}</p>
-              {projeto.descricao && (
-                <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-                  {projeto.descricao}
-                </p>
-              )}
+      <PageHeader
+        eyebrow={souOrientador ? "Acompanhamento" : "Pesquisa"}
+        titulo={souOrientador ? "Todos os projetos" : "Meus projetos"}
+        acao={
+          !souOrientador && (
+            <Link href="/projetos/novo" className={`text-sm ${BOTAO_PRIMARIO}`}>
+              + Novo projeto
             </Link>
-          </li>
-        ))}
-      </ul>
+          )
+        }
+      />
+
+      {!projetos || projetos.length === 0 ? (
+        <EmptyState
+          className="mt-8"
+          titulo={
+            souOrientador
+              ? "Nenhum projeto criado ainda"
+              : "Você ainda não participa de nenhum projeto"
+          }
+          descricao={
+            souOrientador
+              ? "Assim que os bolsistas criarem projetos, eles aparecem aqui."
+              : "Crie um projeto para organizar grupos, designar testes e registrar resultados."
+          }
+          acao={
+            !souOrientador && (
+              <Link href="/projetos/novo" className={`text-sm ${BOTAO_PRIMARIO}`}>
+                + Novo projeto
+              </Link>
+            )
+          }
+        />
+      ) : (
+        <ul className="mt-8 flex flex-col gap-3">
+          {projetos.map((projeto) => (
+            <li key={projeto.id}>
+              <Link
+                href={`/projetos/${projeto.id}`}
+                className="group flex items-start justify-between gap-4 rounded border border-rule bg-paper-raised p-5 transition-colors hover:border-absorbance"
+              >
+                <div className="min-w-0">
+                  <p className="font-display text-lg text-ink">{projeto.nome}</p>
+                  {projeto.descricao && (
+                    <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+                      {projeto.descricao}
+                    </p>
+                  )}
+                </div>
+                <span
+                  aria-hidden="true"
+                  className="mt-1 shrink-0 text-ink-soft/50 transition-transform group-hover:translate-x-0.5 group-hover:text-absorbance"
+                >
+                  →
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
   );
 }

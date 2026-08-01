@@ -122,7 +122,7 @@ function LinhaPedido({ pedido }: { pedido: PedidoRow }) {
         </p>
       )}
       {atendido && pedido.atendido_em && (
-        <p className="mt-1 text-[11px] text-green-700 dark:text-green-400">
+        <p className="mt-1 text-[11px] text-sucesso">
           Atendido em {dataHora(pedido.atendido_em)}
         </p>
       )}
