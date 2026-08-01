@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ResultadoPerfil = { erro: string } | { sucesso: true } | undefined;
 
@@ -64,9 +65,17 @@ export async function atualizarPerfil(
     const extensao = foto.type === "image/png" ? "png" : foto.type === "image/webp" ? "webp" : "jpg";
     const caminho = `${user.id}/foto.${extensao}`;
 
-    const { error: erroUpload } = await supabase.storage
-      .from("avatars")
-      .upload(caminho, foto, { upsert: true, contentType: foto.type });
+    // O upload usa a service role: o caminho é travado na pasta do próprio
+    // usuário (validado acima), então é seguro e dispensa policies de
+    // storage.objects em produção — que é o que estava barrando o envio. Se a
+    // chave não estiver no ambiente, cai no client do usuário (caminho antigo).
+    const admin = createAdminClient();
+    const storage = (admin ?? supabase).storage.from("avatars");
+
+    const { error: erroUpload } = await storage.upload(caminho, foto, {
+      upsert: true,
+      contentType: foto.type,
+    });
 
     if (erroUpload) {
       return { erro: "Não foi possível enviar a foto: " + erroUpload.message };
@@ -74,7 +83,7 @@ export async function atualizarPerfil(
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from("avatars").getPublicUrl(caminho);
+    } = storage.getPublicUrl(caminho);
 
     // Evita cache de navegador/CDN mostrando a foto antiga depois do upsert.
     atualizacao.foto_url = `${publicUrl}?v=${Date.now()}`;
