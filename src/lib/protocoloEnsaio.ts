@@ -63,6 +63,17 @@ export type ProtocoloEnsaio = {
 const INFINITE = "infinite_200pro" as const;
 const UVVIS = "uv_vis" as const;
 
+// Ensaios de luz VISÍVEL (412–650 nm) podem ser lidos em qualquer recipiente —
+// microplaca de 96 ou 24 poços (Infinite) e microcubeta ou cubeta padrão de
+// plástico/vidro (UV-VIS). Só os ensaios em UV (CAT 240 nm, carboniladas 370 nm)
+// são restritos, porque exigem quartzo/placa UV-Star (definidos caso a caso).
+const TODOS_MODOS: ModoLeitura[] = [
+  { aparelho: INFINITE, recipiente: "microplaca_96" },
+  { aparelho: INFINITE, recipiente: "microplaca_24" },
+  { aparelho: UVVIS, recipiente: "microcubeta" },
+  { aparelho: UVVIS, recipiente: "cubeta_padrao" },
+];
+
 const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
   {
     prefixos: ["cat-"],
@@ -88,12 +99,9 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["sod-"],
     protocolo: {
       escala: true,
-      // Formato padrão = microplaca de 24 poços (não há pipeta de 1 µL para 96p).
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: INFINITE, recipiente: "microplaca_24" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Leitura a 420 nm (visível) — qualquer recipiente. O formato mais prático
+      // é a microplaca de 24 poços (não há pipeta de 1 µL para 96 poços).
+      modos: TODOS_MODOS,
       reagentes: [
         { nome: "Tampão TRIS 50 mM + EDTA pH 8,2", origem: "estoque", ulBase: 233 },
         { nome: "Catalase — solução de trabalho", origem: "dia", ulBase: 1 },
@@ -105,11 +113,8 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["acido-ascorbico"],
     protocolo: {
       escala: true,
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "microcubeta" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Leitura a 520 nm (visível) — qualquer recipiente.
+      modos: TODOS_MODOS,
       reagentes: [
         { nome: "Tampão citrato/acetato pH 4,15 com pHMB", origem: "estoque", ulBase: 62 },
         { nome: "Solução de DCIP", origem: "estoque", ulBase: 63 },
@@ -121,11 +126,8 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["h2o2"],
     protocolo: {
       escala: true,
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "microcubeta" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Leitura a 610 nm (visível) — qualquer recipiente.
+      modos: TODOS_MODOS,
       reagentes: [
         {
           nome: "Meio de reação",
@@ -141,11 +143,9 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["tbars"],
     protocolo: {
       escala: false,
-      // Reação em tubo de vidro (1.700 µL), incubação a 95 °C; só a alíquota vai à leitura.
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Reação em tubo de vidro (1.700 µL), incubação a 95 °C; só a alíquota vai
+      // à leitura a 535 nm (visível) — qualquer recipiente serve para ler.
+      modos: TODOS_MODOS,
       reagentes: [
         { nome: "SDS 8,1%", origem: "estoque", ulBase: 20 },
         { nome: "Ácido acético 20% pH 3,5", origem: "estoque", ulBase: 600 },
@@ -201,10 +201,8 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["sulfidrilas"],
     protocolo: {
       escala: false,
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Leitura a 412 nm (visível) — qualquer recipiente.
+      modos: TODOS_MODOS,
       reagentes: [
         { nome: "PBS pH 7,4", origem: "estoque", ulBase: 980 },
         { nome: "DTNB 10 mM", origem: "dia", ulBase: 30 },
@@ -221,10 +219,8 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["tiois-dissulfetos"],
     protocolo: {
       escala: false,
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Leitura a 412 nm (visível) — qualquer recipiente.
+      modos: TODOS_MODOS,
       reagentes: [
         { nome: "Tampão TRIS 50 mM pH 9,0", origem: "estoque", ulBase: 100 },
         { nome: "DTT 3 mM", origem: "dia", ulBase: 100 },
@@ -244,10 +240,8 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["lowry"],
     protocolo: {
       escala: false,
-      modos: [
-        { aparelho: INFINITE, recipiente: "microplaca_96" },
-        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
-      ],
+      // Leitura a 650 nm (visível) — qualquer recipiente.
+      modos: TODOS_MODOS,
       reagentes: [
         { nome: "Água ultrapura (milli-Q)", origem: "estoque", ulBase: 190 },
         { nome: "Reativo C", origem: "dia", ulBase: 1000 },
@@ -274,4 +268,24 @@ export function recipientesDoSlug(slug: string): Recipiente[] {
 export function aparelhosDoSlug(slug: string): Aparelho[] {
   const p = protocoloDoSlug(slug);
   return p ? Array.from(new Set(p.modos.map((m) => m.aparelho))) : [];
+}
+
+/**
+ * Catálogo de reagentes/soluções conhecidos dos protocolos (nome + se é de
+ * estoque ou preparado no dia), sem repetição. Serve para a aba de estoque já
+ * vir com as soluções conhecidas e para casar o nome no abate do consumo real.
+ */
+export function reagentesConhecidos(): { nome: string; origem: "estoque" | "dia" }[] {
+  const vistos = new Map<string, "estoque" | "dia">();
+  for (const { protocolo } of PROTOCOLOS) {
+    for (const r of protocolo.reagentes) {
+      // Se aparece como estoque em algum ensaio, prevalece "estoque".
+      const atual = vistos.get(r.nome);
+      if (atual === "estoque") continue;
+      vistos.set(r.nome, r.origem);
+    }
+  }
+  return Array.from(vistos.entries())
+    .map(([nome, origem]) => ({ nome, origem }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }

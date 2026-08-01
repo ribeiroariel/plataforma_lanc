@@ -243,6 +243,16 @@ create table if not exists public.projetos (
 alter table public.projetos add column if not exists numero_levas integer;
 alter table public.projetos add column if not exists finalizado boolean not null default false;
 alter table public.projetos add column if not exists finalizado_em timestamptz;
+-- Modelo animal do projeto: espécie (rato ou camundongo) e linhagem/raça
+-- (ex.: Wistar, Swiss). Aplica-se a todos os animais do projeto.
+alter table public.projetos add column if not exists especie text;
+alter table public.projetos add column if not exists linhagem text;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'projetos_especie_check') then
+    alter table public.projetos
+      add constraint projetos_especie_check check (especie in ('rato', 'camundongo'));
+  end if;
+end $$;
 -- Tecidos que o projeto vai analisar (ex.: {"figado","cortex-rins"}). Filtra
 -- os testes oferecidos na designação — só testes desses tecidos. Vazio = sem
 -- restrição (projetos antigos criados antes desta coluna).
@@ -1581,3 +1591,80 @@ grant execute on function public.pode_aprovar_cadastros() to authenticated;
 grant execute on function public.listar_cadastros_pendentes() to authenticated;
 grant execute on function public.aprovar_cadastro(uuid) to authenticated;
 grant execute on function public.rejeitar_cadastro(uuid) to authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Estoque de reagentes (inventário do laboratório) + consumo real por teste
+-- ═══════════════════════════════════════════════════════════════════════════
+-- O estoque é do LABORATÓRIO inteiro (não de um projeto): quais soluções prontas
+-- existem, quanto tem (mL) e onde ficam (geladeira/freezer/armário de uso/
+-- armário de reagentes PA). Qualquer bolsista ou orientadora vê e mantém.
+create table if not exists public.reagentes_estoque (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  -- 'solucao' = solução/tampão pronto; 'pa' = reagente P.A. puro (estrutura já
+  -- pronta; o registro detalhado dos P.A. virá depois).
+  tipo text not null default 'solucao' check (tipo in ('solucao', 'pa')),
+  quantidade_ml numeric,
+  minimo_ml numeric, -- abaixo disso, a aba avisa "estoque baixo".
+  localizacao text check (
+    localizacao in ('geladeira', 'freezer', 'armario_uso', 'armario_pa')
+  ),
+  obs text,
+  atualizado_por uuid references public.profiles (id),
+  atualizado_em timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (nome)
+);
+
+alter table public.reagentes_estoque enable row level security;
+alter table public.reagentes_estoque force row level security;
+drop policy if exists "Usuários veem o estoque" on public.reagentes_estoque;
+create policy "Usuários veem o estoque" on public.reagentes_estoque for select
+  using (auth.uid() is not null);
+drop policy if exists "Usuários mantêm o estoque" on public.reagentes_estoque;
+create policy "Usuários mantêm o estoque" on public.reagentes_estoque for all
+  using (auth.uid() is not null)
+  with check (auth.uid() is not null);
+
+-- Consumo REAL de cada reagente em um teste (o bolsista registra no fim quanto
+-- de fato usou, que pode diferir do estimado). Ao gravar, a action dá baixa no
+-- estoque da solução correspondente (pelo nome). Uma linha por (teste, reagente).
+create table if not exists public.consumo_real (
+  id uuid primary key default gen_random_uuid(),
+  projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
+  reagente_nome text not null,
+  volume_estimado_ul numeric,
+  volume_real_ul numeric,
+  registrado_por uuid references public.profiles (id),
+  registrado_em timestamptz not null default now(),
+  unique (projeto_teste_id, reagente_nome)
+);
+
+alter table public.consumo_real enable row level security;
+alter table public.consumo_real force row level security;
+drop policy if exists "Equipe do teste vê o consumo" on public.consumo_real;
+create policy "Equipe do teste vê o consumo" on public.consumo_real for select
+  using (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+  );
+drop policy if exists "Executor registra o consumo" on public.consumo_real;
+create policy "Executor registra o consumo" on public.consumo_real for all
+  using (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+  )
+  with check (
+    public.eh_executor_teste(projeto_teste_id)
+    or public.eh_coautor_do_teste(projeto_teste_id)
+    or public.is_orientador()
+  );
+
+-- Consumo real também congela quando o teste é encerrado (mesma garantia dos
+-- resultados/passos).
+drop trigger if exists bloquear_encerrado_consumo on public.consumo_real;
+create trigger bloquear_encerrado_consumo
+  before insert or update on public.consumo_real
+  for each row execute function public.bloquear_se_teste_encerrado();

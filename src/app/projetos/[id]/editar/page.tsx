@@ -9,6 +9,8 @@ type Projeto = {
   nome: string;
   descricao: string | null;
   numero_levas: number | null;
+  especie: string | null;
+  linhagem: string | null;
   finalizado: boolean;
   tecidos: string[] | null;
 };
@@ -33,7 +35,7 @@ export default async function EditarProjeto({
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, descricao, numero_levas, finalizado, tecidos")
+        .select("id, nome, descricao, numero_levas, especie, linhagem, finalizado, tecidos")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -82,6 +84,8 @@ export default async function EditarProjeto({
         projetoId={projeto.id}
         nomeInicial={projeto.nome}
         descricaoInicial={projeto.descricao ?? ""}
+        especieInicial={projeto.especie ?? ""}
+        linhagemInicial={projeto.linhagem ?? ""}
         levasInicial={levas}
         gruposIniciais={gruposIniciais}
         tecidosIniciais={projeto.tecidos ?? []}

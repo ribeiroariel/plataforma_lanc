@@ -101,6 +101,25 @@ export default function NovoProjeto() {
           <textarea name="descricao" rows={3} className={INPUT} />
         </label>
 
+        <div className="flex flex-wrap gap-4">
+          <label className="flex flex-col gap-1 text-sm text-ink">
+            Espécie
+            <select name="especie" defaultValue="" className={`${INPUT} w-44`}>
+              <option value="">—</option>
+              <option value="rato">Rato</option>
+              <option value="camundongo">Camundongo</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-ink">
+            Linhagem / raça
+            <input
+              name="linhagem"
+              placeholder="Ex.: Wistar, Swiss"
+              className={`${INPUT} w-56`}
+            />
+          </label>
+        </div>
+
         <label className="flex flex-col gap-1 text-sm text-ink">
           Número de levas de sacrifício
           <input

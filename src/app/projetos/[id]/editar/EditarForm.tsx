@@ -12,6 +12,8 @@ export default function EditarForm({
   projetoId,
   nomeInicial,
   descricaoInicial,
+  especieInicial,
+  linhagemInicial,
   levasInicial,
   gruposIniciais,
   tecidosIniciais,
@@ -19,6 +21,8 @@ export default function EditarForm({
   projetoId: string;
   nomeInicial: string;
   descricaoInicial: string;
+  especieInicial: string;
+  linhagemInicial: string;
   levasInicial: number;
   gruposIniciais: LinhaGrupo[];
   tecidosIniciais: string[];
@@ -87,6 +91,25 @@ export default function EditarForm({
         Descrição
         <textarea name="descricao" rows={3} defaultValue={descricaoInicial} className={INPUT} />
       </label>
+      <div className="flex flex-wrap gap-4">
+        <label className="flex flex-col gap-1 text-sm text-ink">
+          Espécie
+          <select name="especie" defaultValue={especieInicial} className={`${INPUT} w-44`}>
+            <option value="">—</option>
+            <option value="rato">Rato</option>
+            <option value="camundongo">Camundongo</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-ink">
+          Linhagem / raça
+          <input
+            name="linhagem"
+            defaultValue={linhagemInicial}
+            placeholder="Ex.: Wistar, Swiss"
+            className={`${INPUT} w-56`}
+          />
+        </label>
+      </div>
       <label className="flex flex-col gap-1 text-sm text-ink">
         Número de levas de sacrifício
         <input

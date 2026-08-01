@@ -99,7 +99,7 @@ export async function GET(
     await Promise.all([
       supabase
         .from("projetos")
-        .select("nome, numero_levas")
+        .select("nome, numero_levas, especie, linhagem")
         .eq("id", projetoId)
         .maybeSingle(),
       supabase
@@ -159,6 +159,19 @@ export async function GET(
     ["Raw data — transparency export"],
     [],
     ["Project", projeto.nome],
+    [
+      "Animal model",
+      [
+        projeto.especie === "camundongo"
+          ? "Mouse"
+          : projeto.especie === "rato"
+          ? "Rat"
+          : null,
+        projeto.linhagem,
+      ]
+        .filter(Boolean)
+        .join(" ") || "—",
+    ],
     ["Exported on", new Date().toISOString().slice(0, 16).replace("T", " ")],
     ["Experimental groups", (grupos ?? []).map((g) => g.nome).join(", ")],
     ["Number of batches", projeto.numero_levas ?? 1],

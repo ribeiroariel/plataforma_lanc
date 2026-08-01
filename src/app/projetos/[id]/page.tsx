@@ -15,6 +15,8 @@ type Projeto = {
   nome: string;
   descricao: string | null;
   numero_levas: number | null;
+  especie: string | null;
+  linhagem: string | null;
   finalizado: boolean;
   tecidos: string[] | null;
   created_at: string;
@@ -66,7 +68,7 @@ export default async function DetalheProjeto({
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, descricao, numero_levas, finalizado, tecidos, created_at")
+        .select("id, nome, descricao, numero_levas, especie, linhagem, finalizado, tecidos, created_at")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -192,6 +194,21 @@ export default async function DetalheProjeto({
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-ink-soft">
         <span>{totalRatos} rato(s) no total</span>
+        {(projeto.especie || projeto.linhagem) && (
+          <span>
+            ·{" "}
+            {[
+              projeto.especie === "camundongo"
+                ? "Camundongo"
+                : projeto.especie === "rato"
+                ? "Rato"
+                : null,
+              projeto.linhagem,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          </span>
+        )}
         {projeto.numero_levas && <span>· {projeto.numero_levas} leva(s)</span>}
         {tecidosProjeto.size > 0 && (
           <span>
@@ -354,7 +371,9 @@ export default async function DetalheProjeto({
                       href={`/projetos/${projeto.id}/testes/${t.id}`}
                       className="rounded border border-rule px-3 py-1 text-xs text-ink transition-colors hover:border-absorbance"
                     >
-                      {souResponsavel ? "Registrar resultado" : "Ver"}
+                      {souResponsavel && t.status !== "concluido"
+                        ? "Registrar resultado"
+                        : "Ver resultados"}
                     </Link>
                   )}
                 </div>

@@ -47,6 +47,7 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/projetos") ||
     path.startsWith("/testes") ||
     path.startsWith("/reagentes") ||
+    path.startsWith("/estoque") ||
     path.startsWith("/meus-testes") ||
     path.startsWith("/minhas-funcoes") ||
     path.startsWith("/perfil");
