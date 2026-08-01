@@ -112,6 +112,14 @@ export type CaixaRow = {
   ordem: number | null;
   pesos: number[] | null;
   mortos: number;
+  leva: number | null;
+};
+
+/** Cronograma de tratamento de uma leva (início + duração, únicos p/ todas). */
+export type ConfigRow = {
+  leva: number;
+  tratamento_inicio: string | null;
+  tratamento_dias: number | null;
 };
 
 export type ProcedimentoRow = {
@@ -129,11 +137,14 @@ export type ProcedimentoRow = {
   ordem: number | null;
 };
 
-/** Dias restantes de um tratamento a partir de hoje, ou null. */
-export function diasRestantes(p: ProcedimentoRow): number | null {
-  if (p.tipo !== "tratamento" || !p.dias || !p.inicio) return null;
-  const inicio = new Date(p.inicio).getTime();
-  if (Number.isNaN(inicio)) return null;
-  const fim = inicio + p.dias * 24 * 3600 * 1000;
+/** Dias restantes de tratamento a partir de hoje (do cronograma da leva). */
+export function diasRestantes(
+  inicio: string | null,
+  dias: number | null
+): number | null {
+  if (!inicio || !dias) return null;
+  const ini = new Date(inicio).getTime();
+  if (Number.isNaN(ini)) return null;
+  const fim = ini + dias * 24 * 3600 * 1000;
   return Math.max(0, Math.ceil((fim - Date.now()) / (24 * 3600 * 1000)));
 }

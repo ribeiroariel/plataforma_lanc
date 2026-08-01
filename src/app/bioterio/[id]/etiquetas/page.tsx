@@ -6,8 +6,11 @@ import {
   siglaVia,
   textoDose,
   numeracaoCaixas,
+  media,
+  doseMlPorAnimal,
   type CaixaRow,
   type ProcedimentoRow,
+  type ConfigRow,
 } from "@/lib/bioterio";
 import BotaoImprimir from "./BotaoImprimir";
 
@@ -20,33 +23,42 @@ function unidadeAnimal(especie: string | null): string {
   return "animais";
 }
 
-function linhaProc(p: ProcedimentoRow): string {
+const fmt = (n: number | null, casas = 2) =>
+  n == null ? "—" : n.toLocaleString("pt-BR", { maximumFractionDigits: casas });
+
+function linhaProc(p: ProcedimentoRow, mlAnimal?: number | null): string {
   const partes: string[] = [];
   if (p.substancia) partes.push(p.substancia);
   const dose = textoDose(p.dose_valor, p.dose_unidade);
   if (dose) partes.push(`— ${dose}`);
   if (p.via) partes.push(`(${siglaVia(p.via)})`);
-  return partes.join(" ") || "—";
+  let base = partes.join(" ") || "—";
+  if (mlAnimal != null) base += ` · ${fmt(mlAnimal, 3)} mL/animal`;
+  return base;
 }
 
 export default async function PaginaEtiquetas({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ leva?: string }>;
 }) {
   const { id } = await params;
+  const { leva: levaParam } = await searchParams;
+  const leva = Number(levaParam) > 0 ? Number(levaParam) : null;
   const usuario = await getUsuarioAtual();
   if (!usuario) redirect("/login");
   const supabase = await createClient();
 
-  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: procedimentos }] =
+  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixasTodas }, { data: procedimentos }, { data: configs }] =
     await Promise.all([
       supabase.from("projetos").select("id, nome, especie").eq("id", id).maybeSingle().returns<Projeto>(),
       supabase.from("projeto_grupos").select("id, nome").eq("projeto_id", id).returns<Grupo[]>(),
       supabase.from("projeto_membros").select("profile_id").eq("projeto_id", id),
       supabase
         .from("bioterio_caixas")
-        .select("id, grupo_id, num_ratos, ordem, pesos, mortos")
+        .select("id, grupo_id, num_ratos, ordem, pesos, mortos, leva")
         .eq("projeto_id", id)
         .order("ordem", { ascending: true })
         .returns<CaixaRow[]>(),
@@ -56,16 +68,23 @@ export default async function PaginaEtiquetas({
         .eq("projeto_id", id)
         .order("ordem", { ascending: true })
         .returns<ProcedimentoRow[]>(),
+      supabase
+        .from("bioterio_config")
+        .select("leva, tratamento_inicio, tratamento_dias")
+        .eq("projeto_id", id)
+        .returns<ConfigRow[]>(),
     ]);
 
   if (!projeto) notFound();
   const souMembro = membros?.some((m) => m.profile_id === usuario.id) ?? false;
   if (!souMembro && usuario.papel !== "orientador") notFound();
 
+  const caixas = (caixasTodas ?? []).filter((c) => (leva == null ? true : (c.leva ?? 1) === leva));
   const nomeGrupo = new Map((grupos ?? []).map((g) => [g.id, g.nome]));
   const unidade = unidadeAnimal(projeto.especie);
-  const numeros = numeracaoCaixas(caixas ?? []);
+  const numeros = numeracaoCaixas(caixas);
   const procs = procedimentos ?? [];
+  const diasTrat = (configs ?? []).find((c) => c.leva === (leva ?? 1))?.tratamento_dias ?? null;
 
   const inducaoDe = (caixaId: string) =>
     procs.find((p) => p.tipo === "inducao" && (p.caixa_ids ?? []).includes(caixaId));
@@ -79,24 +98,26 @@ export default async function PaginaEtiquetas({
           ← Voltar
         </Link>
         <span className="text-xs text-ink-soft">
-          {caixas?.length ?? 0} etiquetas · confira a proporção antes de imprimir no etiquetador
+          {caixas.length} etiquetas{leva ? ` · leva ${leva}` : ""} · confira a proporção antes de imprimir
         </span>
         <BotaoImprimir />
       </div>
 
-      {(caixas ?? []).length === 0 ? (
-        <p className="text-sm text-ink-soft">Nenhuma caixa criada ainda.</p>
+      {caixas.length === 0 ? (
+        <p className="text-sm text-ink-soft">Nenhuma caixa nesta leva.</p>
       ) : (
         <div className="grid grid-cols-2 gap-3 text-black">
-          {(caixas ?? []).map((c, i) => {
+          {caixas.map((c, i) => {
             const ind = inducaoDe(c.id);
             const trat = tratamentoDe(c.id);
+            const pesoMedio = media((c.pesos ?? []).map(Number));
+            // Para o tratamento (gavagem), quanto de extrato/água por animal —
+            // as induções são pesadas rato a rato, então não vão na etiqueta.
+            const mlTrat = trat
+              ? doseMlPorAnimal(pesoMedio, trat.dose_valor, trat.dose_unidade, trat.concentracao)
+              : null;
             return (
-              <div
-                key={c.id}
-                className="flex break-inside-avoid flex-col border-2 border-black px-4 py-3"
-                style={{ minHeight: "58mm" }}
-              >
+              <div key={c.id} className="flex break-inside-avoid flex-col border-2 border-black px-4 py-3" style={{ minHeight: "58mm" }}>
                 <p className="text-center text-base font-bold uppercase leading-tight">
                   Grupo {nomeGrupo.get(c.grupo_id) ?? "?"}
                 </p>
@@ -111,15 +132,11 @@ export default async function PaginaEtiquetas({
                 )}
                 {trat && (
                   <div>
-                    <p className="text-sm font-bold">
-                      TRATAMENTO{trat.dias ? ` (${trat.dias} DIAS)` : ""}
-                    </p>
-                    <p className="text-sm leading-snug">- {linhaProc(trat)}</p>
+                    <p className="text-sm font-bold">TRATAMENTO{diasTrat ? ` (${diasTrat} DIAS)` : ""}</p>
+                    <p className="text-sm leading-snug">- {linhaProc(trat, mlTrat)}</p>
                   </div>
                 )}
-                {!ind && !trat && (
-                  <p className="text-sm text-neutral-500">Procedimento não definido.</p>
-                )}
+                {!ind && !trat && <p className="text-sm text-neutral-500">Procedimento não definido.</p>}
               </div>
             );
           })}

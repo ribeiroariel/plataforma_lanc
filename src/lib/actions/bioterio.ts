@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 // Cria uma ou mais caixas em sequência, no fim da ordem atual.
 export async function criarCaixas(dados: {
   projetoId: string;
+  leva: number;
   caixas: { grupoId: string; numRatos: number }[];
 }): Promise<{ erro: string } | { sucesso: true }> {
   const caixas = dados.caixas.filter((c) => c.grupoId && c.numRatos > 0);
@@ -28,6 +29,7 @@ export async function criarCaixas(dados: {
 
   const linhas = caixas.map((c) => ({
     projeto_id: dados.projetoId,
+    leva: dados.leva,
     numero: ordem, // legado; a exibição usa a ordem
     ordem: ordem++,
     grupo_id: c.grupoId,
@@ -121,8 +123,6 @@ export async function salvarProcedimento(dados: {
   doseUnidade: string | null;
   concentracao: number | null;
   via: string | null;
-  dias: number | null;
-  inicio: string | null;
   caixaIds: string[];
 }): Promise<{ erro: string } | { sucesso: true }> {
   if (dados.caixaIds.length === 0) {
@@ -143,8 +143,6 @@ export async function salvarProcedimento(dados: {
     dose_unidade: dados.doseUnidade,
     concentracao: dados.concentracao,
     via: dados.via,
-    dias: dados.dias,
-    inicio: dados.inicio || null,
     caixa_ids: dados.caixaIds,
     atualizado_por: user.id,
     atualizado_em: new Date().toISOString(),
@@ -166,6 +164,37 @@ export async function removerProcedimento(dados: {
   const supabase = await createClient();
   const { error } = await supabase.from("bioterio_procedimentos").delete().eq("id", dados.id);
   if (error) return { erro: "Não foi possível remover: " + error.message };
+  revalidatePath(`/bioterio/${dados.projetoId}`);
+  return { sucesso: true };
+}
+
+// Cronograma de tratamento de uma leva (início + duração, únicos para todas as
+// caixas daquela leva). Upsert por (projeto, leva).
+export async function salvarConfigTratamento(dados: {
+  projetoId: string;
+  leva: number;
+  inicio: string | null;
+  dias: number | null;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Você precisa estar logado." };
+
+  const { error } = await supabase.from("bioterio_config").upsert(
+    {
+      projeto_id: dados.projetoId,
+      leva: dados.leva,
+      tratamento_inicio: dados.inicio || null,
+      tratamento_dias: dados.dias,
+      atualizado_por: user.id,
+      atualizado_em: new Date().toISOString(),
+    },
+    { onConflict: "projeto_id,leva" }
+  );
+  if (error) return { erro: "Não foi possível salvar o cronograma: " + error.message };
+
   revalidatePath(`/bioterio/${dados.projetoId}`);
   return { sucesso: true };
 }

@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import type { CaixaRow, ProcedimentoRow } from "@/lib/bioterio";
+import type { CaixaRow, ProcedimentoRow, ConfigRow } from "@/lib/bioterio";
 import Bioterio from "./Bioterio";
 
-type Projeto = { id: string; nome: string; especie: string | null };
+type Projeto = { id: string; nome: string; especie: string | null; numero_levas: number | null };
 type Grupo = { id: string; nome: string };
 
 export default async function PaginaBioterioProjeto({
@@ -18,11 +18,11 @@ export default async function PaginaBioterioProjeto({
   if (!usuario) redirect("/login");
   const supabase = await createClient();
 
-  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: procedimentos }] =
+  const [{ data: projeto }, { data: grupos }, { data: membros }, { data: caixas }, { data: procedimentos }, { data: configs }] =
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, especie")
+        .select("id, nome, especie, numero_levas")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -38,7 +38,7 @@ export default async function PaginaBioterioProjeto({
         .eq("projeto_id", id),
       supabase
         .from("bioterio_caixas")
-        .select("id, grupo_id, num_ratos, ordem, pesos, mortos")
+        .select("id, grupo_id, num_ratos, ordem, pesos, mortos, leva")
         .eq("projeto_id", id)
         .order("ordem", { ascending: true })
         .returns<CaixaRow[]>(),
@@ -50,6 +50,11 @@ export default async function PaginaBioterioProjeto({
         .eq("projeto_id", id)
         .order("ordem", { ascending: true })
         .returns<ProcedimentoRow[]>(),
+      supabase
+        .from("bioterio_config")
+        .select("leva, tratamento_inicio, tratamento_dias")
+        .eq("projeto_id", id)
+        .returns<ConfigRow[]>(),
     ]);
 
   if (!projeto) notFound();
@@ -71,9 +76,11 @@ export default async function PaginaBioterioProjeto({
       <Bioterio
         projetoId={projeto.id}
         especie={projeto.especie}
+        numeroLevas={projeto.numero_levas ?? 1}
         grupos={grupos ?? []}
         caixas={caixas ?? []}
         procedimentos={procedimentos ?? []}
+        configs={configs ?? []}
         podeEditar={souMembro}
       />
     </main>

@@ -11,6 +11,7 @@ import {
   reordenarCaixas,
   salvarProcedimento,
   removerProcedimento,
+  salvarConfigTratamento,
 } from "@/lib/actions/bioterio";
 import {
   DOENCAS,
@@ -26,6 +27,7 @@ import {
   textoDose,
   type CaixaRow,
   type ProcedimentoRow,
+  type ConfigRow,
 } from "@/lib/bioterio";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
@@ -44,28 +46,38 @@ const num = (s: string): number | null => {
 const fmt = (n: number | null, casas = 1) =>
   n == null ? "—" : n.toLocaleString("pt-BR", { maximumFractionDigits: casas });
 
+type InfoCaixa = Map<string, { numero: string; grupo: string; pesoMedio: number | null; numRatos: number }>;
+
 export default function Bioterio({
   projetoId,
   especie,
+  numeroLevas,
   grupos,
   caixas,
   procedimentos,
+  configs,
   podeEditar,
 }: {
   projetoId: string;
   especie: string | null;
+  numeroLevas: number;
   grupos: Grupo[];
   caixas: CaixaRow[];
   procedimentos: ProcedimentoRow[];
+  configs: ConfigRow[];
   podeEditar: boolean;
 }) {
   const nomeGrupo = useMemo(() => new Map(grupos.map((g) => [g.id, g.nome])), [grupos]);
   const limite = limiteCaixa(especie);
+  const [leva, setLeva] = useState(1);
+  const temLevas = numeroLevas > 1;
 
-  // Numeração de exibição (3, 3.1...) e um índice caixaId -> {numero, grupo, pesoMédio}.
-  const numeros = numeracaoCaixas(caixas);
-  const infoCaixa = new Map(
-    caixas.map((c, i) => [
+  // Caixas desta leva (na ordem), com numeração e info por caixa.
+  const caixasLeva = caixas.filter((c) => (c.leva ?? 1) === leva);
+  const numeros = numeracaoCaixas(caixasLeva);
+  const idsLeva = new Set(caixasLeva.map((c) => c.id));
+  const infoCaixa: InfoCaixa = new Map(
+    caixasLeva.map((c, i) => [
       c.id,
       {
         numero: numeros[i],
@@ -75,14 +87,39 @@ export default function Bioterio({
       },
     ])
   );
+  const procsLeva = procedimentos.filter((p) =>
+    (p.caixa_ids ?? []).some((id) => idsLeva.has(id))
+  );
+  const config = configs.find((c) => c.leva === leva) ?? null;
 
   return (
     <div className="mt-8 flex flex-col gap-12">
-      {caixas.length > 0 && (
+      {temLevas && (
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: numeroLevas }, (_, i) => i + 1).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => setLeva(l)}
+              className={`rounded-full px-3 py-1 font-mono text-xs uppercase tracking-wide transition-colors ${
+                l === leva
+                  ? "bg-signal text-paper"
+                  : "border border-rule text-ink-soft hover:border-signal hover:text-signal"
+              }`}
+            >
+              Leva {l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {caixasLeva.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded border border-signal/40 bg-signal/5 px-4 py-3">
-          <span className="text-sm text-ink">{caixas.length} caixa(s).</span>
+          <span className="text-sm text-ink">
+            {caixasLeva.length} caixa(s){temLevas ? ` na leva ${leva}` : ""}.
+          </span>
           <Link
-            href={`/bioterio/${projetoId}/etiquetas`}
+            href={`/bioterio/${projetoId}/etiquetas${temLevas ? `?leva=${leva}` : ""}`}
             target="_blank"
             className="ml-auto rounded border border-signal px-3 py-1.5 text-sm text-signal transition-colors hover:bg-signal hover:text-paper"
           >
@@ -92,9 +129,11 @@ export default function Bioterio({
       )}
 
       <CaixasSection
+        key={`caixas-${leva}`}
         projetoId={projetoId}
+        leva={leva}
         grupos={grupos}
-        caixas={caixas}
+        caixas={caixasLeva}
         numeros={numeros}
         nomeGrupo={nomeGrupo}
         limite={limite}
@@ -102,16 +141,97 @@ export default function Bioterio({
         podeEditar={podeEditar}
       />
 
-      {caixas.length > 0 && (
-        <ProcedimentosSection
-          projetoId={projetoId}
-          caixas={caixas}
-          infoCaixa={infoCaixa}
-          procedimentos={procedimentos}
-          podeEditar={podeEditar}
-        />
+      {caixasLeva.length > 0 && (
+        <>
+          <CronogramaTratamento
+            key={`crono-${leva}`}
+            projetoId={projetoId}
+            leva={leva}
+            config={config}
+            podeEditar={podeEditar}
+          />
+          <ProcedimentosSection
+            projetoId={projetoId}
+            caixas={caixasLeva}
+            infoCaixa={infoCaixa}
+            procedimentos={procsLeva}
+            config={config}
+            podeEditar={podeEditar}
+          />
+        </>
       )}
     </div>
+  );
+}
+
+/* ── Cronograma de tratamento (único por leva) ── */
+function CronogramaTratamento({
+  projetoId,
+  leva,
+  config,
+  podeEditar,
+}: {
+  projetoId: string;
+  leva: number;
+  config: ConfigRow | null;
+  podeEditar: boolean;
+}) {
+  const router = useRouter();
+  const [pend, iniciar] = useTransition();
+  const [inicio, setInicio] = useState(config?.tratamento_inicio ?? "");
+  const [dias, setDias] = useState(config?.tratamento_dias != null ? String(config.tratamento_dias) : "");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const rest = diasRestantes(config?.tratamento_inicio ?? null, config?.tratamento_dias ?? null);
+
+  function salvar() {
+    setMsg(null);
+    iniciar(async () => {
+      const r = await salvarConfigTratamento({
+        projetoId,
+        leva,
+        inicio: inicio || null,
+        dias: int0(dias) || null,
+      });
+      setMsg("erro" in r ? r.erro : "Cronograma salvo.");
+      if (!("erro" in r)) router.refresh();
+    });
+  }
+
+  return (
+    <section>
+      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+        Cronograma do tratamento
+      </p>
+      <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
+        O tratamento de todas as caixas começa no mesmo dia e dura o mesmo tanto —
+        defina uma vez aqui.
+        {rest != null && (
+          <span className="text-ink"> Faltam {rest === 0 ? "0 dias (concluído)" : `${rest} dia(s)`}.</span>
+        )}
+      </p>
+      {podeEditar ? (
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            Início
+            <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={INPUT_SM} />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            Duração (dias)
+            <input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value)} placeholder="Ex.: 15" className={`${INPUT_SM} w-20`} />
+          </label>
+          <button type="button" onClick={salvar} disabled={pend} className={BOTAO_SECUNDARIO_SM}>
+            {pend ? "Salvando..." : "Salvar"}
+          </button>
+          {msg && <span className={`text-xs ${msg === "Cronograma salvo." ? "text-ink-soft" : "text-alerta"}`}>{msg}</span>}
+        </div>
+      ) : (
+        <p className="text-sm text-ink">
+          {config?.tratamento_inicio ? `Início ${config.tratamento_inicio}` : "Início não definido"}
+          {config?.tratamento_dias ? ` · ${config.tratamento_dias} dias` : ""}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -119,6 +239,7 @@ export default function Bioterio({
 
 function CaixasSection({
   projetoId,
+  leva,
   grupos,
   caixas,
   numeros,
@@ -128,6 +249,7 @@ function CaixasSection({
   podeEditar,
 }: {
   projetoId: string;
+  leva: number;
   grupos: Grupo[];
   caixas: CaixaRow[];
   numeros: string[];
@@ -141,8 +263,6 @@ function CaixasSection({
   const [ordem, setOrdem] = useState<CaixaRow[]>(caixas);
   const arrastando = useRef<number | null>(null);
 
-  // Ressincroniza a ordem local quando os dados do servidor mudam (add/remove/
-  // reordenar). Padrão de estado derivado de props, sem ler ref no render.
   const idsProps = caixas.map((c) => c.id).join(",");
   const [idsVistos, setIdsVistos] = useState(idsProps);
   if (idsProps !== idsVistos) {
@@ -164,7 +284,7 @@ function CaixasSection({
     });
   }
 
-  const numerosLocais = numeracaoCaixasLocais(ordem);
+  const numerosLocais = numeracaoCaixas(ordem);
 
   return (
     <section>
@@ -190,7 +310,6 @@ function CaixasSection({
               nomeGrupo={nomeGrupo}
               limite={limite}
               podeEditar={podeEditar}
-              indice={i}
               onDragStart={() => (arrastando.current = i)}
               onDrop={() => soltar(i)}
             />
@@ -199,7 +318,7 @@ function CaixasSection({
       )}
 
       {podeEditar && grupos.length > 0 && (
-        <CriarCaixas projetoId={projetoId} grupos={grupos} limite={limite} />
+        <CriarCaixas projetoId={projetoId} leva={leva} grupos={grupos} limite={limite} />
       )}
       {grupos.length === 0 && (
         <p className="text-sm text-ink-soft">
@@ -208,11 +327,6 @@ function CaixasSection({
       )}
     </section>
   );
-}
-
-// Numeração local (para refletir a ordem durante o arrasto, sem esperar o servidor).
-function numeracaoCaixasLocais(caixas: CaixaRow[]): string[] {
-  return numeracaoCaixas(caixas);
 }
 
 function CaixaItem({
@@ -233,7 +347,6 @@ function CaixaItem({
   nomeGrupo: Map<string, string>;
   limite: number;
   podeEditar: boolean;
-  indice: number;
   onDragStart: () => void;
   onDrop: () => void;
 }) {
@@ -265,7 +378,6 @@ function CaixaItem({
       return nova;
     });
   }
-
   function salvar() {
     setErro(null);
     iniciar(async () => {
@@ -308,17 +420,13 @@ function CaixaItem({
         className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-rule bg-paper-raised px-3 py-2 text-sm"
       >
         {podeEditar && (
-          <span className="cursor-grab select-none text-ink-soft" title="arraste para reordenar">
-            ⠿
-          </span>
+          <span className="cursor-grab select-none text-ink-soft" title="arraste para reordenar">⠿</span>
         )}
         <span className="font-mono text-ink">Caixa {numero}</span>
         <span className="text-ink">{nomeGrupo.get(caixa.grupo_id) ?? "?"}</span>
         <span className="font-mono text-ink-soft">{caixa.num_ratos} animais</span>
         {m != null && (
-          <span className="font-mono text-xs text-ink-soft">
-            · {fmt(m)}{dp != null ? ` ± ${fmt(dp)}` : ""} g
-          </span>
+          <span className="font-mono text-xs text-ink-soft">· {fmt(m)}{dp != null ? ` ± ${fmt(dp)}` : ""} g</span>
         )}
         {caixa.mortos > 0 && (
           <span className="rounded-full bg-alerta/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-alerta">
@@ -329,18 +437,9 @@ function CaixaItem({
           <span className="ml-auto flex items-center gap-3">
             <label className="flex items-center gap-1 text-xs text-ink-soft">
               mortos
-              <input
-                inputMode="numeric"
-                value={mortos}
-                onChange={(e) => salvarMortos(e.target.value)}
-                className={`${INPUT_SM} w-12`}
-              />
+              <input inputMode="numeric" value={mortos} onChange={(e) => salvarMortos(e.target.value)} className={`${INPUT_SM} w-12`} />
             </label>
-            <button
-              type="button"
-              onClick={() => setEditando(true)}
-              className="text-xs text-signal underline-offset-2 hover:underline"
-            >
+            <button type="button" onClick={() => setEditando(true)} className="text-xs text-signal underline-offset-2 hover:underline">
               editar / pesos
             </button>
           </span>
@@ -357,9 +456,7 @@ function CaixaItem({
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
           Grupo
           <select value={grupoId} onChange={(e) => setGrupoId(e.target.value)} className={INPUT_SM}>
-            {grupos.map((g) => (
-              <option key={g.id} value={g.id}>{g.nome}</option>
-            ))}
+            {grupos.map((g) => (<option key={g.id} value={g.id}>{g.nome}</option>))}
           </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -368,42 +465,22 @@ function CaixaItem({
         </label>
       </div>
       {acima && <p className="mt-1 text-xs text-alerta">Acima do limite ({limite}/caixa).</p>}
-
       <div className="mt-3">
-        <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
-          Peso de cada rato (g)
-        </p>
+        <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">Peso de cada rato (g)</p>
         <div className="flex flex-wrap gap-2">
           {pesos.map((p, i) => (
-            <input
-              key={i}
-              inputMode="decimal"
-              value={p}
-              onChange={(e) =>
-                setPesos((prev) => prev.map((x, idx) => (idx === i ? e.target.value : x)))
-              }
-              placeholder={`#${i + 1}`}
-              className={`${INPUT_SM} w-16`}
-            />
+            <input key={i} inputMode="decimal" value={p} onChange={(e) => setPesos((prev) => prev.map((x, idx) => (idx === i ? e.target.value : x)))} placeholder={`#${i + 1}`} className={`${INPUT_SM} w-16`} />
           ))}
         </div>
         <p className="mt-1.5 font-mono text-xs text-ink">
-          Média: {fmt(m)} g{dp != null ? ` · DP: ${fmt(dp)} g` : ""}
-          {m != null ? ` (n=${pesosNum.length})` : ""}
+          Média: {fmt(m)} g{dp != null ? ` · DP: ${fmt(dp)} g` : ""}{m != null ? ` (n=${pesosNum.length})` : ""}
         </p>
       </div>
-
       {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
       <div className="mt-3 flex items-center gap-3">
-        <button type="button" onClick={salvar} disabled={pend} className={BOTAO_SECUNDARIO_SM}>
-          {pend ? "Salvando..." : "Salvar"}
-        </button>
-        <button type="button" onClick={() => setEditando(false)} className="text-xs text-ink-soft hover:underline">
-          cancelar
-        </button>
-        <button type="button" onClick={remover} disabled={pend} className="ml-auto text-xs text-alerta hover:underline">
-          remover
-        </button>
+        <button type="button" onClick={salvar} disabled={pend} className={BOTAO_SECUNDARIO_SM}>{pend ? "Salvando..." : "Salvar"}</button>
+        <button type="button" onClick={() => setEditando(false)} className="text-xs text-ink-soft hover:underline">cancelar</button>
+        <button type="button" onClick={remover} disabled={pend} className="ml-auto text-xs text-alerta hover:underline">remover</button>
       </div>
     </div>
   );
@@ -411,10 +488,12 @@ function CaixaItem({
 
 function CriarCaixas({
   projetoId,
+  leva,
   grupos,
   limite,
 }: {
   projetoId: string;
+  leva: number;
   grupos: Grupo[];
   limite: number;
 }) {
@@ -438,7 +517,7 @@ function CriarCaixas({
       return;
     }
     iniciar(async () => {
-      const r = await criarCaixas({ projetoId, caixas });
+      const r = await criarCaixas({ projetoId, leva, caixas });
       if ("erro" in r) setErro(r.erro);
       else {
         setLinhas([{ grupoId: grupos[0]?.id ?? "", num: "" }]);
@@ -449,9 +528,7 @@ function CriarCaixas({
 
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-        Adicionar caixas
-      </p>
+      <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">Adicionar caixas</p>
       <div className="flex flex-col gap-2">
         {linhas.map((l, i) => {
           const acima = int0(l.num) > limite;
@@ -460,9 +537,7 @@ function CriarCaixas({
               <label className="flex flex-col gap-1 text-xs text-ink-soft">
                 Grupo
                 <select value={l.grupoId} onChange={(e) => set(i, { grupoId: e.target.value })} className={INPUT_SM}>
-                  {grupos.map((g) => (
-                    <option key={g.id} value={g.id}>{g.nome}</option>
-                  ))}
+                  {grupos.map((g) => (<option key={g.id} value={g.id}>{g.nome}</option>))}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -479,12 +554,8 @@ function CriarCaixas({
       </div>
       {erro && <p className="mt-2 text-sm text-alerta">{erro}</p>}
       <div className="mt-3 flex items-center gap-3">
-        <button type="button" onClick={() => setLinhas((p) => [...p, { grupoId: grupos[0]?.id ?? "", num: "" }])} className="text-xs text-signal hover:underline">
-          + outra caixa
-        </button>
-        <button type="button" onClick={criar} disabled={pend} className={`ml-auto ${BOTAO_SECUNDARIO_SM}`}>
-          {pend ? "Criando..." : "Criar caixas"}
-        </button>
+        <button type="button" onClick={() => setLinhas((p) => [...p, { grupoId: grupos[0]?.id ?? "", num: "" }])} className="text-xs text-signal hover:underline">+ outra caixa</button>
+        <button type="button" onClick={criar} disabled={pend} className={`ml-auto ${BOTAO_SECUNDARIO_SM}`}>{pend ? "Criando..." : "Criar caixas"}</button>
       </div>
     </div>
   );
@@ -492,28 +563,25 @@ function CriarCaixas({
 
 /* ─────────────────────── Procedimentos ─────────────────────── */
 
-type InfoCaixa = Map<string, { numero: string; grupo: string; pesoMedio: number | null; numRatos: number }>;
-
 function ProcedimentosSection({
   projetoId,
   caixas,
   infoCaixa,
   procedimentos,
+  config,
   podeEditar,
 }: {
   projetoId: string;
   caixas: CaixaRow[];
   infoCaixa: InfoCaixa;
   procedimentos: ProcedimentoRow[];
+  config: ConfigRow | null;
   podeEditar: boolean;
 }) {
   const [criando, setCriando] = useState(false);
-
   return (
     <section>
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
-        Procedimentos
-      </p>
+      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">Procedimentos</p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
         Cadastre uma indução ou um tratamento com a substância e a dose, e marque
         quais caixas o recebem — o volume em mL sai automático do peso médio de
@@ -522,31 +590,17 @@ function ProcedimentosSection({
 
       <div className="flex flex-col gap-3">
         {procedimentos.map((p) => (
-          <ProcedimentoItem
-            key={p.id}
-            projetoId={projetoId}
-            proc={p}
-            caixas={caixas}
-            infoCaixa={infoCaixa}
-            podeEditar={podeEditar}
-          />
+          <ProcedimentoItem key={p.id} projetoId={projetoId} proc={p} infoCaixa={infoCaixa} caixas={caixas} config={config} podeEditar={podeEditar} />
         ))}
       </div>
 
       {podeEditar &&
         (criando ? (
           <div className="mt-3">
-            <ProcedimentoForm
-              projetoId={projetoId}
-              caixas={caixas}
-              infoCaixa={infoCaixa}
-              aoFechar={() => setCriando(false)}
-            />
+            <ProcedimentoForm projetoId={projetoId} caixas={caixas} infoCaixa={infoCaixa} aoFechar={() => setCriando(false)} />
           </div>
         ) : (
-          <button type="button" onClick={() => setCriando(true)} className={`mt-3 ${BOTAO_SECUNDARIO_SM}`}>
-            + Adicionar procedimento
-          </button>
+          <button type="button" onClick={() => setCriando(true)} className={`mt-3 ${BOTAO_SECUNDARIO_SM}`}>+ Adicionar procedimento</button>
         ))}
     </section>
   );
@@ -555,14 +609,16 @@ function ProcedimentosSection({
 function ProcedimentoItem({
   projetoId,
   proc,
-  caixas,
   infoCaixa,
+  caixas,
+  config,
   podeEditar,
 }: {
   projetoId: string;
   proc: ProcedimentoRow;
-  caixas: CaixaRow[];
   infoCaixa: InfoCaixa;
+  caixas: CaixaRow[];
+  config: ConfigRow | null;
   podeEditar: boolean;
 }) {
   const router = useRouter();
@@ -570,24 +626,16 @@ function ProcedimentoItem({
   const [editando, setEditando] = useState(false);
 
   if (editando) {
-    return (
-      <ProcedimentoForm
-        projetoId={projetoId}
-        caixas={caixas}
-        infoCaixa={infoCaixa}
-        inicial={proc}
-        aoFechar={() => setEditando(false)}
-      />
-    );
+    return <ProcedimentoForm projetoId={projetoId} caixas={caixas} infoCaixa={infoCaixa} inicial={proc} aoFechar={() => setEditando(false)} />;
   }
 
-  const rest = diasRestantes(proc);
   const ids = proc.caixa_ids ?? [];
+  const ehTrat = proc.tipo === "tratamento";
   return (
     <div className="rounded border border-rule bg-paper-raised p-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span className="rounded-full bg-signal/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
-          {proc.tipo === "inducao" ? "Indução" : "Tratamento"}
+          {ehTrat ? "Tratamento" : "Indução"}
         </span>
         <span className="font-medium text-ink">{proc.substancia ?? "—"}</span>
         {proc.dose_valor != null && (
@@ -597,29 +645,13 @@ function ProcedimentoItem({
           </span>
         )}
         {proc.via && <span className="text-xs text-ink-soft">via {siglaVia(proc.via)}</span>}
-        {proc.tipo === "tratamento" && proc.dias && (
-          <span className="text-xs text-ink-soft">
-            · {proc.dias} dias{rest != null ? (rest === 0 ? " (concluído)" : `, faltam ${rest}`) : ""}
-          </span>
+        {ehTrat && config?.tratamento_dias && (
+          <span className="text-xs text-ink-soft">· {config.tratamento_dias} dias</span>
         )}
         {podeEditar && (
           <span className="ml-auto flex gap-3">
-            <button type="button" onClick={() => setEditando(true)} className="text-xs text-signal hover:underline">
-              editar
-            </button>
-            <button
-              type="button"
-              disabled={pend}
-              onClick={() =>
-                iniciar(async () => {
-                  await removerProcedimento({ projetoId, id: proc.id });
-                  router.refresh();
-                })
-              }
-              className="text-xs text-alerta hover:underline"
-            >
-              remover
-            </button>
+            <button type="button" onClick={() => setEditando(true)} className="text-xs text-signal hover:underline">editar</button>
+            <button type="button" disabled={pend} onClick={() => iniciar(async () => { await removerProcedimento({ projetoId, id: proc.id }); router.refresh(); })} className="text-xs text-alerta hover:underline">remover</button>
           </span>
         )}
       </div>
@@ -673,8 +705,6 @@ function ProcedimentoForm({
   const [doseUnidade, setDoseUnidade] = useState(inicial?.dose_unidade ?? "mg/kg");
   const [concentracao, setConcentracao] = useState(inicial?.concentracao != null ? String(inicial.concentracao) : "");
   const [via, setVia] = useState(inicial?.via ?? (inicial?.tipo === "tratamento" ? "gavagem" : "ip"));
-  const [dias, setDias] = useState(inicial?.dias != null ? String(inicial.dias) : "");
-  const [inicio, setInicio] = useState(inicial?.inicio ?? "");
   const [sel, setSel] = useState<Set<string>>(new Set(inicial?.caixa_ids ?? []));
 
   const uni = UNIDADES_DOSE.find((u) => u.valor === doseUnidade);
@@ -687,7 +717,6 @@ function ProcedimentoForm({
       return n;
     });
   }
-
   function salvar() {
     setErro(null);
     iniciar(async () => {
@@ -701,9 +730,7 @@ function ProcedimentoForm({
         doseUnidade,
         concentracao: uni?.usaConcentracao ? num(concentracao) : null,
         via: via || null,
-        dias: tipo === "tratamento" ? int0(dias) || null : null,
-        inicio: tipo === "tratamento" ? inicio || null : null,
-        caixaIds: Array.from(sel),
+        caixaIds: Array.from(sel).filter((id) => infoCaixa.has(id)),
       });
       if ("erro" in r) {
         setErro(r.erro);
@@ -730,30 +757,21 @@ function ProcedimentoForm({
               Doença
               <select value={doenca} onChange={(e) => setDoenca(e.target.value)} className={INPUT_SM}>
                 <option value="">—</option>
-                {DOENCAS.map((d) => (
-                  <option key={d.valor} value={d.valor}>{d.rotulo}</option>
-                ))}
+                {DOENCAS.map((d) => (<option key={d.valor} value={d.valor}>{d.rotulo}</option>))}
               </select>
             </label>
           )}
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
             Via
             <select value={via} onChange={(e) => setVia(e.target.value)} className={INPUT_SM}>
-              {VIAS.map((v) => (
-                <option key={v.valor} value={v.valor}>{v.rotulo}</option>
-              ))}
+              {VIAS.map((v) => (<option key={v.valor} value={v.valor}>{v.rotulo}</option>))}
             </select>
           </label>
         </div>
 
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
           Substância
-          <input
-            value={substancia}
-            onChange={(e) => setSubstancia(e.target.value)}
-            placeholder={tipo === "inducao" ? "Ex.: aloxana (2% em citrato 0,05 M, pH 4,5)" : "Ex.: extrato hidroalcoólico (EBH)"}
-            className={`${INPUT_SM} w-full max-w-lg`}
-          />
+          <input value={substancia} onChange={(e) => setSubstancia(e.target.value)} placeholder={tipo === "inducao" ? "Ex.: aloxana (2% em citrato 0,05 M, pH 4,5)" : "Ex.: extrato hidroalcoólico (EBH) / água"} className={`${INPUT_SM} w-full max-w-lg`} />
         </label>
 
         <div className="flex flex-wrap items-end gap-3">
@@ -764,9 +782,7 @@ function ProcedimentoForm({
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
             Unidade
             <select value={doseUnidade} onChange={(e) => setDoseUnidade(e.target.value)} className={INPUT_SM}>
-              {UNIDADES_DOSE.map((u) => (
-                <option key={u.valor} value={u.valor}>{u.rotulo}</option>
-              ))}
+              {UNIDADES_DOSE.map((u) => (<option key={u.valor} value={u.valor}>{u.rotulo}</option>))}
             </select>
           </label>
           {uni?.usaConcentracao && (
@@ -774,18 +790,6 @@ function ProcedimentoForm({
               Concentração (mg/mL)
               <input inputMode="decimal" value={concentracao} onChange={(e) => setConcentracao(e.target.value)} placeholder="Ex.: 20" className={`${INPUT_SM} w-28`} />
             </label>
-          )}
-          {tipo === "tratamento" && (
-            <>
-              <label className="flex flex-col gap-1 text-xs text-ink-soft">
-                Dias
-                <input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value)} placeholder="Ex.: 15" className={`${INPUT_SM} w-16`} />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-ink-soft">
-                Início
-                <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={INPUT_SM} />
-              </label>
-            </>
           )}
         </div>
 
@@ -806,12 +810,8 @@ function ProcedimentoForm({
 
         {erro && <p className="text-sm text-alerta">{erro}</p>}
         <div className="flex gap-2">
-          <button type="button" onClick={salvar} disabled={pend} className={BOTAO_SECUNDARIO_SM}>
-            {pend ? "Salvando..." : "Salvar procedimento"}
-          </button>
-          <button type="button" onClick={aoFechar} className="text-xs text-ink-soft hover:underline">
-            cancelar
-          </button>
+          <button type="button" onClick={salvar} disabled={pend} className={BOTAO_SECUNDARIO_SM}>{pend ? "Salvando..." : "Salvar procedimento"}</button>
+          <button type="button" onClick={aoFechar} className="text-xs text-ink-soft hover:underline">cancelar</button>
         </div>
       </div>
     </div>

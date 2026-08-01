@@ -1887,3 +1887,29 @@ drop policy if exists "Membros gerenciam os procedimentos" on public.bioterio_pr
 create policy "Membros gerenciam os procedimentos" on public.bioterio_procedimentos for all
   using (public.eh_membro_projeto(projeto_id))
   with check (public.eh_membro_projeto(projeto_id));
+
+-- ── Biotério: separação por levas + cronograma único de tratamento ──────────
+-- Cada caixa pertence a uma leva (null = leva 1). Como o tratamento de uma leva
+-- começa no mesmo dia e dura o mesmo tanto para todas as caixas, o início e a
+-- duração ficam num único registro por (projeto, leva), não em cada procedimento.
+alter table public.bioterio_caixas add column if not exists leva integer;
+
+create table if not exists public.bioterio_config (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  leva integer not null default 1,
+  tratamento_inicio date,
+  tratamento_dias integer,
+  atualizado_por uuid references public.profiles (id),
+  atualizado_em timestamptz not null default now(),
+  unique (projeto_id, leva)
+);
+alter table public.bioterio_config enable row level security;
+alter table public.bioterio_config force row level security;
+drop policy if exists "Membros veem a config do biotério" on public.bioterio_config;
+create policy "Membros veem a config do biotério" on public.bioterio_config for select
+  using (public.eh_membro_projeto(projeto_id) or public.is_orientador());
+drop policy if exists "Membros gerenciam a config do biotério" on public.bioterio_config;
+create policy "Membros gerenciam a config do biotério" on public.bioterio_config for all
+  using (public.eh_membro_projeto(projeto_id))
+  with check (public.eh_membro_projeto(projeto_id));
