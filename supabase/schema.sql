@@ -1668,3 +1668,43 @@ drop trigger if exists bloquear_encerrado_consumo on public.consumo_real;
 create trigger bloquear_encerrado_consumo
   before insert or update on public.consumo_real
   for each row execute function public.bloquear_se_teste_encerrado();
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Sessões de laboratório (transparência de horas)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Cada ida ao laboratório: o bolsista inicia a sessão (fim null = em andamento)
+-- e, ao encerrar, marca o que fez (tópicos) e o tempo total fica registrado.
+-- Também pode registrar uma sessão passada informando início/fim. Alimenta o
+-- painel da orientadora (horas no lab).
+create table if not exists public.sessoes_lab (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles (id) on delete cascade,
+  inicio timestamptz not null,
+  fim timestamptz,
+  topicos text[] not null default '{}',
+  descricao text,
+  criado_em timestamptz not null default now()
+);
+-- Acelera achar a sessão aberta de cada pessoa.
+create index if not exists sessoes_lab_abertas
+  on public.sessoes_lab (profile_id) where fim is null;
+
+alter table public.sessoes_lab enable row level security;
+alter table public.sessoes_lab force row level security;
+drop policy if exists "Vê as próprias sessões" on public.sessoes_lab;
+create policy "Vê as próprias sessões" on public.sessoes_lab for select
+  using (
+    profile_id = auth.uid()
+    or public.is_orientador()
+    or public.pode_aprovar_cadastros()
+  );
+drop policy if exists "Registra a própria sessão" on public.sessoes_lab;
+create policy "Registra a própria sessão" on public.sessoes_lab for insert
+  with check (profile_id = auth.uid());
+drop policy if exists "Edita a própria sessão" on public.sessoes_lab;
+create policy "Edita a própria sessão" on public.sessoes_lab for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+drop policy if exists "Remove a própria sessão" on public.sessoes_lab;
+create policy "Remove a própria sessão" on public.sessoes_lab for delete
+  using (profile_id = auth.uid());

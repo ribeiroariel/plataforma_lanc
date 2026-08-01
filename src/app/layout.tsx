@@ -53,7 +53,8 @@ export default async function RootLayout({
       { href: "/projetos", rotulo: "Projetos" },
       { href: "/testes", rotulo: "Protocolos" },
       { href: "/reagentes", rotulo: "Reagentes" },
-      { href: "/estoque", rotulo: "Estoque" }
+      { href: "/estoque", rotulo: "Estoque" },
+      { href: "/laboratorio", rotulo: "Laboratório" }
     );
   } else if (usuario?.papel === "orientador") {
     navPrincipal.push(

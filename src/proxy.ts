@@ -50,6 +50,7 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/estoque") ||
     path.startsWith("/meus-testes") ||
     path.startsWith("/minhas-funcoes") ||
+    path.startsWith("/laboratorio") ||
     path.startsWith("/perfil");
   const isRotaLogada =
     isBolsistaRoute || isOrientadorRoute || isCompartilhadaRoute || isCadastrosRoute;
