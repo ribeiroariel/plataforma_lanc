@@ -1,25 +1,26 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { salvarItemEstoque, removerItemEstoque } from "@/lib/actions/estoque";
 import {
-  salvarItemEstoque,
-  removerItemEstoque,
-} from "@/lib/actions/estoque";
-import {
+  CATEGORIAS,
   LOCALIZACOES,
-  fmtMl,
-  type Localizacao,
-  type TipoReagenteEstoque,
+  UNIDADES,
+  fmtQuantidade,
+  nomeLocalizacao,
+  type Categoria,
+  type Unidade,
 } from "@/lib/estoque";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 export type ItemEstoque = {
   id: string;
   nome: string;
-  tipo: TipoReagenteEstoque;
-  quantidade_ml: number | null;
-  minimo_ml: number | null;
+  categoria: string;
+  quantidade: number | null;
+  unidade: string | null;
+  minimo: number | null;
   localizacao: string | null;
   obs: string | null;
   atualizado_em: string | null;
@@ -35,11 +36,7 @@ function parseNum(s: string): number | null {
 }
 
 function estaBaixo(i: ItemEstoque): boolean {
-  return (
-    i.quantidade_ml != null &&
-    i.minimo_ml != null &&
-    i.quantidade_ml < i.minimo_ml
-  );
+  return i.quantidade != null && i.minimo != null && i.quantidade < i.minimo;
 }
 
 export default function GestaoEstoque({
@@ -52,23 +49,9 @@ export default function GestaoEstoque({
   podeEditar: boolean;
 }) {
   const nomesNoEstoque = new Set(itens.map((i) => i.nome));
-  // Soluções conhecidas dos protocolos ainda não cadastradas (sugestões).
   const sugestoes = catalogo
     .filter((c) => !nomesNoEstoque.has(c.nome))
     .map((c) => c.nome);
-
-  const porLocal = useMemo(() => {
-    const grupos: { chave: Localizacao | "sem"; rotulo: string; itens: ItemEstoque[] }[] =
-      LOCALIZACOES.map((l) => ({ chave: l.valor, rotulo: l.rotulo, itens: [] }));
-    grupos.push({ chave: "sem", rotulo: "Sem local definido", itens: [] });
-    for (const i of itens) {
-      const g =
-        grupos.find((x) => x.chave === i.localizacao) ??
-        grupos[grupos.length - 1];
-      g.itens.push(i);
-    }
-    return grupos.filter((g) => g.itens.length > 0);
-  }, [itens]);
 
   const baixos = itens.filter(estaBaixo);
 
@@ -79,7 +62,7 @@ export default function GestaoEstoque({
           <p className="font-medium text-alerta">Estoque baixo</p>
           <p className="mt-1 text-ink-soft">
             {baixos
-              .map((i) => `${i.nome} (${fmtMl(i.quantidade_ml)})`)
+              .map((i) => `${i.nome} (${fmtQuantidade(i.quantidade, i.unidade)})`)
               .join(" · ")}
           </p>
         </div>
@@ -89,25 +72,26 @@ export default function GestaoEstoque({
         <AdicionarForm sugestoes={sugestoes} nomesNoEstoque={nomesNoEstoque} />
       )}
 
-      {itens.length === 0 ? (
-        <p className="text-sm text-ink-soft">
-          Nenhuma solução no estoque ainda. Adicione as soluções que o laboratório
-          já tem prontas, com a quantidade e onde ficam guardadas.
-        </p>
-      ) : (
-        porLocal.map((g) => (
-          <section key={g.chave}>
-            <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-signal">
-              {g.rotulo}
+      {CATEGORIAS.map((cat) => {
+        const doGrupo = itens.filter((i) => i.categoria === cat.valor);
+        return (
+          <section key={cat.valor}>
+            <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+              {cat.rotulo}
             </p>
-            <div className="flex flex-col gap-2">
-              {g.itens.map((i) => (
-                <LinhaEstoque key={i.id} item={i} podeEditar={podeEditar} />
-              ))}
-            </div>
+            <p className="mb-3 text-xs text-ink-soft">{cat.descricao}</p>
+            {doGrupo.length === 0 ? (
+              <p className="text-xs text-ink-soft">Nada cadastrado aqui ainda.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {doGrupo.map((i) => (
+                  <LinhaEstoque key={i.id} item={i} podeEditar={podeEditar} />
+                ))}
+              </div>
+            )}
           </section>
-        ))
-      )}
+        );
+      })}
     </div>
   );
 }
@@ -124,16 +108,21 @@ function AdicionarForm({
   const [erro, setErro] = useState<string | null>(null);
   const [aberto, setAberto] = useState(false);
 
+  const [categoria, setCategoria] = useState<Categoria>("solucao");
   const [nome, setNome] = useState("");
-  const [tipo, setTipo] = useState<TipoReagenteEstoque>("solucao");
   const [quantidade, setQuantidade] = useState("");
+  const [unidade, setUnidade] = useState<Unidade>("mL");
   const [minimo, setMinimo] = useState("");
   const [local, setLocal] = useState<string>("");
   const [obs, setObs] = useState("");
 
+  function trocarCategoria(c: Categoria) {
+    setCategoria(c);
+    setUnidade(CATEGORIAS.find((x) => x.valor === c)?.unidadePadrao ?? "un");
+  }
+
   function limpar() {
     setNome("");
-    setTipo("solucao");
     setQuantidade("");
     setMinimo("");
     setLocal("");
@@ -143,19 +132,20 @@ function AdicionarForm({
   function adicionar() {
     setErro(null);
     if (!nome.trim()) {
-      setErro("Informe o nome da solução.");
+      setErro("Informe o nome do item.");
       return;
     }
     if (nomesNoEstoque.has(nome.trim())) {
-      setErro("Essa solução já está no estoque — edite a linha dela abaixo.");
+      setErro("Esse item já está no estoque — edite a linha dele abaixo.");
       return;
     }
     iniciar(async () => {
       const r = await salvarItemEstoque({
         nome,
-        tipo,
-        quantidadeMl: parseNum(quantidade),
-        minimoMl: parseNum(minimo),
+        categoria,
+        quantidade: parseNum(quantidade),
+        unidade,
+        minimo: parseNum(minimo),
         localizacao: local || null,
         obs: obs || null,
       });
@@ -176,7 +166,7 @@ function AdicionarForm({
         onClick={() => setAberto(true)}
         className={`w-fit ${BOTAO_SECUNDARIO_SM}`}
       >
-        + Adicionar solução ao estoque
+        + Adicionar item ao estoque
       </button>
     );
   }
@@ -184,59 +174,82 @@ function AdicionarForm({
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
       <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-        Nova solução no estoque
+        Novo item no estoque
       </p>
       <div className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
-          Nome da solução
+          Tópico
+          <select
+            value={categoria}
+            onChange={(e) => trocarCategoria(e.target.value as Categoria)}
+            className={`${INPUT_SM} w-64`}
+          >
+            {CATEGORIAS.map((c) => (
+              <option key={c.valor} value={c.valor}>
+                {c.rotulo}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+          Nome
           <input
-            list="catalogo-reagentes"
+            list={categoria === "solucao" ? "catalogo-reagentes" : undefined}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex.: PBS pH 7,4"
+            placeholder={
+              categoria === "solucao"
+                ? "Ex.: PBS pH 7,4"
+                : categoria === "ponteira"
+                ? "Ex.: Ponteira 1000 µL"
+                : categoria === "material"
+                ? "Ex.: Béquer 100 mL"
+                : "Ex.: Ácido clorídrico P.A."
+            }
             className={`${INPUT_SM} w-full max-w-md`}
           />
-          <datalist id="catalogo-reagentes">
-            {sugestoes.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-          <span className="text-[11px] text-ink-soft">
-            Comece a digitar para escolher uma solução conhecida dos protocolos,
-            ou escreva uma nova.
-          </span>
+          {categoria === "solucao" && (
+            <datalist id="catalogo-reagentes">
+              {sugestoes.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          )}
         </label>
 
         <div className="flex flex-wrap gap-3">
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            Tipo
-            <select
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoReagenteEstoque)}
-              className={INPUT_SM}
-            >
-              <option value="solucao">Solução / tampão</option>
-              <option value="pa">Reagente P.A. (puro)</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            Quantidade (mL)
+            Quantidade
             <input
               inputMode="decimal"
               value={quantidade}
               onChange={(e) => setQuantidade(e.target.value)}
-              placeholder="Ex.: 100"
-              className={`${INPUT_SM} w-28`}
+              className={`${INPUT_SM} w-24`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
-            Avisar abaixo de (mL)
+            Unidade
+            <select
+              value={unidade}
+              onChange={(e) => setUnidade(e.target.value as Unidade)}
+              className={INPUT_SM}
+            >
+              {UNIDADES.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            Avisar abaixo de
             <input
               inputMode="decimal"
               value={minimo}
               onChange={(e) => setMinimo(e.target.value)}
               placeholder="opcional"
-              className={`${INPUT_SM} w-28`}
+              className={`${INPUT_SM} w-24`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-soft">
@@ -307,11 +320,14 @@ function LinhaEstoque({
   const [erro, setErro] = useState<string | null>(null);
 
   const [quantidade, setQuantidade] = useState(
-    item.quantidade_ml != null ? String(item.quantidade_ml) : ""
+    item.quantidade != null ? String(item.quantidade) : ""
   );
-  const [minimo, setMinimo] = useState(
-    item.minimo_ml != null ? String(item.minimo_ml) : ""
+  const [unidade, setUnidade] = useState<Unidade>(
+    (UNIDADES as string[]).includes(item.unidade ?? "")
+      ? (item.unidade as Unidade)
+      : "un"
   );
+  const [minimo, setMinimo] = useState(item.minimo != null ? String(item.minimo) : "");
   const [local, setLocal] = useState<string>(item.localizacao ?? "");
   const [obs, setObs] = useState(item.obs ?? "");
 
@@ -322,9 +338,10 @@ function LinhaEstoque({
     iniciar(async () => {
       const r = await salvarItemEstoque({
         nome: item.nome,
-        tipo: item.tipo,
-        quantidadeMl: parseNum(quantidade),
-        minimoMl: parseNum(minimo),
+        categoria: item.categoria,
+        quantidade: parseNum(quantidade),
+        unidade,
+        minimo: parseNum(minimo),
         localizacao: local || null,
         obs: obs || null,
       });
@@ -350,14 +367,12 @@ function LinhaEstoque({
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-rule bg-paper-raised px-3 py-2 text-sm">
         <span className="font-medium text-ink">{item.nome}</span>
-        {item.tipo === "pa" && (
-          <span className="rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-soft">
-            P.A.
-          </span>
-        )}
         <span className="font-mono tabular-nums text-ink-soft">
-          {fmtMl(item.quantidade_ml)}
+          {fmtQuantidade(item.quantidade, item.unidade)}
         </span>
+        {item.localizacao && (
+          <span className="text-xs text-ink-soft">· {nomeLocalizacao(item.localizacao)}</span>
+        )}
         {baixo && (
           <span className="rounded-full bg-alerta/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-alerta">
             baixo
@@ -383,22 +398,36 @@ function LinhaEstoque({
       <p className="mb-2 text-sm font-medium text-ink">{item.nome}</p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
-          Quantidade (mL)
+          Quantidade
           <input
             inputMode="decimal"
             value={quantidade}
             onChange={(e) => setQuantidade(e.target.value)}
-            className={`${INPUT_SM} w-24`}
+            className={`${INPUT_SM} w-20`}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-soft">
-          Avisar abaixo de (mL)
+          Unidade
+          <select
+            value={unidade}
+            onChange={(e) => setUnidade(e.target.value as Unidade)}
+            className={INPUT_SM}
+          >
+            {UNIDADES.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-ink-soft">
+          Avisar abaixo de
           <input
             inputMode="decimal"
             value={minimo}
             onChange={(e) => setMinimo(e.target.value)}
             placeholder="opcional"
-            className={`${INPUT_SM} w-24`}
+            className={`${INPUT_SM} w-20`}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-ink-soft">

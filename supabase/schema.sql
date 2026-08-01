@@ -343,6 +343,9 @@ alter table public.projeto_testes add column if not exists recipiente text;
 alter table public.projeto_testes add column if not exists encerrado boolean not null default false;
 alter table public.projeto_testes add column if not exists encerrado_por uuid references public.profiles (id);
 alter table public.projeto_testes add column if not exists encerrado_em timestamptz;
+-- Considerações gerais do teste (texto livre do bolsista sobre como foi o
+-- ensaio: imprevistos, observações, se deu tudo certo).
+alter table public.projeto_testes add column if not exists consideracoes text;
 
 -- Checks das colunas novas de forma idempotente (add column if not exists não
 -- aplica o check em bancos que já tinham a tabela).
@@ -1604,8 +1607,8 @@ create table if not exists public.reagentes_estoque (
   -- 'solucao' = solução/tampão pronto; 'pa' = reagente P.A. puro (estrutura já
   -- pronta; o registro detalhado dos P.A. virá depois).
   tipo text not null default 'solucao' check (tipo in ('solucao', 'pa')),
-  quantidade_ml numeric,
-  minimo_ml numeric, -- abaixo disso, a aba avisa "estoque baixo".
+  quantidade_ml numeric, -- legado (soluções); ver `quantidade`/`unidade` abaixo.
+  minimo_ml numeric,      -- legado; ver `minimo`.
   localizacao text check (
     localizacao in ('geladeira', 'freezer', 'armario_uso', 'armario_pa')
   ),
@@ -1615,6 +1618,76 @@ create table if not exists public.reagentes_estoque (
   created_at timestamptz not null default now(),
   unique (nome)
 );
+
+-- Categoria (tópico) e unidade genérica do item de estoque. Categorias:
+--   'solucao'  = reagentes/soluções prontos (mL/L) — os que o consumo abate;
+--   'pa'       = reagentes P.A. puros (mL, L, g, kg);
+--   'ponteira' = ponteiras e eppendorfs (por tipo, contagem);
+--   'material' = materiais de uso (tubos, béqueres, erlenmeyers... contagem).
+alter table public.reagentes_estoque add column if not exists categoria text
+  not null default 'solucao';
+alter table public.reagentes_estoque add column if not exists quantidade numeric;
+alter table public.reagentes_estoque add column if not exists unidade text default 'mL';
+alter table public.reagentes_estoque add column if not exists minimo numeric;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'reagentes_estoque_categoria_check') then
+    alter table public.reagentes_estoque add constraint reagentes_estoque_categoria_check
+      check (categoria in ('solucao', 'pa', 'ponteira', 'material'));
+  end if;
+end $$;
+-- Migra o modelo antigo (quantidade_ml/minimo_ml em mL) para o genérico.
+update public.reagentes_estoque
+  set quantidade = quantidade_ml
+  where quantidade is null and quantidade_ml is not null;
+update public.reagentes_estoque
+  set minimo = minimo_ml
+  where minimo is null and minimo_ml is not null;
+update public.reagentes_estoque set unidade = 'mL' where unidade is null;
+-- Se a coluna antiga `tipo` existir (versão inicial), alinha categoria com ela.
+update public.reagentes_estoque set categoria = 'pa'
+  where categoria = 'solucao' and tipo = 'pa';
+
+-- Pedidos dos bolsistas (falta/precisa de algo) — vão para a aba Pedidos do
+-- Ariel e da orientadora.
+create table if not exists public.pedidos (
+  id uuid primary key default gen_random_uuid(),
+  item text not null,
+  quantidade text,       -- livre (ex.: "2 caixas", "500 mL") — pedido informal.
+  categoria text,        -- opcional: solucao/pa/ponteira/material/outro.
+  motivo text,
+  obs text,
+  status text not null default 'aberto' check (status in ('aberto', 'atendido')),
+  solicitado_por uuid not null references public.profiles (id),
+  criado_em timestamptz not null default now(),
+  atendido_por uuid references public.profiles (id),
+  atendido_em timestamptz
+);
+
+alter table public.pedidos enable row level security;
+alter table public.pedidos force row level security;
+-- Vê os próprios pedidos; orientadora e quem aprova cadastros (Ariel) veem todos.
+drop policy if exists "Vê os pedidos" on public.pedidos;
+create policy "Vê os pedidos" on public.pedidos for select
+  using (
+    solicitado_por = auth.uid()
+    or public.is_orientador()
+    or public.pode_aprovar_cadastros()
+  );
+drop policy if exists "Bolsista cria pedido" on public.pedidos;
+create policy "Bolsista cria pedido" on public.pedidos for insert
+  with check (solicitado_por = auth.uid());
+-- Só orientadora / quem aprova cadastros marca como atendido ou remove.
+drop policy if exists "Gestor atualiza pedido" on public.pedidos;
+create policy "Gestor atualiza pedido" on public.pedidos for update
+  using (public.is_orientador() or public.pode_aprovar_cadastros())
+  with check (public.is_orientador() or public.pode_aprovar_cadastros());
+drop policy if exists "Solicitante ou gestor remove pedido" on public.pedidos;
+create policy "Solicitante ou gestor remove pedido" on public.pedidos for delete
+  using (
+    solicitado_por = auth.uid()
+    or public.is_orientador()
+    or public.pode_aprovar_cadastros()
+  );
 
 alter table public.reagentes_estoque enable row level security;
 alter table public.reagentes_estoque force row level security;

@@ -15,6 +15,7 @@ import MetadadosLeitura from "./MetadadosLeitura";
 import FotosCaderno from "./FotosCaderno";
 import EncerramentoTeste from "./EncerramentoTeste";
 import ConsumoReal from "./ConsumoReal";
+import ConsideracoesTeste from "./ConsideracoesTeste";
 
 type ProjetoTeste = {
   id: string;
@@ -30,6 +31,7 @@ type ProjetoTeste = {
   encerrado: boolean;
   encerrado_por: string | null;
   encerrado_em: string | null;
+  consideracoes: string | null;
 };
 
 type Resultado = {
@@ -63,7 +65,7 @@ export default async function PaginaResultado({
       supabase
         .from("projeto_testes")
         .select(
-          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em"
+          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em, consideracoes"
         )
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
@@ -260,6 +262,13 @@ export default async function PaginaResultado({
         }
         existentes={consumoExistente}
         podeRegistrar={podeEditar}
+      />
+
+      <ConsideracoesTeste
+        projetoId={projetoId}
+        projetoTesteId={projetoTeste.id}
+        inicial={projetoTeste.consideracoes ?? ""}
+        podeEditar={podeEditar}
       />
 
       <EncerramentoTeste
