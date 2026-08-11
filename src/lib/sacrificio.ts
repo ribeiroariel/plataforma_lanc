@@ -16,7 +16,7 @@ export const FUNCOES_SACRIFICIO: FuncaoSacrificio[] = [
   { valor: "dissecacao_rim", rotulo: "Dissecação — rim", minPessoas: 1 },
   { valor: "dissecacao_pancreas", rotulo: "Dissecação — pâncreas", minPessoas: 1 },
   { valor: "dissecacao_cortex", rotulo: "Dissecação — córtex", minPessoas: 1 },
-  { valor: "separacao_cortex_hipocampo", rotulo: "Separação córtex/hipocampo", minPessoas: 1 },
+  { valor: "separacao_cortex_hipocampo", rotulo: "Separação córtex/hipocampo/cerebelo", minPessoas: 1 },
   { valor: "homogeneizacao", rotulo: "Homogeneização", minPessoas: 1 },
   { valor: "separacao_aliquotas", rotulo: "Separação de alíquotas", minPessoas: 1 },
   { valor: "separacao_sangue", rotulo: "Separação de sangue (plasma/eritrócito)", minPessoas: 1 },
@@ -51,7 +51,7 @@ export const FUNCAO_ESCOPO: Record<
   dissecacao_cortex: { secoes: ["coleta"], orgaos: ["cortex"] },
   separacao_cortex_hipocampo: {
     secoes: ["coleta"],
-    orgaos: ["cortex", "hipocampo"],
+    orgaos: ["cortex", "hipocampo", "cerebelo"],
   },
   separacao_sangue: { secoes: ["coleta"], orgaos: ["plasma", "eritrocito"] },
   homogeneizacao: { secoes: ["homogeneizacao"] },
@@ -74,6 +74,7 @@ export const ORGAOS_DISSECAVEIS: { valor: string; rotulo: string }[] = [
   { valor: "pancreas", rotulo: "Pâncreas" },
   { valor: "cortex", rotulo: "Córtex" },
   { valor: "hipocampo", rotulo: "Hipocampo" },
+  { valor: "cerebelo", rotulo: "Cerebelo" },
   { valor: "plasma", rotulo: "Plasma" },
   { valor: "eritrocito", rotulo: "Eritrócito" },
 ];

@@ -1,16 +1,20 @@
 import { readFileSync, existsSync } from "fs";
 import path from "path";
-import { nomeTecido, type Tecido } from "./tecidos";
+import { nomeTecido } from "./tecidos";
 
-// Alguns protocolos do manual (eritrócitos/plasma, fígado) dizem "Idêntico à
-// seção X" em vez de repetir Princípio/Equipamentos/Preparação. No site cada
-// aba precisa ser completa, então aqui a gente COMPÕE o protocolo do tecido
-// variante reaproveitando o texto exato do protocolo de córtex/rins do mesmo
-// ensaio (que veio direto do manual — nenhum número é redigitado).
+// Alguns protocolos do manual (hipocampo, cerebelo, rins, eritrócitos,
+// plasma, fígado) dizem "Idêntico à seção X" em vez de repetir
+// Princípio/Equipamentos/Preparação. No site cada aba precisa ser completa,
+// então aqui a gente COMPÕE o protocolo do tecido variante reaproveitando o
+// texto exato do protocolo-base de córtex do mesmo ensaio (que veio direto
+// do manual — nenhum número é redigitado). Hipocampo e cerebelo usam o
+// mesmíssimo protocolo do córtex (mesma homogeneização, mesmos volumes) —
+// só o rótulo do tecido muda.
 
 const SUFIXOS_TECIDO = [
-  "-cortex-rins",
-  "-eritrocitos-plasma",
+  "-hipocampo",
+  "-cerebelo",
+  "-rins",
   "-eritrocitos",
   "-plasma",
   "-figado",
@@ -22,9 +26,9 @@ function dirTestes() {
   return path.join(process.cwd(), "content", "testes");
 }
 
-/** slug do mesmo ensaio no bloco córtex/rins, ou null se não for variante. */
+/** slug do mesmo ensaio na base "córtex", ou null se não for variante. */
 function slugBase(slug: string): string | null {
-  if (slug.endsWith("-cortex-rins")) return null;
+  if (slug.endsWith("-cortex")) return null;
   if (
     slug.startsWith("preparo-amostras") ||
     slug.startsWith("valores-referencia") ||
@@ -36,7 +40,7 @@ function slugBase(slug: string): string | null {
   const sufixo = SUFIXOS_TECIDO.find((s) => slug.endsWith(s));
   if (!sufixo) return null;
   const prefixo = slug.slice(0, -sufixo.length);
-  const base = `${prefixo}-cortex-rins`;
+  const base = `${prefixo}-cortex`;
   return existsSync(path.join(dirTestes(), `${base}.md`)) ? base : null;
 }
 
@@ -110,9 +114,12 @@ export function conteudoProtocolo(slug: string): string {
   const descarteVar = corpoVar.filter((l) => /^Descarte/i.test(l.trim()));
 
   const nomeDoTecido = (() => {
-    if (slug.includes("figado")) return nomeTecido("figado" as Tecido);
-    if (slug.includes("eritrocitos") || slug.includes("plasma"))
-      return nomeTecido("eritrocitos-plasma" as Tecido);
+    if (slug.endsWith("-figado")) return nomeTecido("figado");
+    if (slug.endsWith("-eritrocitos")) return nomeTecido("eritrocitos");
+    if (slug.endsWith("-plasma")) return nomeTecido("plasma");
+    if (slug.endsWith("-hipocampo")) return nomeTecido("hipocampo");
+    if (slug.endsWith("-cerebelo")) return nomeTecido("cerebelo");
+    if (slug.endsWith("-rins")) return nomeTecido("rins");
     return "";
   })();
 

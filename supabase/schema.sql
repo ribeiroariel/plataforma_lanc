@@ -159,7 +159,7 @@ create policy "Orientadora gerencia notícias"
 -- CURVAS PADRÃO DE LOWRY (registro de transparência)
 -- ----------------------------------------------------------------------------
 -- Cada linha é uma curva padrão de BSA que um bolsista rodou (6 pontos fixos,
--- conforme content/testes/lowry-cortex-rins.md) + as amostras lidas com essa
+-- conforme content/testes/lowry-cortex.md) + as amostras lidas com essa
 -- curva. É um registro de transparência: uma vez salva, não é editável nem
 -- apagável pelo site — só leitura, para o próprio bolsista e para a
 -- orientadora (inclusive para revisores de artigo no futuro).
@@ -253,7 +253,7 @@ do $$ begin
       add constraint projetos_especie_check check (especie in ('rato', 'camundongo'));
   end if;
 end $$;
--- Tecidos que o projeto vai analisar (ex.: {"figado","cortex-rins"}). Filtra
+-- Tecidos que o projeto vai analisar (ex.: {"figado","cortex","rins"}). Filtra
 -- os testes oferecidos na designação — só testes desses tecidos. Vazio = sem
 -- restrição (projetos antigos criados antes desta coluna).
 alter table public.projetos add column if not exists tecidos text[] not null default '{}';

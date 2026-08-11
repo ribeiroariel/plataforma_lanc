@@ -4,7 +4,7 @@ Informação
 Tecido/Amostra
 Fígado — homogeneizado 10%
 Ensaio
-Idêntico à seção 12
+Idêntico à seção 13
 λ de leitura
 370 nm
 Tipo de cubeta

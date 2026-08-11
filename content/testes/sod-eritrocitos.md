@@ -4,7 +4,7 @@ Informação
 Tecido/Amostra
 Eritrócitos — lisado (diluição 1:50)
 Ensaio
-Idêntico à seção 9
+Idêntico à seção 10
 λ de leitura
 420 nm
 Tipo de cubeta

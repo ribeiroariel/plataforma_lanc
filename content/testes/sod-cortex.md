@@ -2,7 +2,7 @@
 Parâmetro
 Informação
 Tecido/Amostra
-Córtex cerebral e rins — homogeneizado 10%
+Córtex cerebral — homogeneizado 10%
 Ensaio
 Inibição da autooxidação do pirogalol
 λ de leitura
@@ -26,7 +26,7 @@ Tampão TRIS 50 mM com EDTA 1 mM, pH 8,2
 Preparo na aba "Tampões e reagentes gerais". Estável por 1 mês em geladeira.
 Pirogalol 24 mM em HCl 10 mM (preparar imediatamente antes do uso)
 0,00303 g de pirogalol + 1,0 mL de HCl 10 mM. Frasco com papel alumínio.
-Obs.: Preparar somente a quantidade necessária imediatamente antes do uso. Para 10 amostras + 10% de margem: apenas 44 µL de solução de pirogalol são necessários (10 amostras × 4 µL × 1,10). O restante deve ser descartado. O pirogalol se oxida rapidamente — nunca reutilizar.
+Obs.: Preparar somente a quantidade necessária imediatamente antes do uso. Para 10 amostras + 10% de margem: 264 µL de solução de pirogalol são necessários (10 amostras × 24 µL × 1,10) — o volume de pirogalol usado por amostra na mistura de reação (placa de 24 poços, escala 6×) é 24 µL, não os 4 µL da versão original em microplaca de 96 poços. O restante do 1,0 mL preparado deve ser descartado. O pirogalol se oxida rapidamente — nunca reutilizar.
 Catalase — solução de trabalho (preparar no dia)
 0,0062 g de catalase + 650 µL de tampão TRIS pH 8,2. Manter no gelo, frasco com papel alumínio.
 10.4. PROCEDIMENTO

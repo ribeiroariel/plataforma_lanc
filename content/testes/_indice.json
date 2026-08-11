@@ -1,113 +1,293 @@
 [
   {
-    "slug": "preparo-amostras-cortex-rins",
-    "titulo": "Preparo das amostras — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "preparo-amostras-cortex",
+    "titulo": "Preparo das amostras — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "cat-cortex-rins",
-    "titulo": "Catalase (CAT) — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "cat-cortex",
+    "titulo": "Catalase (CAT) — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "sod-cortex-rins",
-    "titulo": "Superóxido dismutase (SOD) — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "sod-cortex",
+    "titulo": "Superóxido dismutase (SOD) — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "tbars-cortex-rins",
-    "titulo": "Peroxidação lipídica (TBARS) — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "tbars-cortex",
+    "titulo": "Peroxidação lipídica (TBARS) — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "sulfidrilas-cortex-rins",
-    "titulo": "Sulfidrilas totais e não-proteicas — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "sulfidrilas-cortex",
+    "titulo": "Sulfidrilas totais e não-proteicas — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "carboniladas-cortex-rins",
-    "titulo": "Proteínas carboniladas — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "carboniladas-cortex",
+    "titulo": "Proteínas carboniladas — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "lowry-cortex-rins",
-    "titulo": "Dosagem de proteínas totais (método de Lowry) — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "lowry-cortex",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "tiois-dissulfetos-cortex-rins",
-    "titulo": "Tióis e dissulfetos — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "tiois-dissulfetos-cortex",
+    "titulo": "Tióis e dissulfetos — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "acido-ascorbico-cortex-rins",
-    "titulo": "Ácido ascórbico (vitamina C) — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "acido-ascorbico-cortex",
+    "titulo": "Ácido ascórbico (vitamina C) — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "h2o2-cortex-rins",
-    "titulo": "Peróxido de hidrogênio (H₂O₂) — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "h2o2-cortex",
+    "titulo": "Peróxido de hidrogênio (H₂O₂) — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "valores-referencia-cortex-rins",
-    "titulo": "Valores de referência — córtex e rins",
-    "tecido": "cortex-rins"
+    "slug": "valores-referencia-cortex",
+    "titulo": "Valores de referência — córtex cerebral",
+    "tecido": "cortex"
   },
   {
-    "slug": "preparo-amostras-eritrocitos-plasma",
-    "titulo": "Preparo das amostras — eritrócitos e plasma",
-    "tecido": "eritrocitos-plasma"
+    "slug": "preparo-amostras-hipocampo",
+    "titulo": "Preparo das amostras — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "cat-hipocampo",
+    "titulo": "Catalase (CAT) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "sod-hipocampo",
+    "titulo": "Superóxido dismutase (SOD) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "tbars-hipocampo",
+    "titulo": "Peroxidação lipídica (TBARS) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "sulfidrilas-hipocampo",
+    "titulo": "Sulfidrilas totais e não-proteicas — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "carboniladas-hipocampo",
+    "titulo": "Proteínas carboniladas — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "lowry-hipocampo",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "tiois-dissulfetos-hipocampo",
+    "titulo": "Tióis e dissulfetos — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "acido-ascorbico-hipocampo",
+    "titulo": "Ácido ascórbico (vitamina C) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "h2o2-hipocampo",
+    "titulo": "Peróxido de hidrogênio (H₂O₂) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "valores-referencia-hipocampo",
+    "titulo": "Valores de referência — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "preparo-amostras-cerebelo",
+    "titulo": "Preparo das amostras — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "cat-cerebelo",
+    "titulo": "Catalase (CAT) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "sod-cerebelo",
+    "titulo": "Superóxido dismutase (SOD) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "tbars-cerebelo",
+    "titulo": "Peroxidação lipídica (TBARS) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "sulfidrilas-cerebelo",
+    "titulo": "Sulfidrilas totais e não-proteicas — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "carboniladas-cerebelo",
+    "titulo": "Proteínas carboniladas — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "lowry-cerebelo",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "tiois-dissulfetos-cerebelo",
+    "titulo": "Tióis e dissulfetos — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "acido-ascorbico-cerebelo",
+    "titulo": "Ácido ascórbico (vitamina C) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "h2o2-cerebelo",
+    "titulo": "Peróxido de hidrogênio (H₂O₂) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "valores-referencia-cerebelo",
+    "titulo": "Valores de referência — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "preparo-amostras-rins",
+    "titulo": "Preparo das amostras — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "cat-rins",
+    "titulo": "Catalase (CAT) — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "sod-rins",
+    "titulo": "Superóxido dismutase (SOD) — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "tbars-rins",
+    "titulo": "Peroxidação lipídica (TBARS) — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "sulfidrilas-rins",
+    "titulo": "Sulfidrilas totais e não-proteicas — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "carboniladas-rins",
+    "titulo": "Proteínas carboniladas — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "lowry-rins",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "tiois-dissulfetos-rins",
+    "titulo": "Tióis e dissulfetos — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "acido-ascorbico-rins",
+    "titulo": "Ácido ascórbico (vitamina C) — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "valores-referencia-rins",
+    "titulo": "Valores de referência — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "preparo-amostras-eritrocitos",
+    "titulo": "Preparo das amostras — eritrócitos",
+    "tecido": "eritrocitos"
   },
   {
     "slug": "cat-eritrocitos",
     "titulo": "Catalase (CAT) — eritrócitos",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "eritrocitos"
   },
   {
     "slug": "sod-eritrocitos",
     "titulo": "Superóxido dismutase (SOD) — eritrócitos",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "eritrocitos"
   },
   {
     "slug": "tbars-eritrocitos",
     "titulo": "Peroxidação lipídica (TBARS) — eritrócitos",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "eritrocitos"
+  },
+  {
+    "slug": "sulfidrilas-eritrocitos",
+    "titulo": "Sulfidrilas totais e não-proteicas — eritrócitos",
+    "tecido": "eritrocitos"
   },
   {
     "slug": "carboniladas-eritrocitos",
     "titulo": "Proteínas carboniladas — eritrócitos",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "eritrocitos"
+  },
+  {
+    "slug": "lowry-eritrocitos",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — eritrócitos",
+    "tecido": "eritrocitos"
+  },
+  {
+    "slug": "valores-referencia-eritrocitos",
+    "titulo": "Valores de referência — eritrócitos",
+    "tecido": "eritrocitos"
+  },
+  {
+    "slug": "preparo-amostras-plasma",
+    "titulo": "Preparo das amostras — plasma",
+    "tecido": "plasma"
   },
   {
     "slug": "tbars-plasma",
     "titulo": "Peroxidação lipídica (TBARS) — plasma",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "plasma"
   },
   {
-    "slug": "sulfidrilas-eritrocitos-plasma",
-    "titulo": "Sulfidrilas totais e não-proteicas — eritrócitos e plasma",
-    "tecido": "eritrocitos-plasma"
+    "slug": "sulfidrilas-plasma",
+    "titulo": "Sulfidrilas totais e não-proteicas — plasma",
+    "tecido": "plasma"
   },
   {
     "slug": "carboniladas-plasma",
     "titulo": "Proteínas carboniladas — plasma",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "plasma"
   },
   {
     "slug": "acido-ascorbico-plasma",
     "titulo": "Ácido ascórbico (vitamina C) — plasma",
-    "tecido": "eritrocitos-plasma"
+    "tecido": "plasma"
   },
   {
-    "slug": "lowry-eritrocitos-plasma",
-    "titulo": "Dosagem de proteínas totais (método de Lowry) — eritrócitos e plasma",
-    "tecido": "eritrocitos-plasma"
+    "slug": "lowry-plasma",
+    "titulo": "Dosagem de proteínas totais (método de Lowry) — plasma",
+    "tecido": "plasma"
   },
   {
-    "slug": "valores-referencia-eritrocitos-plasma",
-    "titulo": "Valores de referência — eritrócitos e plasma",
-    "tecido": "eritrocitos-plasma"
+    "slug": "valores-referencia-plasma",
+    "titulo": "Valores de referência — plasma",
+    "tecido": "plasma"
   },
   {
     "slug": "preparo-amostras-figado",

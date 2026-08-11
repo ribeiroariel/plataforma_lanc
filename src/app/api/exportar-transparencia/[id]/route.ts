@@ -33,8 +33,12 @@ type Resultado = {
 };
 
 const TECIDO_EN: Record<string, string> = {
-  "cortex-rins": "Cerebral cortex and kidney",
-  "eritrocitos-plasma": "Erythrocytes and plasma",
+  cortex: "Cerebral cortex",
+  hipocampo: "Hippocampus",
+  cerebelo: "Cerebellum",
+  rins: "Kidney",
+  eritrocitos: "Erythrocytes",
+  plasma: "Plasma",
   figado: "Liver",
   geral: "General",
 };

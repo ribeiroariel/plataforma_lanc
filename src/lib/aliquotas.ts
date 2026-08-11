@@ -25,14 +25,18 @@ const MULTIPLICADOR: Partial<Record<CategoriaAliquota, number>> = {
 };
 
 // Órgão dissecável → tecido de análise (define quais testes se aplicam ao
-// órgão). ⚠️ CALIBRÁVEL. Pâncreas não tem teste bioquímico designável.
+// órgão). Cada órgão mapeia para o seu próprio tecido de designação — antes
+// rim/córtex/hipocampo caíam todos em "cortex-rins" e o sistema de alíquotas
+// não conseguia separar os testes designados para cada um. ⚠️ CALIBRÁVEL.
+// Pâncreas não tem teste bioquímico designável.
 export const ORGAO_PARA_TECIDO: Record<string, Tecido | null> = {
   figado: "figado",
-  rim: "cortex-rins",
-  cortex: "cortex-rins",
-  hipocampo: "cortex-rins",
-  plasma: "eritrocitos-plasma",
-  eritrocito: "eritrocitos-plasma",
+  rim: "rins",
+  cortex: "cortex",
+  hipocampo: "hipocampo",
+  cerebelo: "cerebelo",
+  plasma: "plasma",
+  eritrocito: "eritrocitos",
   pancreas: null,
 };
 

@@ -4,7 +4,7 @@ Informação
 Tecido/Amostra
 Fígado — homogeneizado 10% (diluição 1:10)
 Ensaio
-Idêntico à seção 9
+Idêntico à seção 10
 λ de leitura
 420 nm
 Tipo de cubeta

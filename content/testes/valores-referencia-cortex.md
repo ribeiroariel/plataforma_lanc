@@ -1,4 +1,4 @@
-VALORES DE REFERÊNCIA — CONTROLES: CÓRTEX CEREBRAL E RINS
+VALORES DE REFERÊNCIA — CONTROLES: CÓRTEX CEREBRAL
 Os valores a seguir são faixas indicativas obtidas da literatura para ratos Wistar adultos saudáveis (machos, 8–12 semanas, condições-padrão). Variações decorrentes de cepa, sexo, idade, dieta e protocolo específico do laboratório são esperadas. Cada laboratório deve estabelecer sua própria faixa de referência com seus grupos controle, sempre processados em paralelo com os grupos experimentais.
 Ensaio
 Tecido/Amostra
@@ -8,25 +8,13 @@ CAT
 Córtex cerebral (homog. 10%)
 15–40 µmol H₂O₂·min⁻¹·mg prot⁻¹
 Aebi, 1984
-CAT
-Rins (homog. 10%)
-30–80 µmol H₂O₂·min⁻¹·mg prot⁻¹
-Aebi, 1984
 SOD
 Córtex cerebral (homog. 10%)
 6–18 U·mg prot⁻¹
 Marklund & Marklund, 1974
-SOD
-Rins (homog. 10%)
-8–22 U·mg prot⁻¹
-Marklund & Marklund, 1974
 TBARS
 Córtex cerebral (homog. 10%)
 0,4–1,8 nmol MDA-eq·mg prot⁻¹
-Ohkawa et al., 1979
-TBARS
-Rins (homog. 10%)
-0,3–1,5 nmol MDA-eq·mg prot⁻¹
 Ohkawa et al., 1979
 T-SH (tióis totais)
 Córtex cerebral (homog. 10%)
@@ -57,4 +45,3 @@ Homogeneizado 10% córtex
 2–6 mg prot·mL⁻¹
 Lowry et al., 1951
 Obs.: Critério prático de controle de qualidade: se o valor do grupo controle não se encontrar dentro da faixa esperada para o protocolo, revisar o preparo dos reagentes, a qualidade da amostra (tempo pós-sacrifício, número de ciclos de congelamento) e a calibração do espectrofotômetro antes de prosseguir com a análise dos grupos experimentais.
-BLOCO 2 – TESTES BIOQUÍMICOS: ERITRÓCITOS E PLASMA

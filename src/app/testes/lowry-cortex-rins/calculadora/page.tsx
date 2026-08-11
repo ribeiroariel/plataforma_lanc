@@ -17,7 +17,7 @@ import { regressaoLinear } from "@/lib/estatistica";
 import { INPUT_SM, BOTAO_PRIMARIO, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
 
 // Pontos fixos da curva padrão de BSA, conforme
-// content/testes/lowry-cortex-rins.md (seção 14.4 do manual).
+// content/testes/lowry-cortex.md (seção 14.4 do manual).
 const PONTOS_PADRAO = [0, 10, 20, 40, 60, 80] as const;
 const VOLUME_AMOSTRA_UL = 10;
 const R2_MINIMO = 0.99;
@@ -143,7 +143,7 @@ export default function CalculadoraLowry() {
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <Link
-        href="/testes/lowry-cortex-rins"
+        href="/testes/lowry-cortex"
         className="text-sm text-ink-soft hover:text-absorbance"
       >
         ← Voltar ao protocolo

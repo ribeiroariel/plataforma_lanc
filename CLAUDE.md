@@ -36,7 +36,9 @@ Next 16.2.10 App Router, React 19.2.4, Tailwind 4, `@supabase/ssr`).
   pendentes) — consegue ler tudo isso porque a função `is_orientador()`
   está somada em toda policy de leitura relevante.
 - `/testes` — barra lateral com todos os testes bioquímicos do manual,
-  agrupados por tecido (córtex/rins, eritrócitos/plasma, fígado).
+  agrupados por tecido (córtex, hipocampo, cerebelo, rins, eritrócitos,
+  plasma, fígado — cada um sua própria categoria de designação; hipocampo e
+  cerebelo usam o mesmo protocolo do córtex, ver `src/lib/protocolo.ts`).
   Conteúdo em `content/testes/*.md`, extraído **literalmente** (sem
   reescrita) do manual via `content/testes/_indice.json` +
   `src/lib/testes.ts` — ver script que gerou os cortes em

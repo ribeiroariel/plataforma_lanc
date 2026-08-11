@@ -1,5 +1,5 @@
-8. PREPARO DAS AMOSTRAS (TECIDO)
-Os rins serão removidos, decapsulados e mantidos em gelo com solução salina (154 mM NaCl, 5 mM Tris–HEPES, pH 7,5). Para o córtex cerebral, remover o tecido imediatamente após o sacrifício e congelar em eppendorfs identificados.
+8. PREPARO DAS AMOSTRAS (TECIDO) – CEREBELO
+Dissecar o cerebelo imediatamente após o sacrifício e congelar em eppendorfs identificados. Mesmo procedimento de coleta e homogeneização do córtex cerebral, aplicado à estrutura específica.
 Obs.: O intervalo entre o sacrifício e o início da homogeneização não deve exceder 15 minutos. Tempos superiores comprometem a atividade enzimática de CAT e SOD.
 8.1. HOMOGENEIZAÇÃO
 Pesar a amostra (mg).

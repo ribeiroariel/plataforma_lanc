@@ -1,8 +1,8 @@
-15. TIÓIS E DISSULFETOS – CÓRTEX CEREBRAL E RINS
+15. TIÓIS E DISSULFETOS – CÓRTEX CEREBRAL
 Parâmetro
 Informação
 Tecido/Amostra
-Córtex cerebral e rins — fração citosólica ou mitocondrial
+Córtex cerebral — fração citosólica ou mitocondrial
 Ensaio
 Quantificação de tióis (–SH) e dissulfetos (–S–S–) por redução com DTT e reação com DTNB
 λ de leitura
@@ -18,6 +18,7 @@ Referência: Zahler, W.L. & Cleland, W.W. (1968). A specific and sensitive assay
 Espectrofotômetro visível (cubeta de vidro ou plástico, 412 nm) — para leitura convencional;
 Leitor de microplaca Infinite 200 Pro (TECAN) com módulo UV-Vis e software Magellan ou i-control — alternativa ao espectrofotômetro convencional para leitura cinética em microplaca de 96 poços (máx. 300 µL/poço; volume recomendado: 250 µL).
 Obs.: O Infinite 200 Pro somente pode ser utilizado na presença de um dos responsáveis pelo equipamento. Nunca operar o aparelho sem supervisão de um responsável habilitado.
+Obs. — Diluição para leitura em cubeta grande: se a quantidade de amostra disponível for limitada, há duas formas equivalentes de fechar o volume necessário para a cubeta grande do espectrofotômetro convencional. (a) Escala cheia: pipetar todos os reagentes desta receita nos volumes já descritos (mantendo as proporções) — é a forma padrão, sem etapa extra. (b) Escala reduzida + diluição: rodar a reação numa escala reduzida (ex.: os mesmos volumes usados numa microcubeta, quando essa opção existir para o ensaio) e, só depois de pronta a reação, completar com água ultrapura (milli-Q) até o volume mínimo da cubeta grande. Anotar o fator de diluição (volume final ÷ volume da reação reduzida) e multiplicar a absorbância lida por esse fator antes de usar o valor no cálculo do resultado. IMPORTANTE: a diluição (opção b) só é válida partindo de uma reação já lida em cubeta (mesmo caminho óptico da cubeta grande, tipicamente 1 cm) — nunca a partir da leitura em microplaca de 96 poços: o caminho óptico do poço não é o mesmo da cubeta, a absorbância não escala de forma simples pela diluição, e o fator de diluição necessário costuma ser grande demais, deixando a absorbância resultante abaixo do que o espectrofotômetro consegue ler com confiabilidade.
 Vórtex, banho de temperatura ambiente, eppendorfs, micropipetas, papel alumínio.
 15.3. PREPARAÇÃO DAS SOLUÇÕES
 Quantidade calculada para 10 amostras (+10% de margem de segurança). Preparar sempre 10% a mais do que o necessário para cobrir eventuais erros de pipetagem.
