@@ -87,9 +87,11 @@ digitado em **gramas**.
 
 ## 3. Tecidos/órgãos da dissecação (mais granular que os tecidos de análise)
 
-Análise usa `Tecido` = {cortex-rins, eritrocitos-plasma, figado, geral}. A
-dissecação é por **órgão**: fígado, rim, pâncreas, cérebro → (córtex + hipocampo),
-sangue → (plasma + eritrócito). Ex.: pâncreas pode ir só pra histologia (sem
+Análise usa `Tecido` = {cortex, hipocampo, cerebelo, rins, eritrocitos, plasma,
+figado, geral} — cada um sua própria categoria de designação (atualizado:
+antes cortex/rim/hipocampo caíam todos em "cortex-rins" combinado). A
+dissecação é por **órgão**: fígado, rim, pâncreas, cérebro → (córtex +
+hipocampo + cerebelo), sangue → (plasma + eritrócito). Ex.: pâncreas pode ir só pra histologia (sem
 teste bioquímico). *Precisa de uma lista canônica de órgãos* (ver Q5).
 
 ## 4. Funções do dia (enum, com mínimo de pessoas)

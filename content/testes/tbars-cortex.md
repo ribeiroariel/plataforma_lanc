@@ -2,7 +2,7 @@
 Parâmetro
 Informação
 Tecido/Amostra
-Córtex cerebral e rins — homogeneizado 10%
+Córtex cerebral — homogeneizado 10%
 Ensaio
 Quantificação de aldeídos totais (MDA-equivalentes) por reação com TBA
 λ de leitura
@@ -19,6 +19,7 @@ Referência: Ohkawa, Ohishi & Yagi (1979). Analytical Biochemistry, 95(2), 351�
 Espectrofotômetro visível (cubeta de vidro, 535 nm) — para leitura convencional;
 Leitor de microplaca Infinite 200 Pro (TECAN) com módulo UV-Vis e software Magellan ou i-control — alternativa ao espectrofotômetro convencional para leitura cinética em microplaca de 96 poços (máx. 300 µL/poço; volume recomendado: 250 µL).
 Obs.: O Infinite 200 Pro somente pode ser utilizado na presença de um dos responsáveis pelo equipamento. Nunca operar o aparelho sem supervisão de um responsável habilitado.
+Obs. — Diluição para leitura em cubeta grande: se a quantidade de amostra disponível for limitada, há duas formas equivalentes de fechar o volume necessário para a cubeta grande do espectrofotômetro convencional. (a) Escala cheia: pipetar todos os reagentes desta receita nos volumes já descritos (mantendo as proporções) — é a forma padrão, sem etapa extra. (b) Escala reduzida + diluição: rodar a reação numa escala reduzida (ex.: os mesmos volumes usados numa microcubeta, quando essa opção existir para o ensaio) e, só depois de pronta a reação, completar com o mesmo diluente indicado no branco deste ensaio (KCl 1,15%, ou água ultrapura na ausência de tampão específico) até o volume mínimo da cubeta grande. Anotar o fator de diluição (volume final ÷ volume da reação reduzida) e multiplicar a absorbância lida por esse fator antes de usar o valor no cálculo do resultado. IMPORTANTE: a diluição (opção b) só é válida partindo de uma reação já lida em cubeta (mesmo caminho óptico da cubeta grande, tipicamente 1 cm) — nunca a partir da leitura em microplaca de 96 poços: o caminho óptico do poço não é o mesmo da cubeta, a absorbância não escala de forma simples pela diluição, e o fator de diluição necessário costuma ser grande demais, deixando a absorbância resultante abaixo do que o espectrofotômetro consegue ler com confiabilidade.
 Banho-maria a 95 °C, centrífuga, tubos de vidro com tampa, eppendorfs, micropipetas.
 11.3. PREPARAÇÃO DAS SOLUÇÕES
 Quantidade calculada para 10 amostras (+10% de margem de segurança). Preparar sempre 10% a mais do que o necessário para cobrir eventuais erros de pipetagem. Os reagentes abaixo são soluções estoque estáveis.

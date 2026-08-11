@@ -2,7 +2,7 @@
 Parâmetro
 Informação
 Tecido/Amostra
-Córtex cerebral e rins — homogeneizado 10%
+Córtex cerebral — homogeneizado 10%
 Ensaio
 Decaimento da absorbância do H₂O₂
 λ de leitura

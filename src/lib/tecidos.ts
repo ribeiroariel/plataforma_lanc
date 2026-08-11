@@ -3,7 +3,21 @@
 // de cliente devem importar deste arquivo.
 import indice from "../../content/testes/_indice.json";
 
-export type Tecido = "cortex-rins" | "eritrocitos-plasma" | "figado" | "geral";
+// Cada tecido é uma categoria de designação independente — um projeto pode
+// designar "Catalase — rim" separado de "Catalase — fígado". "cortex",
+// "hipocampo" e "cerebelo" usam o mesmo protocolo (mesma homogeneização,
+// mesmos volumes; só muda o rótulo do tecido) — ver src/lib/protocolo.ts
+// para como o conteúdo de cada variante é composto a partir da base
+// "-cortex" do mesmo ensaio.
+export type Tecido =
+  | "cortex"
+  | "hipocampo"
+  | "cerebelo"
+  | "rins"
+  | "eritrocitos"
+  | "plasma"
+  | "figado"
+  | "geral";
 
 export type TesteResumo = {
   slug: string;
@@ -14,8 +28,12 @@ export type TesteResumo = {
 export const testes: TesteResumo[] = indice as TesteResumo[];
 
 const NOMES_TECIDO: Record<Tecido, string> = {
-  "cortex-rins": "Córtex cerebral e rins",
-  "eritrocitos-plasma": "Eritrócitos e plasma",
+  cortex: "Córtex cerebral",
+  hipocampo: "Hipocampo",
+  cerebelo: "Cerebelo",
+  rins: "Rins",
+  eritrocitos: "Eritrócitos",
+  plasma: "Plasma",
   figado: "Fígado",
   geral: "Geral",
 };
@@ -28,8 +46,12 @@ export function nomeTecido(tecido: Tecido) {
 // (tampões, referências, preparo de amostras) — nenhum teste designável tem
 // esse tecido. É o conjunto que filtra os testes oferecidos na designação.
 export const TECIDOS_ANALISAVEIS: Tecido[] = [
-  "cortex-rins",
-  "eritrocitos-plasma",
+  "cortex",
+  "hipocampo",
+  "cerebelo",
+  "rins",
+  "eritrocitos",
+  "plasma",
   "figado",
 ];
 
@@ -43,18 +65,14 @@ export function tituloCurto(titulo: string) {
 }
 
 /**
- * Rótulo para listas que já vêm agrupadas por tecido: mostra a matriz
- * específica apenas quando ela distingue itens do mesmo grupo. Só o grupo
- * "eritrócitos e plasma" tem matrizes diferentes (eritrócitos vs plasma) —
- * nos demais o cabeçalho do grupo já diz o tecido, então o sufixo é
- * redundante e é removido.
+ * Rótulo para listas já agrupadas por tecido: com cada matriz sendo o seu
+ * próprio grupo agora (diferente de quando "eritrócitos e plasma" era um
+ * grupo só, com as duas matrizes juntas), o sufixo do título é sempre
+ * redundante com o cabeçalho do grupo — por isso sempre removido.
  */
-export function tituloSemTecido(titulo: string, tecido: Tecido) {
-  const partes = titulo.split(" — ");
-  const ensaio = partes[0].trim();
-  const matriz = partes[1]?.trim();
-  if (!matriz) return ensaio;
-  return tecido === "eritrocitos-plasma" ? `${ensaio} — ${matriz}` : ensaio;
+export function tituloSemTecido(titulo: string, _tecido: Tecido) {
+  void _tecido;
+  return titulo.split(" — ")[0].trim();
 }
 
 export function testesPorTecido(): Map<Tecido, TesteResumo[]> {

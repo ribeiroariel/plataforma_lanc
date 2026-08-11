@@ -2,7 +2,7 @@
 Parâmetro
 Informação
 Tecido/Amostra
-Córtex cerebral e rins — homogeneizado 10%
+Córtex cerebral — homogeneizado 10%
 Ensaio
 Derivatização de grupos carbonila com DNPH
 λ de leitura
@@ -19,6 +19,7 @@ Espectrofotômetro UV-Vis (cubeta de plástico, 370 nm) — para leitura convenc
 Leitor de microplaca Infinite 200 Pro (TECAN) com módulo UV-Vis e software Magellan ou i-control — alternativa ao espectrofotômetro convencional para leitura cinética em microplaca de 96 poços (máx. 300 µL/poço; volume recomendado: 250 µL).
 Obs.: O Infinite 200 Pro somente pode ser utilizado na presença de um dos responsáveis pelo equipamento. Nunca operar o aparelho sem supervisão de um responsável habilitado.
 Obs.: Para uso no Infinite 200 Pro a 370 nm: utilizar microplaca UV-Star de 96 poços. Placas padrão de poliestireno absorvem a 370 nm.
+Obs. — Diluição para leitura em cubeta grande: se a quantidade de amostra disponível for limitada, há duas formas equivalentes de fechar o volume necessário para a cubeta grande do espectrofotômetro convencional. (a) Escala cheia: pipetar todos os reagentes desta receita nos volumes já descritos (mantendo as proporções) — é a forma padrão, sem etapa extra. (b) Escala reduzida + diluição: rodar a reação numa escala reduzida (ex.: os mesmos volumes usados numa microcubeta, quando essa opção existir para o ensaio) e, só depois de pronta a reação (pellet já ressuspendido em guanidina 6 M), completar com mais guanidina 6 M até o volume mínimo da cubeta grande. Anotar o fator de diluição (volume final ÷ volume da reação reduzida) e multiplicar a absorbância lida por esse fator antes de usar o valor no cálculo do resultado. IMPORTANTE: a diluição (opção b) só é válida partindo de uma reação já lida em cubeta (mesmo caminho óptico da cubeta grande, tipicamente 1 cm) — nunca a partir da leitura em microplaca de 96 poços: o caminho óptico do poço não é o mesmo da cubeta, a absorbância não escala de forma simples pela diluição, e o fator de diluição necessário costuma ser grande demais, deixando a absorbância resultante abaixo do que o espectrofotômetro consegue ler com confiabilidade.
 Vórtex, centrífuga, banho-maria 60 °C, eppendorfs, micropipetas, papel alumínio;
 Etanol e acetato de etila — trabalhar em capela.
 13.3. PREPARAÇÃO DAS SOLUÇÕES
