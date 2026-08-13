@@ -99,9 +99,17 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     prefixos: ["sod-"],
     protocolo: {
       escala: true,
-      // Leitura a 420 nm (visível) — qualquer recipiente. O formato mais prático
-      // é a microplaca de 24 poços (não há pipeta de 1 µL para 96 poços).
-      modos: TODOS_MODOS,
+      // Leitura a 420 nm (visível) — qualquer recipiente. A microplaca de 24
+      // poços é o formato PADRÃO (por isso vem primeiro, virando o default das
+      // calculadoras): não há pipeta de 1 µL no laboratório, então a microplaca
+      // de 96 poços (catalase = 1 µL/amostra) é impraticável e fica por último,
+      // só como referência de escala.
+      modos: [
+        { aparelho: INFINITE, recipiente: "microplaca_24" },
+        { aparelho: UVVIS, recipiente: "microcubeta" },
+        { aparelho: UVVIS, recipiente: "cubeta_padrao" },
+        { aparelho: INFINITE, recipiente: "microplaca_96" },
+      ],
       reagentes: [
         { nome: "Tampão TRIS 50 mM + EDTA pH 8,2", origem: "estoque", ulBase: 233 },
         { nome: "Catalase — solução de trabalho", origem: "dia", ulBase: 1 },
@@ -158,12 +166,16 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
   {
     prefixos: ["carboniladas"],
     protocolo: {
-      // Ensaio feito inteiro em eppendorf (1,5–2,0 mL); o Ariel reduz os volumes
-      // conforme a leitura. Base = microplaca 96; a MICROCUBETA usa o DOBRO. A
-      // cubeta normal NÃO é usada no carboniladas — não há sobrenadante suficiente
-      // para o volume dela.
-      escala: true,
-      fatores: { microplaca_96: 1, microcubeta: 2 },
+      // Ensaio feito inteiro em eppendorf (1,5–2,0 mL): a reação tem volume FIXO
+      // por amostra (o que vai no eppendorf é maior que o da leitura, de propósito,
+      // para não errar), e só uma alíquota vai à leitura (na microplaca de 96, a
+      // leitura é sempre ~250 µL). Portanto o consumo de reagente NÃO muda com o
+      // recipiente de leitura (`escala: false`) — igual aos demais ensaios de tubo.
+      // Os volumes abaixo são os do eppendorf, por amostra (antes estavam pela
+      // metade, tratados erroneamente como base de microplaca 96 que dobrava na
+      // microcubeta). A cubeta normal não é usada — só microplaca 96 e microcubeta
+      // como recipientes de leitura possíveis.
+      escala: false,
       brancoParaCadaAmostra: true,
       modos: [
         { aparelho: INFINITE, recipiente: "microplaca_96" },
@@ -173,27 +185,27 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
         {
           nome: "HCl 2 M",
           origem: "estoque",
-          ulBase: 200,
+          ulBase: 400,
           escopo: "branco",
           obs: "no branco (no lugar do DNPH) e para zerar a leitura.",
         },
-        { nome: "DNPH 10 mM", origem: "dia", ulBase: 200, escopo: "amostra" },
-        { nome: "TCA 20%", origem: "dia", ulBase: 250, escopo: "ambos" },
+        { nome: "DNPH 10 mM", origem: "dia", ulBase: 400, escopo: "amostra" },
+        { nome: "TCA 20%", origem: "dia", ulBase: 500, escopo: "ambos" },
         {
           nome: "Etanol P.A.",
           origem: "estoque",
-          ulBase: 750,
+          ulBase: 1500,
           escopo: "ambos",
-          obs: "3 lavagens.",
+          obs: "3 lavagens de 500 µL.",
         },
         {
           nome: "Acetato de etila",
           origem: "estoque",
-          ulBase: 750,
+          ulBase: 1500,
           escopo: "ambos",
-          obs: "3 lavagens.",
+          obs: "3 lavagens de 500 µL.",
         },
-        { nome: "Guanidina 6 M", origem: "dia", ulBase: 300, escopo: "ambos" },
+        { nome: "Guanidina 6 M", origem: "dia", ulBase: 600, escopo: "ambos" },
       ],
     },
   },
