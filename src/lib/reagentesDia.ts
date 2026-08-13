@@ -71,7 +71,7 @@ export const ENSAIOS_DIA: EnsaioDia[] = [
           { nome: "HCl 10 mM", quantidade: 1.0, unidade: "mL" },
         ],
         consumoPorAmostraUl: 4,
-        obs: "Preparar imediatamente antes do uso e descartar a sobra — oxida rápido. Para 10 amostras usam-se só ~44 µL.",
+        obs: "Preparar imediatamente antes do uso e descartar a sobra — oxida rápido. O consumo real por amostra depende do recipiente (4 µL na microplaca 96, ×fator nos demais); ver a linha \"Necessário\" acima, já ajustada ao recipiente. O lote mínimo de 1,0 mL cobre todos os formatos.",
       },
       {
         nome: "Catalase — solução de trabalho",
@@ -80,8 +80,12 @@ export const ENSAIOS_DIA: EnsaioDia[] = [
           { nome: "Catalase", quantidade: 0.0062, unidade: "g" },
           { nome: "Tampão TRIS 50 mM + EDTA pH 8,2", quantidade: 650, unidade: "µL" },
         ],
-        consumoPorAmostraUl: 6,
-        obs: "Manter no gelo, frasco com papel alumínio. Para 10 amostras usam-se ~66 µL.",
+        // Base = microplaca 96 (1 µL/amostra), igual a protocoloEnsaio.ts; a
+        // calculadora multiplica pelo fator do recipiente (6 µL na placa de 24,
+        // 10 µL na cubeta). Antes estava 6 aqui (valor de 24 poços), o que
+        // inflava o "necessário" ao aplicar o fator de novo.
+        consumoPorAmostraUl: 1,
+        obs: "Manter no gelo, frasco com papel alumínio. O consumo real por amostra depende do recipiente (1 µL na microplaca 96, ×fator nos demais); ver a linha \"Necessário\" acima. O lote mínimo de 650 µL cobre todos os formatos.",
       },
     ],
   },

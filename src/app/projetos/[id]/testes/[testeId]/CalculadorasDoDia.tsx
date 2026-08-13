@@ -57,11 +57,13 @@ export default function CalculadorasDoDia({
     );
   }
 
-  // Sem recipiente definido, mostra na base microplaca 96 (1×) para ensaios que
-  // escalam; para os de tubo fixo o recipiente não muda os volumes. Ensaios com
-  // fator próprio (ex.: carboniladas) usam esse; senão, o fator global.
+  // Sem recipiente definido, usa o recipiente PADRÃO do ensaio (o primeiro dos
+  // seus modos) — não um microplaca 96 fixo. Importa no SOD, cujo padrão é a
+  // placa de 24 poços (a microplaca 96 é impraticável: catalase = 1 µL/amostra).
+  // Para os ensaios de tubo fixo o recipiente não muda os volumes de qualquer jeito.
   const rec: Recipiente | null = ehRecipiente(recipiente) ? recipiente : null;
-  const recEfetivo = rec ?? "microplaca_96";
+  const recEfetivo: Recipiente =
+    rec ?? protocolo.modos[0]?.recipiente ?? "microplaca_96";
   const fator = !protocolo.escala
     ? 1
     : protocolo.fatores
@@ -97,7 +99,7 @@ export default function CalculadorasDoDia({
         {protocolo.escala
           ? rec
             ? `Recipiente: ${nomeRecipiente(rec)} — os volumes já estão ajustados a ele (${fator}× a microplaca 96).`
-            : "Defina o recipiente na preparação acima; por ora, os volumes estão na base microplaca 96 (1×)."
+            : `Recipiente não definido na preparação — mostrando no formato padrão deste ensaio (${nomeRecipiente(recEfetivo)}, ${fator}× a microplaca 96). Defina o recipiente acima para confirmar.`
           : "Ensaio feito em tubo de volume fixo — o consumo não muda com o recipiente."}
       </p>
 
