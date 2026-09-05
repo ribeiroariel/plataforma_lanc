@@ -1887,3 +1887,14 @@ drop policy if exists "Membros gerenciam os procedimentos" on public.bioterio_pr
 create policy "Membros gerenciam os procedimentos" on public.bioterio_procedimentos for all
   using (public.eh_membro_projeto(projeto_id))
   with check (public.eh_membro_projeto(projeto_id));
+
+-- ── Sacrifício: sincronização em tempo real entre aparelhos ─────────────────
+-- Sem isso, a página do dia de sacrifício (DiaSacrificio.tsx) escuta o canal
+-- mas nunca recebe evento nenhum: por padrão nenhuma tabela do projeto está
+-- na publication `supabase_realtime`. RLS de select de cada tabela continua
+-- valendo mesmo via Realtime (só chega evento pra quem pode ver a linha).
+alter publication supabase_realtime add table public.sacrificios;
+alter publication supabase_realtime add table public.sacrificio_ratos;
+alter publication supabase_realtime add table public.sacrificio_rato_tecidos;
+alter publication supabase_realtime add table public.sacrificio_aliquotas;
+alter publication supabase_realtime add table public.sacrificio_aliquota_categorias;

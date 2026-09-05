@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   salvarSobrevivencia,
@@ -20,6 +20,7 @@ import {
 } from "@/lib/sacrificio";
 import { ependorfsParaOrgao, ROTULO_CATEGORIA } from "@/lib/aliquotas";
 import { INPUT_SM, BOTAO_SECUNDARIO_SM } from "@/lib/estilos";
+import { createClient } from "@/lib/supabase/client";
 
 type RatoRoster = { numero: number; grupoId: string; grupoNome: string };
 type TecidoColeta = {
@@ -68,6 +69,91 @@ type Props = {
   testesDesignados?: string[];
 };
 
+// Mantém a tela sincronizada entre aparelhos: sacrificio_ratos e sacrificios
+// têm coluna sacrificio_id (filtro direto no canal); sacrificio_rato_tecidos,
+// sacrificio_aliquotas e sacrificio_aliquota_categorias só têm
+// sacrificio_rato_id, então o filtro contra o dia atual é feito aqui no
+// cliente (ratoIdsRef, sempre com os ids mais recentes de `ratos`). O
+// gatilho de trava por RLS já garante que só chegam eventos de sacrifícios
+// que o usuário pode ver.
+function useSacrificioAoVivo(
+  sacrificioId: string,
+  ratoIds: string[],
+  router: ReturnType<typeof useRouter>
+) {
+  const ratoIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    ratoIdsRef.current = new Set(ratoIds);
+  }, [ratoIds]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let pendente: ReturnType<typeof setTimeout> | null = null;
+    const agendarRefresh = () => {
+      if (pendente) clearTimeout(pendente);
+      pendente = setTimeout(() => router.refresh(), 400);
+    };
+    const seForRatoRelevante = (payload: {
+      new: Record<string, unknown>;
+      old: Record<string, unknown>;
+    }) => {
+      const id =
+        (payload.new?.sacrificio_rato_id as string | undefined) ??
+        (payload.old?.sacrificio_rato_id as string | undefined);
+      if (id && ratoIdsRef.current.has(id)) agendarRefresh();
+    };
+
+    const canal = supabase
+      .channel(`sacrificio-ao-vivo-${sacrificioId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sacrificios",
+          filter: `id=eq.${sacrificioId}`,
+        },
+        agendarRefresh
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sacrificio_ratos",
+          filter: `sacrificio_id=eq.${sacrificioId}`,
+        },
+        agendarRefresh
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sacrificio_rato_tecidos" },
+        seForRatoRelevante
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sacrificio_aliquotas" },
+        seForRatoRelevante
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "sacrificio_aliquota_categorias",
+        },
+        seForRatoRelevante
+      )
+      .subscribe();
+
+    return () => {
+      if (pendente) clearTimeout(pendente);
+      supabase.removeChannel(canal);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sacrificioId]);
+}
+
 export default function DiaSacrificio({
   projetoId,
   sacrificioId,
@@ -83,6 +169,11 @@ export default function DiaSacrificio({
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
 
   const router = useRouter();
+  useSacrificioAoVivo(
+    sacrificioId,
+    ratos.map((r) => r.id),
+    router
+  );
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
 
