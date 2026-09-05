@@ -15,7 +15,9 @@ import {
 } from "@/lib/actions/sacrificio";
 import {
   ORGAOS_DISSECAVEIS,
+  TECIDOS_SANGUE,
   volumeTampaoUl,
+  volumeLisadoEritrocitoUl,
   type SecaoSacrificio,
 } from "@/lib/sacrificio";
 import { ependorfsParaOrgao, ROTULO_CATEGORIA } from "@/lib/aliquotas";
@@ -89,19 +91,19 @@ function useSacrificioAoVivo(
   useEffect(() => {
     const supabase = createClient();
     let pendente: ReturnType<typeof setTimeout> | null = null;
-    const agendarRefresh = () => {
+    const agendarRefresh = (origem: string) => {
+      console.log(`[sacrificio-ao-vivo] mudança em ${origem}, atualizando…`);
       if (pendente) clearTimeout(pendente);
       pendente = setTimeout(() => router.refresh(), 400);
     };
-    const seForRatoRelevante = (payload: {
-      new: Record<string, unknown>;
-      old: Record<string, unknown>;
-    }) => {
-      const id =
-        (payload.new?.sacrificio_rato_id as string | undefined) ??
-        (payload.old?.sacrificio_rato_id as string | undefined);
-      if (id && ratoIdsRef.current.has(id)) agendarRefresh();
-    };
+    const seForRatoRelevante =
+      (tabela: string) =>
+      (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+        const id =
+          (payload.new?.sacrificio_rato_id as string | undefined) ??
+          (payload.old?.sacrificio_rato_id as string | undefined);
+        if (id && ratoIdsRef.current.has(id)) agendarRefresh(tabela);
+      };
 
     const canal = supabase
       .channel(`sacrificio-ao-vivo-${sacrificioId}`)
@@ -113,7 +115,7 @@ function useSacrificioAoVivo(
           table: "sacrificios",
           filter: `id=eq.${sacrificioId}`,
         },
-        agendarRefresh
+        () => agendarRefresh("sacrificios")
       )
       .on(
         "postgres_changes",
@@ -123,17 +125,17 @@ function useSacrificioAoVivo(
           table: "sacrificio_ratos",
           filter: `sacrificio_id=eq.${sacrificioId}`,
         },
-        agendarRefresh
+        () => agendarRefresh("sacrificio_ratos")
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sacrificio_rato_tecidos" },
-        seForRatoRelevante
+        seForRatoRelevante("sacrificio_rato_tecidos")
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sacrificio_aliquotas" },
-        seForRatoRelevante
+        seForRatoRelevante("sacrificio_aliquotas")
       )
       .on(
         "postgres_changes",
@@ -142,9 +144,11 @@ function useSacrificioAoVivo(
           schema: "public",
           table: "sacrificio_aliquota_categorias",
         },
-        seForRatoRelevante
+        seForRatoRelevante("sacrificio_aliquota_categorias")
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[sacrificio-ao-vivo] canal ${status}`);
+      });
 
     return () => {
       if (pendente) clearTimeout(pendente);
@@ -547,6 +551,39 @@ export default function DiaSacrificio({
       </section>
       )}
 
+      {mostra("sangue") && (
+      <section>
+        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          Preparo de plasma/eritrócito
+        </p>
+        <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
+          Plasma e eritrócito não passam pela homogeneização dos órgãos —
+          plasma já sai pronto da centrifugação (só confirme que o
+          sobrenadante foi separado); eritrócito é diluído 1:50 (volume ×
+          50 = lisado final).
+        </p>
+        {dissecados.length === 0 ? (
+          <p className="text-xs text-ink-soft">
+            Registre a coleta dos ratos dissecados para preparar plasma e
+            eritrócito.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {dissecados.map((r) => (
+              <PainelSangue
+                key={r.id}
+                projetoId={projetoId}
+                sacrificioId={sacrificioId}
+                rato={r}
+                podeRegistrar={podeRegistrar}
+                orgaosVisiveis={orgaosVisiveis}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+      )}
+
       {mostra("aliquotas") && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
@@ -598,6 +635,7 @@ function PainelAliquotas({
   const coletados = rato.tecidos.filter(
     (t) =>
       t.destino === "coleta" &&
+      !TECIDOS_SANGUE.includes(t.tecido as (typeof TECIDOS_SANGUE)[number]) &&
       (!orgaosVisiveis || orgaosVisiveis.includes(t.tecido))
   );
   const aliqPorTecido = new Map(rato.aliquotas.map((a) => [a.tecido, a]));
@@ -712,6 +750,182 @@ function PainelAliquotas({
             })}
           </tbody>
         </table>
+      </div>
+      {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
+    </div>
+  );
+}
+
+// Plasma e eritrócito não têm peso nem tampão 10% — plasma só confirma que o
+// sobrenadante foi separado (sem número nenhum); eritrócito informa o volume
+// de eritrócitos (µL) e trava o lisado final (× 50).
+function PainelSangue({
+  projetoId,
+  sacrificioId,
+  rato,
+  podeRegistrar,
+  orgaosVisiveis,
+}: {
+  projetoId: string;
+  sacrificioId: string;
+  rato: RatoSalvo;
+  podeRegistrar: boolean;
+  orgaosVisiveis?: string[];
+}) {
+  const itens = rato.tecidos.filter(
+    (t) =>
+      t.destino === "coleta" &&
+      TECIDOS_SANGUE.includes(t.tecido as (typeof TECIDOS_SANGUE)[number]) &&
+      (!orgaosVisiveis || orgaosVisiveis.includes(t.tecido))
+  );
+  const aliqPorTecido = new Map(rato.aliquotas.map((a) => [a.tecido, a]));
+  const router = useRouter();
+  const [pend, iniciar] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState<string | null>(null);
+  const [volumes, setVolumes] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const t of itens) {
+      const a = aliqPorTecido.get(t.tecido);
+      init[t.tecido] = a?.pesoG != null ? String(a.pesoG) : "";
+    }
+    return init;
+  });
+
+  const rotulo = (tecido: string) =>
+    ORGAOS_DISSECAVEIS.find((o) => o.valor === tecido)?.rotulo ?? tecido;
+
+  function confirmarEritrocito(tecido: string) {
+    const volumeUl = parseFloat((volumes[tecido] ?? "").replace(",", "."));
+    if (!Number.isFinite(volumeUl) || volumeUl <= 0) {
+      setErro(`Volume inválido para ${rotulo(tecido)}.`);
+      return;
+    }
+    setErro(null);
+    setConfirmando(tecido);
+    iniciar(async () => {
+      const res = await confirmarAliquota({
+        projetoId,
+        sacrificioId,
+        sacrificioRatoId: rato.id,
+        tecido,
+        pesoG: volumeUl,
+      });
+      if ("erro" in res) setErro(res.erro);
+      else router.refresh();
+      setConfirmando(null);
+    });
+  }
+
+  function confirmarPlasma(tecido: string) {
+    setErro(null);
+    setConfirmando(tecido);
+    iniciar(async () => {
+      const res = await confirmarAliquota({
+        projetoId,
+        sacrificioId,
+        sacrificioRatoId: rato.id,
+        tecido,
+        pesoG: null,
+      });
+      if ("erro" in res) setErro(res.erro);
+      else router.refresh();
+      setConfirmando(null);
+    });
+  }
+
+  if (itens.length === 0) return null;
+
+  return (
+    <div className="rounded border border-rule bg-paper-raised p-3">
+      <p className="mb-2 font-mono text-xs text-ink">
+        Rato {rato.rato}
+        {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
+      </p>
+      <div className="flex flex-col gap-2">
+        {itens.map((t) => {
+          const a = aliqPorTecido.get(t.tecido);
+          const travado = a?.confirmado ?? false;
+          if (t.tecido === "plasma") {
+            return (
+              <div
+                key={t.tecido}
+                className="flex flex-wrap items-center gap-2 text-sm"
+              >
+                <span className="w-28 text-ink">{rotulo(t.tecido)}</span>
+                {travado ? (
+                  <span title="sobrenadante separado" className="text-sucesso">
+                    🔒 confirmado
+                  </span>
+                ) : podeRegistrar ? (
+                  <button
+                    type="button"
+                    onClick={() => confirmarPlasma(t.tecido)}
+                    disabled={pend || confirmando === t.tecido}
+                    className={BOTAO_SECUNDARIO_SM}
+                  >
+                    {confirmando === t.tecido
+                      ? "..."
+                      : "Confirmar sobrenadante separado"}
+                  </button>
+                ) : (
+                  <span className="text-xs text-ink-soft">pendente</span>
+                )}
+              </div>
+            );
+          }
+          const volumeNum = parseFloat(
+            (volumes[t.tecido] ?? "").replace(",", ".")
+          );
+          const previa =
+            Number.isFinite(volumeNum) && volumeNum > 0
+              ? volumeLisadoEritrocitoUl(volumeNum)
+              : null;
+          return (
+            <div
+              key={t.tecido}
+              className="flex flex-wrap items-center gap-2 text-sm"
+            >
+              <span className="w-28 text-ink">{rotulo(t.tecido)}</span>
+              {travado ? (
+                <span className="font-mono text-ink-soft">
+                  {a?.pesoG} µL → {a?.volumeUl} µL lisado
+                </span>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={volumes[t.tecido] ?? ""}
+                    onChange={(e) =>
+                      setVolumes((p) => ({ ...p, [t.tecido]: e.target.value }))
+                    }
+                    disabled={!podeRegistrar}
+                    placeholder="Volume (µL)"
+                    className={`${INPUT_SM} w-24`}
+                  />
+                  <span className="font-mono tabular-nums text-ink-soft">
+                    {previa != null ? `→ ${previa} µL lisado` : ""}
+                  </span>
+                </>
+              )}
+              {travado ? (
+                <span title="lisado confirmado" className="text-sucesso">
+                  🔒 confirmado
+                </span>
+              ) : podeRegistrar ? (
+                <button
+                  type="button"
+                  onClick={() => confirmarEritrocito(t.tecido)}
+                  disabled={pend || confirmando === t.tecido}
+                  className={BOTAO_SECUNDARIO_SM}
+                >
+                  {confirmando === t.tecido ? "..." : "Confirmar"}
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
       {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
     </div>

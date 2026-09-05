@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { volumeTampaoUl } from "@/lib/sacrificio";
+import {
+  volumeTampaoUl,
+  volumeLisadoEritrocitoUl,
+} from "@/lib/sacrificio";
 
 // Cria o sacrifício de uma leva (RLS garante que só coautor do projeto insere).
 export async function criarSacrificio(dados: {
@@ -268,19 +271,24 @@ export async function reabrirRato(dados: {
 
 // --- Fatia 4: alíquotas (peso → tampão), padrão confirma→trava ---
 
-// Confirma a alíquota de um órgão: grava peso (g) + volume de tampão calculado
-// (peso × 9000) e trava (o trigger travar_aliquota impede mudança depois).
+// Confirma a alíquota de um órgão/tecido e trava (o trigger travar_aliquota
+// impede mudança depois). Órgãos sólidos: peso (g) × 9000 = tampão (µL).
+// Eritrócito: volume (µL) × 50 = lisado (µL) — reaproveita as mesmas colunas
+// com outro fator. Plasma não tem conta nenhuma (sai pronto da centrifugação
+// do sangue total): pesoG vem null, só confirma que o sobrenadante foi
+// separado.
 export async function confirmarAliquota(dados: {
   projetoId: string;
   sacrificioId: string;
   sacrificioRatoId: string;
   tecido: string;
-  pesoG: number;
+  pesoG: number | null;
 }): Promise<{ erro: string } | { sucesso: true }> {
   const supabase = await createClient();
 
-  if (!Number.isFinite(dados.pesoG) || dados.pesoG <= 0) {
-    return { erro: "Informe um peso válido (g)." };
+  const ehPlasma = dados.tecido === "plasma";
+  if (!ehPlasma && (!Number.isFinite(dados.pesoG) || (dados.pesoG as number) <= 0)) {
+    return { erro: "Informe um valor válido." };
   }
 
   const { data: existente } = await supabase
@@ -293,12 +301,18 @@ export async function confirmarAliquota(dados: {
     return { erro: "Esta alíquota já está confirmada." };
   }
 
+  const volumeCalculado = ehPlasma
+    ? null
+    : dados.tecido === "eritrocito"
+      ? volumeLisadoEritrocitoUl(dados.pesoG as number)
+      : volumeTampaoUl(dados.pesoG as number);
+
   const { error } = await supabase.from("sacrificio_aliquotas").upsert(
     {
       sacrificio_rato_id: dados.sacrificioRatoId,
       tecido: dados.tecido,
-      peso_g: dados.pesoG,
-      volume_tampao_ul: volumeTampaoUl(dados.pesoG),
+      peso_g: ehPlasma ? null : dados.pesoG,
+      volume_tampao_ul: volumeCalculado,
       confirmado: true,
     },
     { onConflict: "sacrificio_rato_id,tecido" }

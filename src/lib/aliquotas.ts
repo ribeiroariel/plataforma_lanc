@@ -31,7 +31,8 @@ const MULTIPLICADOR: Partial<Record<CategoriaAliquota, number>> = {
 // Pâncreas não tem teste bioquímico designável.
 export const ORGAO_PARA_TECIDO: Record<string, Tecido | null> = {
   figado: "figado",
-  rim: "rins",
+  rim_esquerdo: "rins",
+  rim_direito: "rins",
   cortex: "cortex",
   hipocampo: "hipocampo",
   cerebelo: "cerebelo",
