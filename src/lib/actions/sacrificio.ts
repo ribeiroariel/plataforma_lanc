@@ -124,6 +124,23 @@ export async function salvarSobrevivencia(dados: {
     return { erro: "Não foi possível salvar a sobrevivência: " + error.message };
   }
 
+  // Marca o início do sacrifício (base do cronômetro) na 1ª vez que a
+  // sobrevivência é salva, se ainda não começou.
+  const { data: sac } = await supabase
+    .from("sacrificios")
+    .select("iniciado_em, status")
+    .eq("id", dados.sacrificioId)
+    .maybeSingle();
+  if (sac && !sac.iniciado_em && sac.status !== "concluido") {
+    await supabase
+      .from("sacrificios")
+      .update({
+        iniciado_em: new Date().toISOString(),
+        status: "em_andamento",
+      })
+      .eq("id", dados.sacrificioId);
+  }
+
   revalidatePath(`/projetos/${dados.projetoId}/sacrificio/${dados.sacrificioId}`);
   return { sucesso: true };
 }

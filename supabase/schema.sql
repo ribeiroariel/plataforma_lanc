@@ -1138,6 +1138,10 @@ create table if not exists public.sacrificios (
 );
 alter table public.sacrificios
   add column if not exists aliquotas_quando text not null default 'mesmo_dia';
+-- Início real do sacrifício (base do cronômetro). Marcado na 1ª sobrevivência
+-- salva. Null = ainda não começou.
+alter table public.sacrificios
+  add column if not exists iniciado_em timestamptz;
 
 -- Designação de funções do dia (N pessoas por função).
 create table if not exists public.sacrificio_funcoes (
