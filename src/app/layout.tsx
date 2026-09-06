@@ -6,6 +6,7 @@ import "./globals.css";
 import { getUsuarioAtual, podeAprovarCadastros } from "@/lib/supabase/profile";
 import { logout } from "@/lib/actions/auth";
 import { NavPrincipal } from "@/components/NavPrincipal";
+import CronometroSacrificio from "@/components/CronometroSacrificio";
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
@@ -157,6 +158,8 @@ export default async function RootLayout({
         </header>
 
         <div className="flex-1">{children}</div>
+
+        {usuario && <CronometroSacrificio />}
 
         <footer className="mt-16 border-t-2 border-ink bg-paper-raised">
           <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

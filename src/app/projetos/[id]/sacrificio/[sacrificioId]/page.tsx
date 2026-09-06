@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { carregarDia } from "@/lib/sacrificioDados";
+import { orgaosDoProjeto } from "@/lib/sacrificio";
 import DiaSacrificio from "./DiaSacrificio";
 import OrdemCaixas from "./OrdemCaixas";
 
@@ -19,6 +20,7 @@ type Projeto = {
   nome: string;
   numero_levas: number | null;
   finalizado: boolean;
+  tecidos: string[] | null;
   tem_bioquimico: boolean | null;
   tem_histologia: boolean | null;
   tem_comportamental: boolean | null;
@@ -53,7 +55,7 @@ export default async function PaginaDiaSacrificio({
   ] = await Promise.all([
     supabase
       .from("projetos")
-      .select("nome, numero_levas, finalizado, tem_bioquimico, tem_histologia, tem_comportamental")
+      .select("nome, numero_levas, finalizado, tecidos, tem_bioquimico, tem_histologia, tem_comportamental")
       .eq("id", id)
       .maybeSingle()
       .returns<Projeto>(),
@@ -183,6 +185,7 @@ export default async function PaginaDiaSacrificio({
         testesDesignados={(testesDesignados ?? []).map((t) => t.teste_slug)}
         temBioquimico={projeto?.tem_bioquimico ?? true}
         temHistologia={projeto?.tem_histologia ?? true}
+        orgaosVisiveis={orgaosDoProjeto(projeto?.tecidos)}
       />
     </main>
   );

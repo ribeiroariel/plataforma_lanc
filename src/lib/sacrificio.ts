@@ -114,3 +114,32 @@ export const FATOR_DILUICAO_ERITROCITO = 50;
 export function volumeLisadoEritrocitoUl(volumeEritrocitoUl: number): number {
   return volumeEritrocitoUl * FATOR_DILUICAO_ERITROCITO;
 }
+
+// Órgão dissecável → tecidos de análise a que ele pertence. Cobre tanto os
+// tecidos atuais (cortex, rins, ...) quanto os slugs legados compostos
+// ("cortex-rins", "eritrocitos-plasma") de projetos antigos. Pâncreas não tem
+// tecido analisável designável.
+const ORGAO_TECIDOS: Record<string, string[]> = {
+  figado: ["figado"],
+  rim_esquerdo: ["rins", "cortex-rins"],
+  rim_direito: ["rins", "cortex-rins"],
+  cortex: ["cortex", "cortex-rins"],
+  hipocampo: ["hipocampo"],
+  cerebelo: ["cerebelo"],
+  plasma: ["plasma", "eritrocitos-plasma"],
+  eritrocito: ["eritrocitos", "eritrocitos-plasma"],
+  pancreas: [],
+};
+
+// Dado os tecidos que o projeto analisa, devolve a lista de órgãos dissecáveis
+// relevantes (para esconder os que não serão usados na visão geral do dia).
+// Projeto sem tecidos definidos (antigos) = undefined = mostra todos.
+export function orgaosDoProjeto(
+  tecidosProjeto: string[] | null | undefined
+): string[] | undefined {
+  if (!tecidosProjeto || tecidosProjeto.length === 0) return undefined;
+  const set = new Set(tecidosProjeto);
+  return ORGAOS_DISSECAVEIS.filter((o) =>
+    (ORGAO_TECIDOS[o.valor] ?? []).some((t) => set.has(t))
+  ).map((o) => o.valor);
+}
