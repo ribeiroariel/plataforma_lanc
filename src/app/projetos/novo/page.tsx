@@ -159,6 +159,30 @@ export default function NovoProjeto() {
           </div>
         </fieldset>
 
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium text-ink">
+            Tipos de análise do projeto
+          </legend>
+          <p className="text-xs leading-relaxed text-ink-soft">
+            Definem o que aparece no dia do sacrifício e se o projeto terá a aba
+            de testes comportamentais.
+          </p>
+          <div className="flex flex-col gap-1.5">
+            <label className="flex items-center gap-1.5 text-sm text-ink">
+              <input type="checkbox" name="temBioquimico" defaultChecked />
+              Testes bioquímicos (coleta, homogeneização e alíquotas)
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-ink">
+              <input type="checkbox" name="temHistologia" defaultChecked />
+              Histologia
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-ink">
+              <input type="checkbox" name="temComportamental" />
+              Testes comportamentais (campo aberto e nado forçado)
+            </label>
+          </div>
+        </fieldset>
+
         <div>
           <p className="text-sm font-medium text-ink">Grupos experimentais</p>
           <p className="mt-1 mb-3 text-xs leading-relaxed text-ink-soft">

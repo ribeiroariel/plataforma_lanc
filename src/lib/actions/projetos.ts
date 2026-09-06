@@ -56,6 +56,9 @@ export async function criarProjeto(
   const especieRaw = String(formData.get("especie") ?? "").trim();
   const especie = especieRaw === "rato" || especieRaw === "camundongo" ? especieRaw : null;
   const linhagem = String(formData.get("linhagem") ?? "").trim() || null;
+  const temBioquimico = formData.get("temBioquimico") != null;
+  const temHistologia = formData.get("temHistologia") != null;
+  const temComportamental = formData.get("temComportamental") != null;
 
   if (!nome) {
     return { erro: "Dê um nome ao projeto." };
@@ -103,14 +106,19 @@ export async function criarProjeto(
     return { erro: "Não foi possível criar o projeto: " + error.message };
   }
 
-  // Espécie/linhagem não vão pela RPC criar_projeto (assinatura fixa) — gravadas
-  // logo depois, no projeto recém-criado.
-  if (especie || linhagem) {
-    await supabase
-      .from("projetos")
-      .update({ especie, linhagem })
-      .eq("id", data);
-  }
+  // Espécie/linhagem e as flags de tipo de análise não vão pela RPC
+  // criar_projeto (assinatura fixa) — gravadas logo depois, no projeto
+  // recém-criado.
+  await supabase
+    .from("projetos")
+    .update({
+      especie,
+      linhagem,
+      tem_bioquimico: temBioquimico,
+      tem_histologia: temHistologia,
+      tem_comportamental: temComportamental,
+    })
+    .eq("id", data);
 
   redirect(`/projetos/${data}`);
 }
@@ -128,6 +136,9 @@ export async function editarProjeto(
   const especieRaw = String(formData.get("especie") ?? "").trim();
   const especie = especieRaw === "rato" || especieRaw === "camundongo" ? especieRaw : null;
   const linhagem = String(formData.get("linhagem") ?? "").trim() || null;
+  const temBioquimico = formData.get("temBioquimico") != null;
+  const temHistologia = formData.get("temHistologia") != null;
+  const temComportamental = formData.get("temComportamental") != null;
   const nota = String(formData.get("nota") ?? "").trim();
 
   if (!nome) return { erro: "Dê um nome ao projeto." };
@@ -180,6 +191,9 @@ export async function editarProjeto(
       especie,
       linhagem,
       tecidos: tecidosDoForm(formData),
+      tem_bioquimico: temBioquimico,
+      tem_histologia: temHistologia,
+      tem_comportamental: temComportamental,
     })
     .eq("id", projetoId);
   if (erroProj) {

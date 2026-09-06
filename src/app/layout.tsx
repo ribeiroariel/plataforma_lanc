@@ -52,6 +52,7 @@ export default async function RootLayout({
       { href: "/minhas-funcoes", rotulo: "Minhas funções" },
       { href: "/bioterio", rotulo: "Biotério" },
       { href: "/projetos", rotulo: "Projetos" },
+      { href: "/comportamental", rotulo: "Comportamental" },
       { href: "/testes", rotulo: "Protocolos" },
       { href: "/reagentes", rotulo: "Reagentes" },
       { href: "/estoque", rotulo: "Estoque" },
@@ -62,6 +63,7 @@ export default async function RootLayout({
       { href: "/orientador", rotulo: "Painel" },
       { href: "/bioterio", rotulo: "Biotério" },
       { href: "/projetos", rotulo: "Projetos" },
+      { href: "/comportamental", rotulo: "Comportamental" },
       { href: "/testes", rotulo: "Protocolos" },
       { href: "/reagentes", rotulo: "Reagentes" },
       { href: "/estoque", rotulo: "Estoque" }

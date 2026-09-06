@@ -15,7 +15,14 @@ type Sacrificio = {
   data: string | null;
   status: string;
 };
-type Projeto = { nome: string; numero_levas: number | null; finalizado: boolean };
+type Projeto = {
+  nome: string;
+  numero_levas: number | null;
+  finalizado: boolean;
+  tem_bioquimico: boolean | null;
+  tem_histologia: boolean | null;
+  tem_comportamental: boolean | null;
+};
 type Membro = { profile_id: string; papel: "coautor" | "ajudante" };
 type MinhaFuncao = { funcao: string };
 type TesteDesignado = { teste_slug: string };
@@ -46,7 +53,7 @@ export default async function PaginaDiaSacrificio({
   ] = await Promise.all([
     supabase
       .from("projetos")
-      .select("nome, numero_levas, finalizado")
+      .select("nome, numero_levas, finalizado, tem_bioquimico, tem_histologia, tem_comportamental")
       .eq("id", id)
       .maybeSingle()
       .returns<Projeto>(),
@@ -142,6 +149,20 @@ export default async function PaginaDiaSacrificio({
         />
       </div>
 
+      {projeto?.tem_comportamental && (
+        <div className="mt-6 rounded border border-rule bg-paper-raised px-4 py-3">
+          <Link
+            href={`/comportamental/${id}`}
+            className="text-sm text-absorbance hover:underline"
+          >
+            Testes comportamentais deste projeto →
+          </Link>
+          <p className="mt-1 text-xs text-ink-soft">
+            Campo aberto e nado forçado, registrados por rato.
+          </p>
+        </div>
+      )}
+
       <DiaSacrificio
         projetoId={id}
         sacrificioId={sacrificio.id}
@@ -151,6 +172,8 @@ export default async function PaginaDiaSacrificio({
         roster={roster}
         ratos={ratos}
         testesDesignados={(testesDesignados ?? []).map((t) => t.teste_slug)}
+        temBioquimico={projeto?.tem_bioquimico ?? true}
+        temHistologia={projeto?.tem_histologia ?? true}
       />
     </main>
   );

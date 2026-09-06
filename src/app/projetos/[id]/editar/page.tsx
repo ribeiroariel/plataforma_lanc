@@ -13,6 +13,9 @@ type Projeto = {
   linhagem: string | null;
   finalizado: boolean;
   tecidos: string[] | null;
+  tem_bioquimico: boolean | null;
+  tem_histologia: boolean | null;
+  tem_comportamental: boolean | null;
 };
 type Grupo = {
   id: string;
@@ -35,7 +38,7 @@ export default async function EditarProjeto({
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, descricao, numero_levas, especie, linhagem, finalizado, tecidos")
+        .select("id, nome, descricao, numero_levas, especie, linhagem, finalizado, tecidos, tem_bioquimico, tem_histologia, tem_comportamental")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -90,6 +93,9 @@ export default async function EditarProjeto({
         levasInicial={levas}
         gruposIniciais={gruposIniciais}
         tecidosIniciais={projeto.tecidos ?? []}
+        temBioquimicoInicial={projeto.tem_bioquimico ?? true}
+        temHistologiaInicial={projeto.tem_histologia ?? true}
+        temComportamentalInicial={projeto.tem_comportamental ?? false}
       />
     </main>
   );

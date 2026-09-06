@@ -17,6 +17,8 @@ type Sacrificio = {
     nome: string;
     numero_levas: number | null;
     finalizado: boolean;
+    tem_bioquimico: boolean | null;
+    tem_histologia: boolean | null;
   } | null;
 };
 type Designado = { profile_id: string; profiles: { nome: string } | null };
@@ -39,7 +41,7 @@ export default async function PaginaFuncaoSacrificio({
   const { data: sacrificio } = await supabase
     .from("sacrificios")
     .select(
-      "id, projeto_id, leva, status, data, aliquotas_quando, projetos:projeto_id(nome, numero_levas, finalizado)"
+      "id, projeto_id, leva, status, data, aliquotas_quando, projetos:projeto_id(nome, numero_levas, finalizado, tem_bioquimico, tem_histologia)"
     )
     .eq("id", sacrificioId)
     .eq("projeto_id", id)
@@ -163,6 +165,8 @@ export default async function PaginaFuncaoSacrificio({
         secoes={escopo.secoes}
         orgaosVisiveis={escopo.orgaos}
         testesDesignados={(testesDesignados ?? []).map((t) => t.teste_slug)}
+        temBioquimico={sacrificio.projetos?.tem_bioquimico ?? true}
+        temHistologia={sacrificio.projetos?.tem_histologia ?? true}
       />
     </main>
   );

@@ -258,6 +258,14 @@ end $$;
 -- restrição (projetos antigos criados antes desta coluna).
 alter table public.projetos add column if not exists tecidos text[] not null default '{}';
 
+-- Tipos de análise que o projeto terá. Gatilham as seções do dia do sacrifício
+-- e a aba de comportamental. Bioquímico e histologia começam TRUE (preserva o
+-- comportamento dos projetos existentes); comportamental começa FALSE (feature
+-- nova, opcional).
+alter table public.projetos add column if not exists tem_bioquimico boolean not null default true;
+alter table public.projetos add column if not exists tem_histologia boolean not null default true;
+alter table public.projetos add column if not exists tem_comportamental boolean not null default false;
+
 -- Histórico de versões do projeto (cada edição grava um "retrato" do estado
 -- em jsonb). Registro de transparência de como o desenho experimental mudou
 -- ao longo do tempo (levas imprevistas, ratos perdidos).
@@ -1451,6 +1459,73 @@ $$;
 drop trigger if exists travar_aliquota_categoria on public.sacrificio_aliquota_categorias;
 create trigger travar_aliquota_categoria before update on public.sacrificio_aliquota_categorias
   for each row execute function public.travar_aliquota_categoria_confirmada();
+
+-- ----------------------------------------------------------------------------
+-- TESTES COMPORTAMENTAIS
+-- ----------------------------------------------------------------------------
+-- Campo aberto (6 min) + nado forçado (6 min), um registro por rato do projeto.
+-- Só aparece para projetos com tem_comportamental = true. "Tempo em atividade"
+-- do campo aberto NÃO é coluna: é derivado (360 − ca_imobilidade_s) na
+-- exibição/exportação. Campo aberto e nado forçado confirmam/travam separados.
+create table if not exists public.comportamental (
+  id uuid primary key default gen_random_uuid(),
+  projeto_id uuid not null references public.projetos (id) on delete cascade,
+  leva integer,
+  rato text not null,
+  grupo_id uuid references public.projeto_grupos (id),
+  -- Campo aberto (open field), 6 min = 360 s
+  ca_quadrados integer,
+  ca_urinas integer,
+  ca_fezes integer,
+  ca_imobilidade_s integer,
+  ca_confirmado boolean not null default false,
+  -- Nado forçado (forced swim), 6 min
+  nf_imobilidade_s integer,
+  nf_confirmado boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (projeto_id, leva, rato)
+);
+
+alter table public.comportamental enable row level security;
+alter table public.comportamental force row level security;
+drop policy if exists "Membros veem comportamental" on public.comportamental;
+create policy "Membros veem comportamental" on public.comportamental for select
+  using (
+    public.eh_membro_projeto(projeto_id)
+    or public.is_orientador()
+    or public.pode_exportar_dados()
+  );
+drop policy if exists "Coautor gerencia comportamental" on public.comportamental;
+create policy "Coautor gerencia comportamental" on public.comportamental for all
+  using (public.eh_coautor_projeto(projeto_id))
+  with check (public.eh_coautor_projeto(projeto_id));
+
+-- Trava por teste confirmado (dados não mudam mais; DELETE fica livre para
+-- cascata de exclusão de projeto).
+create or replace function public.travar_comportamental_confirmado()
+returns trigger language plpgsql as $$
+begin
+  if OLD.ca_confirmado then
+    if NEW.ca_quadrados is distinct from OLD.ca_quadrados
+       or NEW.ca_urinas is distinct from OLD.ca_urinas
+       or NEW.ca_fezes is distinct from OLD.ca_fezes
+       or NEW.ca_imobilidade_s is distinct from OLD.ca_imobilidade_s
+       or NEW.ca_confirmado is distinct from OLD.ca_confirmado then
+      raise exception 'Campo aberto confirmado: não pode mais mudar.';
+    end if;
+  end if;
+  if OLD.nf_confirmado then
+    if NEW.nf_imobilidade_s is distinct from OLD.nf_imobilidade_s
+       or NEW.nf_confirmado is distinct from OLD.nf_confirmado then
+      raise exception 'Nado forçado confirmado: não pode mais mudar.';
+    end if;
+  end if;
+  return NEW;
+end;
+$$;
+drop trigger if exists travar_comportamental on public.comportamental;
+create trigger travar_comportamental before update on public.comportamental
+  for each row execute function public.travar_comportamental_confirmado();
 
 -- ----------------------------------------------------------------------------
 -- CONTAGEM PÚBLICA DE PROJETOS
