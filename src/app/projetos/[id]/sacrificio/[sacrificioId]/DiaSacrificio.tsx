@@ -69,6 +69,9 @@ type Props = {
   orgaosVisiveis?: string[];
   // Slugs de teste designados no projeto — deriva as categorias de alíquota.
   testesDesignados?: string[];
+  // Tipos de análise do projeto — gatilham as seções.
+  temBioquimico?: boolean;
+  temHistologia?: boolean;
 };
 
 // Mantém a tela sincronizada entre aparelhos: sacrificio_ratos e sacrificios
@@ -169,6 +172,8 @@ export default function DiaSacrificio({
   secoes,
   orgaosVisiveis,
   testesDesignados,
+  temBioquimico = true,
+  temHistologia = true,
 }: Props) {
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
   // Grupo exato de cada rato (para etiquetar o pote da histologia e não errar
@@ -512,7 +517,7 @@ export default function DiaSacrificio({
       {mostra("coleta") && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
-          Coleta e histologia
+          {temHistologia ? "Coleta e histologia" : "Coleta"}
         </p>
         {dissecados.length === 0 ? (
           <p className="text-xs text-ink-soft">
@@ -530,6 +535,8 @@ export default function DiaSacrificio({
                 grupoNome={grupoPorRato.get(r.rato) ?? ""}
                 podeRegistrar={podeRegistrar}
                 orgaosVisiveis={orgaosVisiveis}
+                temBioquimico={temBioquimico}
+                temHistologia={temHistologia}
               />
             ))}
           </div>
@@ -537,7 +544,7 @@ export default function DiaSacrificio({
       </section>
       )}
 
-      {mostra("homogeneizacao") && (
+      {mostra("homogeneizacao") && temBioquimico && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
           Homogeneização (peso → tampão)
@@ -568,7 +575,7 @@ export default function DiaSacrificio({
       </section>
       )}
 
-      {mostra("sangue") && (
+      {mostra("sangue") && temBioquimico && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
           Preparo de plasma/eritrócito
@@ -602,7 +609,7 @@ export default function DiaSacrificio({
       </section>
       )}
 
-      {mostra("aliquotas") && (
+      {mostra("aliquotas") && temBioquimico && (
       <section>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
           Separação de alíquotas
@@ -974,6 +981,8 @@ function PainelColeta({
   grupoNome,
   podeRegistrar,
   orgaosVisiveis,
+  temBioquimico,
+  temHistologia,
 }: {
   projetoId: string;
   sacrificioId: string;
@@ -981,6 +990,8 @@ function PainelColeta({
   grupoNome: string;
   podeRegistrar: boolean;
   orgaosVisiveis?: string[];
+  temBioquimico: boolean;
+  temHistologia: boolean;
 }) {
   const orgaos = orgaosVisiveis
     ? ORGAOS_DISSECAVEIS.filter((o) => orgaosVisiveis.includes(o.valor))
@@ -995,8 +1006,13 @@ function PainelColeta({
     const init: Record<string, { destino: DestinoTecido; motivo: string }> = {};
     for (const o of orgaos) {
       const s = salvo.get(o.valor);
+      const destinoPadrao: DestinoTecido = temBioquimico
+        ? "coleta"
+        : temHistologia
+        ? "histologia"
+        : "nao_coletado";
       init[o.valor] = {
-        destino: s?.destino ?? "coleta",
+        destino: s?.destino ?? destinoPadrao,
         motivo: s?.motivo ?? "",
       };
     }
@@ -1067,8 +1083,12 @@ function PainelColeta({
                       }
                       className={INPUT_SM}
                     >
-                      <option value="coleta">Coleta (bioquímica)</option>
-                      <option value="histologia">Histologia</option>
+                      {temBioquimico && (
+                        <option value="coleta">Coleta (bioquímica)</option>
+                      )}
+                      {temHistologia && (
+                        <option value="histologia">Histologia</option>
+                      )}
                       <option value="nao_coletado">Não coletado</option>
                     </select>
                   </td>

@@ -17,6 +17,9 @@ export default function EditarForm({
   levasInicial,
   gruposIniciais,
   tecidosIniciais,
+  temBioquimicoInicial,
+  temHistologiaInicial,
+  temComportamentalInicial,
 }: {
   projetoId: string;
   nomeInicial: string;
@@ -26,6 +29,9 @@ export default function EditarForm({
   levasInicial: number;
   gruposIniciais: LinhaGrupo[];
   tecidosIniciais: string[];
+  temBioquimicoInicial: boolean;
+  temHistologiaInicial: boolean;
+  temComportamentalInicial: boolean;
 }) {
   const [estado, formAction, pendente] = useActionState(editarProjeto, undefined);
   const [numeroLevas, setNumeroLevas] = useState(levasInicial);
@@ -143,6 +149,42 @@ export default function EditarForm({
               {nomeTecido(t)}
             </label>
           ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium text-ink">
+          Tipos de análise do projeto
+        </legend>
+        <p className="text-xs leading-relaxed text-ink-soft">
+          Definem o que aparece no dia do sacrifício e se o projeto terá a aba
+          de testes comportamentais.
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <label className="flex items-center gap-1.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="temBioquimico"
+              defaultChecked={temBioquimicoInicial}
+            />
+            Testes bioquímicos (coleta, homogeneização e alíquotas)
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="temHistologia"
+              defaultChecked={temHistologiaInicial}
+            />
+            Histologia
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="temComportamental"
+              defaultChecked={temComportamentalInicial}
+            />
+            Testes comportamentais (campo aberto e nado forçado)
+          </label>
         </div>
       </fieldset>
 

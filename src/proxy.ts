@@ -45,6 +45,7 @@ export async function proxy(request: NextRequest) {
   // o próprio perfil) — só exige login, sem checar papel específico.
   const isCompartilhadaRoute =
     path.startsWith("/projetos") ||
+    path.startsWith("/comportamental") ||
     path.startsWith("/testes") ||
     path.startsWith("/reagentes") ||
     path.startsWith("/bioterio") ||
