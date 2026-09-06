@@ -132,6 +132,15 @@ export default async function PaginaDiaSacrificio({
         {projeto?.nome} · {sacrificio.status}
       </p>
 
+      {(souCoautor || souOrientador) && (
+        <a
+          href={`/api/exportar-sacrificio/${sacrificio.id}`}
+          className="mt-3 inline-block rounded border border-rule bg-paper-raised px-3 py-1.5 text-sm text-absorbance transition-colors hover:border-signal"
+        >
+          ↓ Baixar planilha do sacrifício (Excel)
+        </a>
+      )}
+
       {ratosErro && (
         <p className="mt-4 rounded border border-alerta/50 bg-alerta/10 p-3 text-sm text-alerta">
           Não foi possível carregar os ratos deste sacrifício, então as etapas
