@@ -171,6 +171,11 @@ export default function DiaSacrificio({
   testesDesignados,
 }: Props) {
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
+  // Grupo exato de cada rato (para etiquetar o pote da histologia e não errar
+  // a dissecação). Vem do roster (numeração → grupo).
+  const grupoPorRato = new Map(
+    roster.map((r) => [String(r.numero), r.grupoNome])
+  );
 
   const router = useRouter();
   useSacrificioAoVivo(
@@ -424,6 +429,11 @@ export default function DiaSacrificio({
                       }`}
                     >
                       <span className="font-mono text-ink">Rato {r.rato}</span>
+                      {grupoPorRato.get(r.rato) && (
+                        <span className="text-absorbance">
+                          {grupoPorRato.get(r.rato)}
+                        </span>
+                      )}
                       {i === 0 && (
                         <span className="rounded-full bg-signal/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
                           próximo
@@ -473,6 +483,11 @@ export default function DiaSacrificio({
                         #{r.ordem}
                       </span>
                       <span className="font-mono text-ink">Rato {r.rato}</span>
+                      {grupoPorRato.get(r.rato) && (
+                        <span className="text-absorbance">
+                          {grupoPorRato.get(r.rato)}
+                        </span>
+                      )}
                       {r.caixa && <span>· caixa {r.caixa}</span>}
                       {podeRegistrar && (
                         <button
@@ -512,6 +527,7 @@ export default function DiaSacrificio({
                 projetoId={projetoId}
                 sacrificioId={sacrificioId}
                 rato={r}
+                grupoNome={grupoPorRato.get(r.rato) ?? ""}
                 podeRegistrar={podeRegistrar}
                 orgaosVisiveis={orgaosVisiveis}
               />
@@ -542,6 +558,7 @@ export default function DiaSacrificio({
                 projetoId={projetoId}
                 sacrificioId={sacrificioId}
                 rato={r}
+                grupoNome={grupoPorRato.get(r.rato) ?? ""}
                 podeRegistrar={podeRegistrar}
                 orgaosVisiveis={orgaosVisiveis}
               />
@@ -575,6 +592,7 @@ export default function DiaSacrificio({
                 projetoId={projetoId}
                 sacrificioId={sacrificioId}
                 rato={r}
+                grupoNome={grupoPorRato.get(r.rato) ?? ""}
                 podeRegistrar={podeRegistrar}
                 orgaosVisiveis={orgaosVisiveis}
               />
@@ -606,6 +624,7 @@ export default function DiaSacrificio({
                 projetoId={projetoId}
                 sacrificioId={sacrificioId}
                 rato={r}
+                grupoNome={grupoPorRato.get(r.rato) ?? ""}
                 podeRegistrar={podeRegistrar}
                 orgaosVisiveis={orgaosVisiveis}
                 testesDesignados={testesDesignados ?? []}
@@ -623,12 +642,14 @@ function PainelAliquotas({
   projetoId,
   sacrificioId,
   rato,
+  grupoNome,
   podeRegistrar,
   orgaosVisiveis,
 }: {
   projetoId: string;
   sacrificioId: string;
   rato: RatoSalvo;
+  grupoNome: string;
   podeRegistrar: boolean;
   orgaosVisiveis?: string[];
 }) {
@@ -683,6 +704,12 @@ function PainelAliquotas({
     <div className="rounded border border-rule bg-paper-raised p-3">
       <p className="mb-2 font-mono text-xs text-ink">
         Rato {rato.rato}
+        {grupoNome ? (
+          <>
+            {" · "}
+            <span className="font-semibold text-absorbance">{grupoNome}</span>
+          </>
+        ) : null}
         {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
       </p>
       <div className="overflow-x-auto">
@@ -763,12 +790,14 @@ function PainelSangue({
   projetoId,
   sacrificioId,
   rato,
+  grupoNome,
   podeRegistrar,
   orgaosVisiveis,
 }: {
   projetoId: string;
   sacrificioId: string;
   rato: RatoSalvo;
+  grupoNome: string;
   podeRegistrar: boolean;
   orgaosVisiveis?: string[];
 }) {
@@ -840,6 +869,12 @@ function PainelSangue({
     <div className="rounded border border-rule bg-paper-raised p-3">
       <p className="mb-2 font-mono text-xs text-ink">
         Rato {rato.rato}
+        {grupoNome ? (
+          <>
+            {" · "}
+            <span className="font-semibold text-absorbance">{grupoNome}</span>
+          </>
+        ) : null}
         {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
       </p>
       <div className="flex flex-col gap-2">
@@ -936,12 +971,14 @@ function PainelColeta({
   projetoId,
   sacrificioId,
   rato,
+  grupoNome,
   podeRegistrar,
   orgaosVisiveis,
 }: {
   projetoId: string;
   sacrificioId: string;
   rato: RatoSalvo;
+  grupoNome: string;
   podeRegistrar: boolean;
   orgaosVisiveis?: string[];
 }) {
@@ -996,6 +1033,12 @@ function PainelColeta({
     <div className="rounded border border-rule bg-paper-raised p-3">
       <p className="mb-2 font-mono text-xs text-ink">
         Rato {rato.rato}
+        {grupoNome ? (
+          <>
+            {" · "}
+            <span className="font-semibold text-absorbance">{grupoNome}</span>
+          </>
+        ) : null}
         {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
       </p>
       <div className="overflow-x-auto">
@@ -1072,6 +1115,7 @@ function PainelSeparacaoAliquotas({
   projetoId,
   sacrificioId,
   rato,
+  grupoNome,
   podeRegistrar,
   orgaosVisiveis,
   testesDesignados,
@@ -1079,6 +1123,7 @@ function PainelSeparacaoAliquotas({
   projetoId: string;
   sacrificioId: string;
   rato: RatoSalvo;
+  grupoNome: string;
   podeRegistrar: boolean;
   orgaosVisiveis?: string[];
   testesDesignados: string[];
@@ -1126,6 +1171,12 @@ function PainelSeparacaoAliquotas({
     <div className="rounded border border-rule bg-paper-raised p-3">
       <p className="mb-2 font-mono text-xs text-ink">
         Rato {rato.rato}
+        {grupoNome ? (
+          <>
+            {" · "}
+            <span className="font-semibold text-absorbance">{grupoNome}</span>
+          </>
+        ) : null}
         {rato.caixa ? ` · caixa ${rato.caixa}` : ""}
       </p>
       <div className="flex flex-col gap-3">

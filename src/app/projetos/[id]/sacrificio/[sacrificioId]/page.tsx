@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { carregarDia } from "@/lib/sacrificioDados";
 import DiaSacrificio from "./DiaSacrificio";
+import OrdemCaixas from "./OrdemCaixas";
+
+type GrupoOrdem = { id: string; nome: string };
 
 type Sacrificio = {
   id: string;
@@ -89,6 +92,14 @@ export default async function PaginaDiaSacrificio({
     projeto?.numero_levas ?? 1
   );
 
+  const { data: gruposOrdem } = await supabase
+    .from("projeto_grupos")
+    .select("id, nome")
+    .eq("projeto_id", id)
+    .order("ordem", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
+    .returns<GrupoOrdem[]>();
+
   const finalizado = projeto?.finalizado ?? false;
   // Escreve quem tem RLS de escrita nos dados: coautor ou designado (aqui, quem
   // tem "Organização geral"). Encerrar/reabrir mexe na tabela sacrificios, cuja
@@ -121,6 +132,15 @@ export default async function PaginaDiaSacrificio({
           depois de salvar. Detalhe técnico: {ratosErro}
         </p>
       )}
+
+      <div className="mt-8">
+        <OrdemCaixas
+          projetoId={id}
+          grupos={gruposOrdem ?? []}
+          podeEditar={podeRegistrar}
+          travada={ratos.length > 0}
+        />
+      </div>
 
       <DiaSacrificio
         projetoId={id}

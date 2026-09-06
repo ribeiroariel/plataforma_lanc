@@ -33,6 +33,7 @@ async function gravarVersao(
       .from("projeto_grupos")
       .select("nome, numero_ratos, ratos_por_leva")
       .eq("projeto_id", projetoId)
+      .order("ordem", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true }),
   ]);
   await supabase.from("projeto_versoes").insert({
@@ -187,10 +188,14 @@ export async function editarProjeto(
 
   const { data: existentes } = await supabase
     .from("projeto_grupos")
-    .select("id")
+    .select("id, ordem")
     .eq("projeto_id", projetoId);
   const idsExistentes = new Set((existentes ?? []).map((g) => g.id));
   const idsMantidos = new Set<string>();
+  // Grupos novos entram no fim da ordem existente (o usuário reordena depois
+  // pela tela de "ordem das caixas").
+  let proximaOrdem =
+    Math.max(0, ...(existentes ?? []).map((g) => g.ordem ?? 0)) + 1;
 
   for (const g of gruposValidos) {
     const total = g.ratosPorLeva.reduce((s, n) => s + n, 0);
@@ -207,6 +212,7 @@ export async function editarProjeto(
         nome: g.nome,
         numero_ratos: total,
         ratos_por_leva: g.ratosPorLeva,
+        ordem: proximaOrdem++,
       });
       if (error) return { erro: "Erro ao adicionar grupo: " + error.message };
     }
@@ -237,6 +243,53 @@ export async function finalizarProjeto(projetoId: string) {
     .eq("id", projetoId);
   if (error) return { erro: error.message };
   revalidatePath(`/projetos/${projetoId}`);
+}
+
+// Reordena as caixas/grupos do projeto (arrastar). Define a numeração global
+// dos ratos. Só é permitido ANTES de qualquer rato ser semeado num sacrifício —
+// depois disso a numeração já está gravada e reordenar dessincronizaria tudo.
+export async function salvarOrdemGrupos(
+  projetoId: string,
+  ordemIds: string[]
+): Promise<{ erro: string } | void> {
+  const supabase = await createClient();
+
+  const { data: grupos } = await supabase
+    .from("projeto_grupos")
+    .select("id")
+    .eq("projeto_id", projetoId);
+  const idsProjeto = new Set((grupos ?? []).map((g) => g.id));
+
+  // Trava se já há ratos registrados em algum sacrifício do projeto.
+  const { data: sacs } = await supabase
+    .from("sacrificios")
+    .select("id")
+    .eq("projeto_id", projetoId);
+  const sacIds = (sacs ?? []).map((s) => s.id);
+  if (sacIds.length > 0) {
+    const { count } = await supabase
+      .from("sacrificio_ratos")
+      .select("id", { count: "exact", head: true })
+      .in("sacrificio_id", sacIds);
+    if ((count ?? 0) > 0) {
+      return {
+        erro: "A ordem não pode mais mudar: já há ratos registrados no sacrifício. A numeração ficaria dessincronizada.",
+      };
+    }
+  }
+
+  let i = 1;
+  for (const id of ordemIds) {
+    if (!idsProjeto.has(id)) continue;
+    const { error } = await supabase
+      .from("projeto_grupos")
+      .update({ ordem: i++ })
+      .eq("id", id);
+    if (error) return { erro: "Erro ao salvar a ordem: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${projetoId}`);
+  revalidatePath(`/projetos/${projetoId}/sacrificio`);
 }
 
 export async function excluirProjeto(

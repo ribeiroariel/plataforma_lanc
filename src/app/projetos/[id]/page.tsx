@@ -85,6 +85,7 @@ export default async function DetalheProjeto({
         .from("projeto_grupos")
         .select("id, nome, numero_ratos, ratos_por_leva")
         .eq("projeto_id", id)
+        .order("ordem", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true })
         .returns<Grupo[]>(),
       supabase
