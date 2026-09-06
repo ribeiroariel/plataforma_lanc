@@ -3,10 +3,33 @@
 import { categoriaAliquota, type CategoriaAliquota } from "@/lib/tiposTeste";
 import { testes as catalogoTestes, type Tecido } from "@/lib/tecidos";
 
-// Volume de amostra (homogenato/sobrenadante) por teste, em µL — extraído do
-// campo "amostra" do procedimento do manual (leitura convencional).
-// ⚠️ CALIBRÁVEL: revisar com o Ariel/manual antes de confiar. Onde o ensaio usa
-// amostra + branco/duplicata, aqui está só a amostra principal (ver PR fatia 4).
+// Volume de amostra (homogenato/sobrenadante) a separar por teste, em µL.
+// Calibrado com a prática de bancada do Ariel (sacrifício 09/2026): o volume
+// depende do TIPO de tecido, não só do teste.
+//   • tecidos sólidos (fígado, córtex, rim, hipocampo, cerebelo): 100 µL por
+//     teste, exceto carboniladas (200 µL).
+//   • plasma: 300 µL por teste.
+//   • eritrócitos: AINDA NÃO calibrado (a prática usa diluição 1:50 → 1 mL, que
+//     é outra lógica, não peso→tampão); por ora cai no fallback do manual
+//     abaixo. Modelar a diluição num passo posterior.
+// CAT e SOD ainda multiplicam por 5 (ver MULTIPLICADOR) — os valores aqui são
+// por réplica única.
+const VOLUME_SOLIDO_PADRAO_UL = 100;
+const VOLUME_SOLIDO_CARBONILADAS_UL = 200;
+const VOLUME_PLASMA_UL = 300;
+
+// Tecidos sólidos homogeneizados (peso → tampão). Plasma e eritrócitos são
+// frações de sangue e seguem regra própria (ver acima).
+const TECIDOS_SOLIDOS: ReadonlySet<Tecido> = new Set<Tecido>([
+  "figado",
+  "cortex",
+  "hipocampo",
+  "cerebelo",
+  "rins",
+]);
+
+// Fallback (valores por teste do manual) para tecidos ainda não recalibrados —
+// hoje só eritrócitos. ⚠️ CALIBRÁVEL enquanto a diluição não for modelada.
 export const VOLUME_AMOSTRA_UL: Record<string, number> = {
   cat: 10, // 10 µL da amostra diluída
   sod: 10, // 10 µL de sobrenadante na diluição
@@ -49,7 +72,16 @@ export const ROTULO_CATEGORIA: Record<CategoriaAliquota, string> = {
   lowry: "Proteína (Lowry)",
 };
 
-function volumeDoSlug(slug: string): number {
+// Volume de amostra por teste (µL), calibrado por tecido. Ver comentário no
+// topo do arquivo. O `tecido` é o do órgão dissecado (ORGAO_PARA_TECIDO).
+function volumeDoSlug(slug: string, tecido: Tecido): number {
+  if (TECIDOS_SOLIDOS.has(tecido)) {
+    return slug.startsWith("carboniladas")
+      ? VOLUME_SOLIDO_CARBONILADAS_UL
+      : VOLUME_SOLIDO_PADRAO_UL;
+  }
+  if (tecido === "plasma") return VOLUME_PLASMA_UL;
+  // Eritrócitos e qualquer tecido ainda não calibrado: valores do manual.
   const chave = Object.keys(VOLUME_AMOSTRA_UL).find((k) => slug.startsWith(k));
   return chave ? VOLUME_AMOSTRA_UL[chave] : 0;
 }
@@ -84,7 +116,7 @@ export function ependorfsParaOrgao(
     if (!cat) continue;
     const mult = MULTIPLICADOR[cat] ?? 1;
     const atual = porCategoria.get(cat) ?? { volume: 0, testes: [] };
-    atual.volume += volumeDoSlug(slug) * mult;
+    atual.volume += volumeDoSlug(slug, tecido) * mult;
     atual.testes.push(slug);
     porCategoria.set(cat, atual);
   }
