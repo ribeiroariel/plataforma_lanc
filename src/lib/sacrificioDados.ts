@@ -84,6 +84,7 @@ export async function carregarDia(
       .from("projeto_grupos")
       .select("id, nome, numero_ratos, ratos_por_leva")
       .eq("projeto_id", projetoId)
+      .order("ordem", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true })
       .returns<GrupoComContagem[]>(),
     supabase

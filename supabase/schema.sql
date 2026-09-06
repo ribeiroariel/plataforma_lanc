@@ -299,6 +299,28 @@ create table if not exists public.projeto_grupos (
 alter table public.projeto_grupos add column if not exists numero_ratos integer not null default 0;
 alter table public.projeto_grupos add column if not exists ratos_por_leva integer[] not null default '{}';
 
+-- Ordem explícita das caixas/grupos (arrastar para reordenar no site). Antes a
+-- ordem vinha de created_at, que EMPATA quando os grupos são criados na mesma
+-- transação (criar_projeto insere todos de uma vez) → ordem indefinida e a
+-- numeração dos ratos saía embaralhada. Esta coluna define a numeração global
+-- dos ratos (roster) em todo o site.
+alter table public.projeto_grupos add column if not exists ordem integer;
+
+-- Backfill idempotente: numera por projeto seguindo a ordem antiga
+-- (created_at, id como desempate estável), para NÃO mudar a numeração de
+-- projetos que já existem. Só preenche onde ainda está nulo.
+with ranked as (
+  select id, row_number() over (
+    partition by projeto_id order by created_at asc, id asc
+  ) as rn
+  from public.projeto_grupos
+  where ordem is null
+)
+update public.projeto_grupos g
+set ordem = ranked.rn
+from ranked
+where g.id = ranked.id;
+
 create table if not exists public.projeto_testes (
   id uuid primary key default gen_random_uuid(),
   projeto_id uuid not null references public.projetos (id) on delete cascade,
@@ -608,6 +630,7 @@ declare
   v_nome text;
   v_ratos integer[];
   v_total integer;
+  v_ordem integer := 0;
 begin
   if not exists (
     select 1 from public.profiles
@@ -637,8 +660,9 @@ begin
       v_ratos := coalesce(v_ratos, '{}');
       select coalesce(sum(n), 0) into v_total from unnest(v_ratos) as n;
 
-      insert into public.projeto_grupos (projeto_id, nome, numero_ratos, ratos_por_leva)
-      values (v_projeto_id, v_nome, v_total, v_ratos);
+      v_ordem := v_ordem + 1;
+      insert into public.projeto_grupos (projeto_id, nome, numero_ratos, ratos_por_leva, ordem)
+      values (v_projeto_id, v_nome, v_total, v_ratos, v_ordem);
     end if;
   end loop;
 
