@@ -41,60 +41,70 @@ type ComportamentalRow = {
   nf_confirmado: boolean;
 };
 
-const AZUL = "FF1F3A5F";
-const AZUL_CLARO = "FFDCE6F1";
+// Tons do site (globals.css): absorbance (azul de dados), paper-raised
+// (off-white), rule (borda), ink (texto).
+const ABSORB = "FF24427A";
+const OFFWHITE = "FFFAF9F6";
+const RULE = "FFE7E2D8";
+const INK = "FF1C1A15";
+const BRANCO = "FFFFFFFF";
+const FONTE = "Arial";
+const FONTE_TITULO = "Times New Roman";
+
+const bordaFina = {
+  top: { style: "thin" as const, color: { argb: RULE } },
+  bottom: { style: "thin" as const, color: { argb: RULE } },
+  left: { style: "thin" as const, color: { argb: RULE } },
+  right: { style: "thin" as const, color: { argb: RULE } },
+};
 
 function rotuloOrgao(v: string): string {
   return ORGAOS_DISSECAVEIS.find((o) => o.valor === v)?.rotulo ?? v;
 }
 
-// Aplica estilo de cabeçalho (fundo azul, texto branco, borda) numa linha.
-function estilizarCabecalho(row: ExcelJS.Row) {
-  row.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: AZUL },
-    };
-    cell.alignment = { vertical: "middle", horizontal: "left" };
-    cell.border = {
-      top: { style: "thin", color: { argb: "FFB0B0B0" } },
-      bottom: { style: "thin", color: { argb: "FFB0B0B0" } },
-      left: { style: "thin", color: { argb: "FFB0B0B0" } },
-      right: { style: "thin", color: { argb: "FFB0B0B0" } },
-    };
-  });
-  row.height = 20;
-}
-
-// Zebra + bordas leves nas linhas de dados.
-function estilizarDados(ws: ExcelJS.Worksheet, primeiraLinha: number) {
-  for (let i = primeiraLinha; i <= ws.rowCount; i++) {
-    const row = ws.getRow(i);
-    const par = (i - primeiraLinha) % 2 === 1;
-    row.eachCell((cell) => {
-      if (par) {
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: AZUL_CLARO },
-        };
-      }
-      cell.border = {
-        bottom: { style: "hair", color: { argb: "FFD0D0D0" } },
-      };
-      cell.alignment = { vertical: "middle" };
-    });
-  }
-}
-
-function tituloAba(ws: ExcelJS.Worksheet, texto: string, nColunas: number) {
+// Título na linha 1 (mesclado), fonte serifada nos tons do site.
+function titulo(ws: ExcelJS.Worksheet, texto: string, nColunas: number) {
   ws.mergeCells(1, 1, 1, Math.max(1, nColunas));
   const c = ws.getCell(1, 1);
   c.value = texto;
-  c.font = { bold: true, size: 14, color: { argb: AZUL } };
-  ws.getRow(1).height = 24;
+  c.font = { name: FONTE_TITULO, bold: true, size: 14, color: { argb: ABSORB } };
+  c.alignment = { vertical: "middle", wrapText: true };
+  ws.getRow(1).height = 26;
+}
+
+// Aplica, na faixa de dados de uma tabela (título=1, branco=2, cabeçalho=3,
+// dados=4+): fonte, bordas em TODAS as células, quebra de linha, cabeçalho
+// azul com texto branco e zebra nas linhas de dados.
+function estilizarTabela(ws: ExcelJS.Worksheet) {
+  const HEADER = 3;
+  const PRIMEIRA_DADOS = 4;
+  for (let i = HEADER; i <= ws.rowCount; i++) {
+    const row = ws.getRow(i);
+    row.eachCell((cell) => {
+      cell.font = { name: FONTE, size: 10, color: { argb: INK } };
+      cell.alignment = { vertical: "middle", wrapText: true };
+      cell.border = bordaFina;
+    });
+    if (i === HEADER) {
+      row.eachCell((cell) => {
+        cell.font = { name: FONTE, size: 11, bold: true, color: { argb: BRANCO } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: ABSORB } };
+      });
+      row.height = 22;
+    } else {
+      const par = (i - PRIMEIRA_DADOS) % 2 === 1;
+      if (par) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: OFFWHITE },
+          };
+        });
+      }
+    }
+  }
+  ws.views = [{ state: "frozen", ySplit: HEADER }];
 }
 
 export async function GET(
@@ -118,7 +128,6 @@ export async function GET(
     .maybeSingle()
     .returns<Sacrificio>();
   if (!sacrificio) {
-    // RLS já bloqueia quem não pode ver — trata como não encontrado.
     return NextResponse.json({ erro: "Sacrifício não encontrado." }, { status: 404 });
   }
 
@@ -173,8 +182,8 @@ export async function GET(
   // ---------------- Aba 1: Resumo ----------------
   {
     const ws = wb.addWorksheet("Resumo");
-    ws.columns = [{ width: 28 }, { width: 60 }];
-    tituloAba(ws, "Sacrifício — resumo", 2);
+    ws.columns = [{ width: 30 }, { width: 64 }];
+    titulo(ws, "Sacrifício — resumo", 2);
     ws.addRow([]);
     const linhas: [string, string | number][] = [
       ["Projeto", projeto?.nome ?? ""],
@@ -189,10 +198,7 @@ export async function GET(
       ["Grupos", new Set(roster.map((r) => r.grupoNome)).size],
       ["Ratos previstos (leva)", roster.length],
       ["Sobreviventes", ratos.filter((r) => r.sobreviveu).length],
-      [
-        "Dissecados",
-        ratos.filter((r) => r.status === "dissecado").length,
-      ],
+      ["Dissecados", ratos.filter((r) => r.status === "dissecado").length],
       [
         "Análises",
         [
@@ -204,34 +210,44 @@ export async function GET(
           .join(", ") || "—",
       ],
     ];
-    for (const [k, v] of linhas) {
-      const row = ws.addRow([k, v]);
-      row.getCell(1).font = { bold: true, color: { argb: AZUL } };
+    for (const [k, v] of linhas) ws.addRow([k, v]);
+    // Estilo: fonte + bordas + wrap; 1ª coluna em destaque (azul, negrito).
+    for (let i = 3; i <= ws.rowCount; i++) {
+      const row = ws.getRow(i);
+      row.eachCell((cell) => {
+        cell.font = { name: FONTE, size: 10, color: { argb: INK } };
+        cell.alignment = { vertical: "middle", wrapText: true };
+        cell.border = bordaFina;
+      });
+      row.getCell(1).font = {
+        name: FONTE,
+        size: 10,
+        bold: true,
+        color: { argb: ABSORB },
+      };
+      row.getCell(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: OFFWHITE },
+      };
     }
   }
 
   // ---------------- Aba 2: Ratos ----------------
   {
     const ws = wb.addWorksheet("Ratos");
-    const cabec = [
-      "Nº",
-      "Grupo",
-      "Caixa",
-      "Sobreviveu",
-      "Motivo exclusão",
-      "Status",
-    ];
+    const cabec = ["Nº", "Grupo", "Caixa", "Sobreviveu", "Motivo exclusão", "Status"];
     ws.columns = [
       { width: 8 },
-      { width: 26 },
+      { width: 28 },
       { width: 10 },
       { width: 12 },
-      { width: 30 },
+      { width: 32 },
       { width: 12 },
     ];
-    tituloAba(ws, "Ratos", cabec.length);
+    titulo(ws, "Ratos", cabec.length);
     ws.addRow([]);
-    estilizarCabecalho(ws.addRow(cabec));
+    ws.addRow(cabec);
     for (const r of ordenadosPorNumero) {
       const d = dadosPorRato.get(String(r.numero));
       ws.addRow([
@@ -243,8 +259,7 @@ export async function GET(
         d?.status ?? "",
       ]);
     }
-    ws.views = [{ state: "frozen", ySplit: 3 }];
-    estilizarDados(ws, 4);
+    estilizarTabela(ws);
   }
 
   // ---------------- Aba 3: Coleta ----------------
@@ -253,14 +268,14 @@ export async function GET(
     const cabec = ["Nº", "Grupo", "Órgão", "Destino", "Motivo (se não coletado)"];
     ws.columns = [
       { width: 8 },
-      { width: 26 },
+      { width: 28 },
       { width: 16 },
-      { width: 18 },
-      { width: 34 },
+      { width: 20 },
+      { width: 36 },
     ];
-    tituloAba(ws, "Coleta e histologia", cabec.length);
+    titulo(ws, "Coleta e histologia", cabec.length);
     ws.addRow([]);
-    estilizarCabecalho(ws.addRow(cabec));
+    ws.addRow(cabec);
     const rotuloDestino: Record<string, string> = {
       coleta: "Coleta (bioquímica)",
       histologia: "Histologia",
@@ -277,25 +292,24 @@ export async function GET(
         ]);
       }
     }
-    ws.views = [{ state: "frozen", ySplit: 3 }];
-    estilizarDados(ws, 4);
+    estilizarTabela(ws);
   }
 
-  // ---------------- Aba 4 e 5: Alíquotas (só se bioquímica) ----------------
+  // ---------------- Abas 4 e 5: Alíquotas (só se bioquímica) ----------------
   if (temBio) {
     const ws = wb.addWorksheet("Alíquotas (peso-tampão)");
     const cabec = ["Nº", "Grupo", "Órgão/tecido", "Peso (g)", "Tampão (µL)", "Confirmado"];
     ws.columns = [
       { width: 8 },
-      { width: 26 },
+      { width: 28 },
       { width: 18 },
       { width: 12 },
       { width: 14 },
       { width: 12 },
     ];
-    tituloAba(ws, "Alíquotas — peso → tampão (homogenato 10%)", cabec.length);
+    titulo(ws, "Alíquotas — peso → tampão (homogenato 10%)", cabec.length);
     ws.addRow([]);
-    estilizarCabecalho(ws.addRow(cabec));
+    ws.addRow(cabec);
     for (const r of seedadosOrdenados) {
       for (const a of r.aliquotas) {
         ws.addRow([
@@ -308,22 +322,21 @@ export async function GET(
         ]);
       }
     }
-    ws.views = [{ state: "frozen", ySplit: 3 }];
-    estilizarDados(ws, 4);
+    estilizarTabela(ws);
 
     const ws2 = wb.addWorksheet("Alíquotas por categoria");
     const cabec2 = ["Nº", "Grupo", "Órgão/tecido", "Categoria", "Volume (µL)", "Confirmado"];
     ws2.columns = [
       { width: 8 },
-      { width: 26 },
+      { width: 28 },
       { width: 18 },
-      { width: 22 },
+      { width: 24 },
       { width: 14 },
       { width: 12 },
     ];
-    tituloAba(ws2, "Alíquotas — ependorfs por categoria de teste", cabec2.length);
+    titulo(ws2, "Alíquotas — ependorfs por categoria de teste", cabec2.length);
     ws2.addRow([]);
-    estilizarCabecalho(ws2.addRow(cabec2));
+    ws2.addRow(cabec2);
     for (const r of seedadosOrdenados) {
       for (const c of r.categoriasAliquota) {
         ws2.addRow([
@@ -336,8 +349,7 @@ export async function GET(
         ]);
       }
     }
-    ws2.views = [{ state: "frozen", ySplit: 3 }];
-    estilizarDados(ws2, 4);
+    estilizarTabela(ws2);
   }
 
   // ---------------- Aba: Comportamental (só se habilitado) ----------------
@@ -357,19 +369,19 @@ export async function GET(
     ];
     ws.columns = [
       { width: 8 },
-      { width: 26 },
-      { width: 13 },
-      { width: 11 },
-      { width: 11 },
-      { width: 17 },
-      { width: 16 },
+      { width: 28 },
+      { width: 12 },
       { width: 10 },
-      { width: 17 },
       { width: 10 },
+      { width: 15 },
+      { width: 14 },
+      { width: 9 },
+      { width: 15 },
+      { width: 9 },
     ];
-    tituloAba(ws, "Testes comportamentais (6 min cada)", cabec.length);
+    titulo(ws, "Testes comportamentais (6 min cada)", cabec.length);
     ws.addRow([]);
-    estilizarCabecalho(ws.addRow(cabec));
+    ws.addRow(cabec);
     for (const r of ordenadosPorNumero) {
       const c = compPorRato.get(String(r.numero));
       const atividade =
@@ -389,18 +401,17 @@ export async function GET(
         c ? (c.nf_confirmado ? "Sim" : "Não") : "",
       ]);
     }
-    ws.views = [{ state: "frozen", ySplit: 3 }];
-    estilizarDados(ws, 4);
+    estilizarTabela(ws);
   }
 
   // ---------------- Aba: Funções do dia ----------------
   {
     const ws = wb.addWorksheet("Funções do dia");
     const cabec = ["Função", "Pessoas"];
-    ws.columns = [{ width: 40 }, { width: 50 }];
-    tituloAba(ws, "Funções designadas", cabec.length);
+    ws.columns = [{ width: 42 }, { width: 52 }];
+    titulo(ws, "Funções designadas", cabec.length);
     ws.addRow([]);
-    estilizarCabecalho(ws.addRow(cabec));
+    ws.addRow(cabec);
     const porFuncao = new Map<string, string[]>();
     for (const f of funcoes ?? []) {
       const nome = f.profiles?.nome ?? "—";
@@ -411,8 +422,7 @@ export async function GET(
     for (const [funcao, pessoas] of porFuncao) {
       ws.addRow([rotuloFuncao(funcao), pessoas.join(", ")]);
     }
-    ws.views = [{ state: "frozen", ySplit: 3 }];
-    estilizarDados(ws, 4);
+    estilizarTabela(ws);
   }
 
   const buffer = await wb.xlsx.writeBuffer();
