@@ -110,10 +110,21 @@ export default async function PaginaResultado({
     false;
   const souOrientador = usuario?.papel === "orientador";
 
-  if (!souResponsavel && !souCoautor && !souOrientador) {
+  // O usuário é AJUDANTE deste teste? (RLS de projeto_teste_ajudantes deixa ver
+  // a própria linha). Sem isto, um ajudante caía em 404 ao abrir o próprio
+  // teste em "Meus testes".
+  const { data: ajudanteRow } = await supabase
+    .from("projeto_teste_ajudantes")
+    .select("profile_id")
+    .eq("projeto_teste_id", testeId)
+    .eq("profile_id", usuario?.id ?? "")
+    .maybeSingle();
+  const souAjudante = !!ajudanteRow;
+
+  if (!souResponsavel && !souCoautor && !souOrientador && !souAjudante) {
     // RLS já bloquearia a leitura de "resultados" de quem não é
-    // responsável/coautor/orientadora, mas aqui é sobre a designação em
-    // si — se chegou até aqui sem ser nenhum dos três, não deveria ver.
+    // responsável/coautor/ajudante/orientadora — se chegou aqui sem ser nenhum,
+    // não deveria ver.
     notFound();
   }
 
@@ -136,7 +147,7 @@ export default async function PaginaResultado({
   }
 
   const encerrado = projetoTeste.encerrado === true;
-  const podeEditar = (souResponsavel || souCoautor) && !encerrado;
+  const podeEditar = (souResponsavel || souCoautor || souAjudante) && !encerrado;
 
   const fotosCaderno = await listarFotosCaderno(projetoTeste.id);
 
