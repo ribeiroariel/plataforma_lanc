@@ -7,16 +7,20 @@ import { testes as catalogoTestes, type Tecido } from "@/lib/tecidos";
 // Calibrado com a prática de bancada do Ariel (sacrifício 09/2026): o volume
 // depende do TIPO de tecido, não só do teste.
 //   • tecidos sólidos (fígado, córtex, rim, hipocampo, cerebelo): 100 µL por
-//     teste, exceto carboniladas (200 µL).
+//     teste.
 //   • plasma: 300 µL por teste.
+//   • carboniladas: 420 µL em QUALQUER tecido — o ensaio consome 200 µL na
+//     amostra + 200 µL no branco de cada amostra, + 5% de margem (a pedido do
+//     Ariel), para não faltar.
 //   • eritrócitos: AINDA NÃO calibrado (a prática usa diluição 1:50 → 1 mL, que
 //     é outra lógica, não peso→tampão); por ora cai no fallback do manual
 //     abaixo. Modelar a diluição num passo posterior.
 // CAT e SOD ainda multiplicam por 5 (ver MULTIPLICADOR) — os valores aqui são
 // por réplica única.
 const VOLUME_SOLIDO_PADRAO_UL = 100;
-const VOLUME_SOLIDO_CARBONILADAS_UL = 200;
 const VOLUME_PLASMA_UL = 300;
+// Carboniladas: amostra (200) + branco de cada amostra (200) + 5% de margem.
+const VOLUME_CARBONILADAS_UL = 420;
 
 // Tecidos sólidos homogeneizados (peso → tampão). Plasma e eritrócitos são
 // frações de sangue e seguem regra própria (ver acima).
@@ -75,11 +79,9 @@ export const ROTULO_CATEGORIA: Record<CategoriaAliquota, string> = {
 // Volume de amostra por teste (µL), calibrado por tecido. Ver comentário no
 // topo do arquivo. O `tecido` é o do órgão dissecado (ORGAO_PARA_TECIDO).
 function volumeDoSlug(slug: string, tecido: Tecido): number {
-  if (TECIDOS_SOLIDOS.has(tecido)) {
-    return slug.startsWith("carboniladas")
-      ? VOLUME_SOLIDO_CARBONILADAS_UL
-      : VOLUME_SOLIDO_PADRAO_UL;
-  }
+  // Carboniladas tem volume próprio (amostra + branco + 5%) em qualquer tecido.
+  if (slug.startsWith("carboniladas")) return VOLUME_CARBONILADAS_UL;
+  if (TECIDOS_SOLIDOS.has(tecido)) return VOLUME_SOLIDO_PADRAO_UL;
   if (tecido === "plasma") return VOLUME_PLASMA_UL;
   // Eritrócitos e qualquer tecido ainda não calibrado: valores do manual.
   const chave = Object.keys(VOLUME_AMOSTRA_UL).find((k) => slug.startsWith(k));
