@@ -6,6 +6,8 @@ import {
   siglaVia,
   textoDose,
   numeracaoCaixas,
+  media,
+  doseMlPorAnimal,
   UNIDADES_DOSE,
   type CaixaRow,
   type ProcedimentoRow,
@@ -44,10 +46,25 @@ function precisaPesarParaMl(p: ProcedimentoRow): boolean {
 function BlocoProcedimento({
   titulo,
   proc,
+  pesoMedio,
 }: {
   titulo: string;
   proc: ProcedimentoRow;
+  pesoMedio: number | null;
 }) {
+  // Dose do dia calculada a partir do peso médio da caixa (mg/kg × peso ÷
+  // concentração, ou mL/kg × peso). Só aparece preenchida quando a caixa já
+  // tem os pesos registrados; sem peso, cai na linha em branco pra preencher
+  // à caneta no dia.
+  const doseCalculada = precisaPesarParaMl(proc)
+    ? doseMlPorAnimal(
+        pesoMedio,
+        proc.dose_valor,
+        proc.dose_unidade,
+        proc.concentracao
+      )
+    : null;
+
   return (
     <div>
       <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-500">
@@ -56,16 +73,28 @@ function BlocoProcedimento({
       <p className="text-[13px] leading-snug text-neutral-900">
         {linhaProc(proc)}
       </p>
-      {precisaPesarParaMl(proc) && (
-        <p className="mt-1 flex items-baseline gap-1.5 text-[12px] text-neutral-700">
-          <span className="shrink-0">Dose do dia:</span>
-          <span
-            className="inline-block flex-1 border-b border-dotted border-neutral-400"
-            style={{ minWidth: "2.5rem" }}
-          />
-          <span className="shrink-0 font-mono">mL</span>
-        </p>
-      )}
+      {precisaPesarParaMl(proc) &&
+        (doseCalculada != null ? (
+          <p className="mt-1 flex items-baseline gap-1.5 text-[12px] text-neutral-800">
+            <span className="shrink-0">Dose do dia:</span>
+            <span className="rounded bg-yellow-200 px-1.5 font-mono font-semibold">
+              {doseCalculada.toLocaleString("pt-BR", {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3,
+              })}
+            </span>
+            <span className="shrink-0 font-mono">mL/animal</span>
+          </p>
+        ) : (
+          <p className="mt-1 flex items-baseline gap-1.5 text-[12px] text-neutral-700">
+            <span className="shrink-0">Dose do dia:</span>
+            <span
+              className="inline-block flex-1 border-b border-dotted border-neutral-400"
+              style={{ minWidth: "2.5rem" }}
+            />
+            <span className="shrink-0 font-mono">mL</span>
+          </p>
+        ))}
     </div>
   );
 }
@@ -132,6 +161,7 @@ export default async function PaginaEtiquetas({
           {(caixas ?? []).map((c, i) => {
             const ind = inducaoDe(c.id);
             const trat = tratamentoDe(c.id);
+            const pesoMedio = media((c.pesos ?? []).map(Number));
             return (
               <div
                 key={c.id}
@@ -148,11 +178,18 @@ export default async function PaginaEtiquetas({
 
                   {(ind || trat) && (
                     <div className="mt-2 flex flex-col gap-2 border-t border-neutral-300 pt-2">
-                      {ind && <BlocoProcedimento titulo="Indução" proc={ind} />}
+                      {ind && (
+                        <BlocoProcedimento
+                          titulo="Indução"
+                          proc={ind}
+                          pesoMedio={pesoMedio}
+                        />
+                      )}
                       {trat && (
                         <BlocoProcedimento
                           titulo={`Tratamento${trat.dias ? ` · ${trat.dias} dias` : ""}`}
                           proc={trat}
+                          pesoMedio={pesoMedio}
                         />
                       )}
                     </div>

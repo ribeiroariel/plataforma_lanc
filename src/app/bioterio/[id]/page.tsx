@@ -5,7 +5,7 @@ import { getUsuarioAtual } from "@/lib/supabase/profile";
 import type { CaixaRow, ProcedimentoRow } from "@/lib/bioterio";
 import Bioterio from "./Bioterio";
 
-type Projeto = { id: string; nome: string; especie: string | null };
+type Projeto = { id: string; nome: string; especie: string | null; numero_levas: number | null };
 type Grupo = { id: string; nome: string };
 
 export default async function PaginaBioterioProjeto({
@@ -22,7 +22,7 @@ export default async function PaginaBioterioProjeto({
     await Promise.all([
       supabase
         .from("projetos")
-        .select("id, nome, especie")
+        .select("id, nome, especie, numero_levas")
         .eq("id", id)
         .maybeSingle()
         .returns<Projeto>(),
@@ -38,8 +38,9 @@ export default async function PaginaBioterioProjeto({
         .eq("projeto_id", id),
       supabase
         .from("bioterio_caixas")
-        .select("id, grupo_id, num_ratos, ordem, pesos, mortos")
+        .select("id, grupo_id, num_ratos, ordem, pesos, mortos, leva")
         .eq("projeto_id", id)
+        .order("leva", { ascending: true, nullsFirst: true })
         .order("ordem", { ascending: true })
         .returns<CaixaRow[]>(),
       supabase
@@ -71,6 +72,7 @@ export default async function PaginaBioterioProjeto({
       <Bioterio
         projetoId={projeto.id}
         especie={projeto.especie}
+        numeroLevas={projeto.numero_levas ?? 1}
         grupos={grupos ?? []}
         caixas={caixas ?? []}
         procedimentos={procedimentos ?? []}

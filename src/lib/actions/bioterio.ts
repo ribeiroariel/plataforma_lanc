@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 // Cria uma ou mais caixas em sequência, no fim da ordem atual.
 export async function criarCaixas(dados: {
   projetoId: string;
+  leva?: number;
   caixas: { grupoId: string; numRatos: number }[];
 }): Promise<{ erro: string } | { sucesso: true }> {
   const caixas = dados.caixas.filter((c) => c.grupoId && c.numRatos > 0);
@@ -32,6 +33,7 @@ export async function criarCaixas(dados: {
     ordem: ordem++,
     grupo_id: c.grupoId,
     num_ratos: c.numRatos,
+    leva: dados.leva && dados.leva > 0 ? dados.leva : 1,
     criado_por: user.id,
   }));
 
@@ -48,6 +50,7 @@ export async function atualizarCaixa(dados: {
   grupoId: string;
   numRatos: number;
   pesos: number[];
+  leva?: number;
 }): Promise<{ erro: string } | { sucesso: true }> {
   const supabase = await createClient();
   const pesos = dados.pesos.filter((p) => Number.isFinite(p) && p > 0);
@@ -59,6 +62,7 @@ export async function atualizarCaixa(dados: {
       num_ratos: dados.numRatos,
       pesos,
       peso_medio_g: media,
+      ...(dados.leva && dados.leva > 0 ? { leva: dados.leva } : {}),
     })
     .eq("id", dados.id);
   if (error) return { erro: "Não foi possível salvar a caixa: " + error.message };

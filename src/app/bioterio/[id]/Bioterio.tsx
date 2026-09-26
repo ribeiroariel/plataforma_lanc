@@ -47,6 +47,7 @@ const fmt = (n: number | null, casas = 1) =>
 export default function Bioterio({
   projetoId,
   especie,
+  numeroLevas,
   grupos,
   caixas,
   procedimentos,
@@ -54,6 +55,7 @@ export default function Bioterio({
 }: {
   projetoId: string;
   especie: string | null;
+  numeroLevas: number;
   grupos: Grupo[];
   caixas: CaixaRow[];
   procedimentos: ProcedimentoRow[];
@@ -99,6 +101,7 @@ export default function Bioterio({
         nomeGrupo={nomeGrupo}
         limite={limite}
         especie={especie}
+        numeroLevas={numeroLevas}
         podeEditar={podeEditar}
       />
 
@@ -125,6 +128,7 @@ function CaixasSection({
   nomeGrupo,
   limite,
   especie,
+  numeroLevas,
   podeEditar,
 }: {
   projetoId: string;
@@ -134,6 +138,7 @@ function CaixasSection({
   nomeGrupo: Map<string, string>;
   limite: number;
   especie: string | null;
+  numeroLevas: number;
   podeEditar: boolean;
 }) {
   const router = useRouter();
@@ -180,26 +185,43 @@ function CaixasSection({
 
       {ordem.length > 0 && (
         <div className="mb-4 flex flex-col gap-2">
-          {ordem.map((c, i) => (
-            <CaixaItem
-              key={c.id}
-              projetoId={projetoId}
-              caixa={c}
-              numero={numerosLocais[i] ?? String(numeros[i] ?? i + 1)}
-              grupos={grupos}
-              nomeGrupo={nomeGrupo}
-              limite={limite}
-              podeEditar={podeEditar}
-              indice={i}
-              onDragStart={() => (arrastando.current = i)}
-              onDrop={() => soltar(i)}
-            />
-          ))}
+          {ordem.map((c, i) => {
+            const leva = c.leva ?? 1;
+            const levaAnterior = i > 0 ? (ordem[i - 1].leva ?? 1) : null;
+            const mostraCabecalho = numeroLevas > 1 && leva !== levaAnterior;
+            return (
+              <div key={c.id} className="flex flex-col gap-2">
+                {mostraCabecalho && (
+                  <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-signal">
+                    Leva {leva}
+                  </p>
+                )}
+                <CaixaItem
+                  projetoId={projetoId}
+                  caixa={c}
+                  numero={numerosLocais[i] ?? String(numeros[i] ?? i + 1)}
+                  grupos={grupos}
+                  nomeGrupo={nomeGrupo}
+                  limite={limite}
+                  numeroLevas={numeroLevas}
+                  podeEditar={podeEditar}
+                  indice={i}
+                  onDragStart={() => (arrastando.current = i)}
+                  onDrop={() => soltar(i)}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 
       {podeEditar && grupos.length > 0 && (
-        <CriarCaixas projetoId={projetoId} grupos={grupos} limite={limite} />
+        <CriarCaixas
+          projetoId={projetoId}
+          grupos={grupos}
+          limite={limite}
+          numeroLevas={numeroLevas}
+        />
       )}
       {grupos.length === 0 && (
         <p className="text-sm text-ink-soft">
@@ -222,6 +244,7 @@ function CaixaItem({
   grupos,
   nomeGrupo,
   limite,
+  numeroLevas,
   podeEditar,
   onDragStart,
   onDrop,
@@ -232,6 +255,7 @@ function CaixaItem({
   grupos: Grupo[];
   nomeGrupo: Map<string, string>;
   limite: number;
+  numeroLevas: number;
   podeEditar: boolean;
   indice: number;
   onDragStart: () => void;
@@ -242,6 +266,7 @@ function CaixaItem({
   const [editando, setEditando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [grupoId, setGrupoId] = useState(caixa.grupo_id);
+  const [leva, setLeva] = useState(String(caixa.leva ?? 1));
   const [numRatos, setNumRatos] = useState(String(caixa.num_ratos));
   const [pesos, setPesos] = useState<string[]>(() => {
     const base = (caixa.pesos ?? []).map((p) => String(p));
@@ -275,6 +300,7 @@ function CaixaItem({
         grupoId,
         numRatos: int0(numRatos),
         pesos: pesosNum,
+        leva: int0(leva) || 1,
       });
       if ("erro" in r) setErro(r.erro);
       else {
@@ -314,6 +340,11 @@ function CaixaItem({
         )}
         <span className="font-mono text-ink">Caixa {numero}</span>
         <span className="text-ink">{nomeGrupo.get(caixa.grupo_id) ?? "?"}</span>
+        {numeroLevas > 1 && (
+          <span className="rounded-full bg-signal/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+            Leva {caixa.leva ?? 1}
+          </span>
+        )}
         <span className="font-mono text-ink-soft">{caixa.num_ratos} animais</span>
         {m != null && (
           <span className="font-mono text-xs text-ink-soft">
@@ -366,6 +397,16 @@ function CaixaItem({
           Nº de animais
           <input inputMode="numeric" value={numRatos} onChange={(e) => ajustarQtd(e.target.value)} className={`${INPUT_SM} w-20`} />
         </label>
+        {numeroLevas > 1 && (
+          <label className="flex flex-col gap-1 text-xs text-ink-soft">
+            Leva
+            <select value={leva} onChange={(e) => setLeva(e.target.value)} className={INPUT_SM}>
+              {Array.from({ length: numeroLevas }, (_, i) => i + 1).map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       {acima && <p className="mt-1 text-xs text-alerta">Acima do limite ({limite}/caixa).</p>}
 
@@ -413,14 +454,17 @@ function CriarCaixas({
   projetoId,
   grupos,
   limite,
+  numeroLevas,
 }: {
   projetoId: string;
   grupos: Grupo[];
   limite: number;
+  numeroLevas: number;
 }) {
   const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+  const [leva, setLeva] = useState("1");
   const [linhas, setLinhas] = useState<{ grupoId: string; num: string }[]>([
     { grupoId: grupos[0]?.id ?? "", num: "" },
   ]);
@@ -438,7 +482,7 @@ function CriarCaixas({
       return;
     }
     iniciar(async () => {
-      const r = await criarCaixas({ projetoId, caixas });
+      const r = await criarCaixas({ projetoId, leva: int0(leva) || 1, caixas });
       if ("erro" in r) setErro(r.erro);
       else {
         setLinhas([{ grupoId: grupos[0]?.id ?? "", num: "" }]);
@@ -452,6 +496,16 @@ function CriarCaixas({
       <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
         Adicionar caixas
       </p>
+      {numeroLevas > 1 && (
+        <label className="mb-3 flex items-center gap-2 text-xs text-ink-soft">
+          Leva destas caixas
+          <select value={leva} onChange={(e) => setLeva(e.target.value)} className={INPUT_SM}>
+            {Array.from({ length: numeroLevas }, (_, i) => i + 1).map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="flex flex-col gap-2">
         {linhas.map((l, i) => {
           const acima = int0(l.num) > limite;
