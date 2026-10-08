@@ -112,6 +112,7 @@ export type CaixaRow = {
   ordem: number | null;
   pesos: number[] | null;
   mortos: number;
+  leva: number | null;
 };
 
 export type ProcedimentoRow = {

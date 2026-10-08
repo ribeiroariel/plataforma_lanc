@@ -1956,6 +1956,9 @@ create policy "Membros gerenciam os tratamentos" on public.bioterio_tratamentos 
 -- cada rato da caixa (média e DP calculados no app, e usados no cálculo da dose).
 alter table public.bioterio_caixas add column if not exists ordem integer;
 alter table public.bioterio_caixas add column if not exists pesos numeric[] not null default '{}';
+-- Leva de sacrifício a que a caixa pertence (a 2ª leva costuma ser as caixas
+-- criadas depois). Default 1 = tudo na leva 1 até separarem.
+alter table public.bioterio_caixas add column if not exists leva integer not null default 1;
 -- Semeia a ordem a partir do numero antigo, para caixas já existentes.
 update public.bioterio_caixas set ordem = numero where ordem is null;
 
