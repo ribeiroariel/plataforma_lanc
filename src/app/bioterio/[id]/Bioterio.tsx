@@ -84,9 +84,16 @@ export default function Bioterio({
         <div className="flex flex-wrap items-center gap-3 rounded border border-signal/40 bg-signal/5 px-4 py-3">
           <span className="text-sm text-ink">{caixas.length} caixa(s).</span>
           <Link
+            href={`/bioterio/${projetoId}/tabela-doses`}
+            target="_blank"
+            className="ml-auto rounded border border-rule px-3 py-1.5 text-sm text-absorbance transition-colors hover:border-signal"
+          >
+            Tabela de doses ↗
+          </Link>
+          <Link
             href={`/bioterio/${projetoId}/etiquetas`}
             target="_blank"
-            className="ml-auto rounded border border-signal px-3 py-1.5 text-sm text-signal transition-colors hover:bg-signal hover:text-paper"
+            className="rounded border border-signal px-3 py-1.5 text-sm text-signal transition-colors hover:bg-signal hover:text-paper"
           >
             Gerar etiquetas (PDF) ↗
           </Link>
