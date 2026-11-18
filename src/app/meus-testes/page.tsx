@@ -1,145 +1,99 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
+import { carregarMeusTestes, type MeuTeste } from "@/lib/meusTestes";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Abas } from "@/components/ui/Abas";
+import { CartaoTeste } from "@/components/testes/CartaoTeste";
 
-type TesteRow = {
-  id: string;
-  teste_slug: string;
-  status: "pendente" | "concluido";
-  responsavel_id: string;
-  leva: number | null;
-  projeto_id: string;
-  projetos: { nome: string } | null;
-};
+function Grade({ itens, vazio }: { itens: MeuTeste[]; vazio: string }) {
+  if (itens.length === 0) {
+    return <EmptyState className="mt-6" titulo={vazio} />;
+  }
+  // Agrupa por projeto: o bolsista costuma pensar "o que falta no TCC X".
+  const porProjeto = new Map<string, MeuTeste[]>();
+  for (const t of itens) {
+    const lista = porProjeto.get(t.projetoId) ?? [];
+    lista.push(t);
+    porProjeto.set(t.projetoId, lista);
+  }
+  return (
+    <div className="mt-6 flex flex-col gap-8">
+      {Array.from(porProjeto.entries()).map(([projetoId, lista]) => (
+        <section key={projetoId}>
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h2 className="font-display text-lg text-ink">{lista[0].projetoNome}</h2>
+            <Link
+              href={`/projetos/${projetoId}?aba=testes`}
+              className="shrink-0 text-xs text-absorbance hover:underline"
+            >
+              Abrir projeto →
+            </Link>
+          </div>
+          <div className="anim-cascata grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {lista.map((t) => (
+              <CartaoTeste key={t.id} t={t} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
 
-export default async function MeusTestes() {
+export default async function MeusTestes({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>;
+}) {
   const usuario = await getUsuarioAtual();
   if (!usuario) redirect("/login");
+  const { aba } = await searchParams;
 
-  const supabase = await createClient();
-
-  // Testes onde sou responsável.
-  const { data: comoResp } = await supabase
-    .from("projeto_testes")
-    .select("id, teste_slug, status, responsavel_id, leva, projeto_id, projetos:projeto_id(nome)")
-    .eq("responsavel_id", usuario.id)
-    .returns<TesteRow[]>();
-
-  // Testes onde sou ajudante.
-  const { data: ajLinks } = await supabase
-    .from("projeto_teste_ajudantes")
-    .select("projeto_teste_id")
-    .eq("profile_id", usuario.id);
-
-  const idsAjudante = (ajLinks ?? []).map((a) => a.projeto_teste_id);
-  let comoAjudante: TesteRow[] = [];
-  if (idsAjudante.length > 0) {
-    const { data } = await supabase
-      .from("projeto_testes")
-      .select("id, teste_slug, status, responsavel_id, leva, projeto_id, projetos:projeto_id(nome)")
-      .in("id", idsAjudante)
-      .returns<TesteRow[]>();
-    comoAjudante = data ?? [];
-  }
-
-  // Junta, marcando o papel. Se aparecer nos dois, "responsável" prevalece.
-  const mapa = new Map<string, { row: TesteRow; papel: "responsavel" | "ajudante" }>();
-  for (const r of comoAjudante) mapa.set(r.id, { row: r, papel: "ajudante" });
-  for (const r of comoResp ?? []) mapa.set(r.id, { row: r, papel: "responsavel" });
-
-  const itens = Array.from(mapa.values());
-  const pendentes = itens.filter((i) => i.row.status === "pendente");
-  const concluidos = itens.filter((i) => i.row.status === "concluido");
-
-  function tituloDe(slug: string) {
-    const t = catalogoTestes.find((c) => c.slug === slug);
-    return t ? tituloSemTecido(t.titulo, t.tecido) : slug;
-  }
-  function tecidoDe(slug: string) {
-    const t = catalogoTestes.find((c) => c.slug === slug);
-    return t ? nomeTecido(t.tecido) : "";
-  }
-
-  function Linha({
-    row,
-    papel,
-  }: {
-    row: TesteRow;
-    papel: "responsavel" | "ajudante";
-  }) {
-    return (
-      <Link
-        href={`/projetos/${row.projeto_id}/testes/${row.id}`}
-        className="flex items-center justify-between gap-3 rounded border border-rule bg-paper-raised px-4 py-3 text-sm transition-colors hover:border-absorbance"
-      >
-        <div>
-          <p className="font-medium text-ink">{tituloDe(row.teste_slug)}</p>
-          <p className="text-ink-soft">
-            <span className="text-signal">{tecidoDe(row.teste_slug)}</span>
-            {" · "}
-            {row.projetos?.nome ?? "projeto"}
-            {row.leva ? ` · Leva ${row.leva}` : ""}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge tom={papel === "responsavel" ? "info" : "neutro"}>
-            {papel === "responsavel" ? "responsável" : "ajudante"}
-          </Badge>
-          <span className="font-mono text-xs uppercase text-signal">
-            {papel === "responsavel" && row.status !== "concluido"
-              ? "Registrar →"
-              : "Ver →"}
-          </span>
-        </div>
-      </Link>
-    );
-  }
+  const itens = await carregarMeusTestes(usuario.id);
+  const abertos = itens.filter((t) => !t.encerrado && t.status !== "concluido");
+  const concluidos = itens.filter((t) => t.encerrado || t.status === "concluido");
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <PageHeader
         eyebrow="Bancada"
         titulo="Meus testes"
-        descricao="Testes designados a você (como responsável ou ajudante), de todos os projetos."
+        descricao="Testes designados a você (como responsável ou ajudante), de todos os projetos, com quantos ratos já foram confirmados."
       />
 
-      {itens.length === 0 && (
+      {itens.length === 0 ? (
         <EmptyState
           className="mt-8"
           titulo="Nenhum teste designado a você por enquanto"
           descricao="Quando um coautor designar um ensaio a você, ele aparece aqui — pendente ou concluído."
         />
-      )}
-
-      {pendentes.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-3 border-t-2 border-ink pt-2 font-mono text-xs uppercase tracking-[0.12em] text-ink">
-            Pendentes ({pendentes.length})
-          </h2>
-          <div className="flex flex-col gap-2">
-            {pendentes.map((i) => (
-              <Linha key={i.row.id} row={i.row} papel={i.papel} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {concluidos.length > 0 && (
-        <section className="mt-10">
-          <h2 className="mb-3 border-t-2 border-ink pt-2 font-mono text-xs uppercase tracking-[0.12em] text-ink">
-            Concluídos ({concluidos.length})
-          </h2>
-          <div className="flex flex-col gap-2">
-            {concluidos.map((i) => (
-              <Linha key={i.row.id} row={i.row} papel={i.papel} />
-            ))}
-          </div>
-        </section>
+      ) : (
+        <Abas
+          className="mt-6"
+          inicial={aba ?? (abertos.length > 0 ? "abertos" : "concluidos")}
+          abas={[
+            {
+              id: "abertos",
+              rotulo: "Em aberto",
+              indicador: abertos.length,
+              conteudo: <Grade itens={abertos} vazio="Nenhum teste em aberto — tudo em dia." />,
+            },
+            {
+              id: "concluidos",
+              rotulo: "Concluídos",
+              indicador: concluidos.length,
+              conteudo: <Grade itens={concluidos} vazio="Nenhum teste concluído ainda." />,
+            },
+            {
+              id: "todos",
+              rotulo: "Todos",
+              indicador: itens.length,
+              conteudo: <Grade itens={itens} vazio="Nenhum teste." />,
+            },
+          ]}
+        />
       )}
     </main>
   );

@@ -155,3 +155,74 @@ body {
     -webkit-print-color-adjust: exact;
   }
 }
+
+/* ── Movimento ────────────────────────────────────────────────────────────
+   Curto e discreto: o conteúdo novo sobe 6px com fade ao trocar de tela
+   (template.tsx), abas cruzam em fade, a gaveta "Mais" do celular sobe de
+   baixo. prefers-reduced-motion (acima) neutraliza tudo. */
+@keyframes lanc-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lanc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes lanc-gaveta {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes lanc-brilho {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.anim-entrada {
+  animation: lanc-entrada 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.anim-fade {
+  animation: lanc-fade 180ms ease-out both;
+}
+.anim-gaveta {
+  animation: lanc-gaveta 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+/* Entrada em cascata: filhos diretos aparecem um após o outro. */
+.anim-cascata > * {
+  animation: lanc-entrada 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.anim-cascata > *:nth-child(2) { animation-delay: 40ms; }
+.anim-cascata > *:nth-child(3) { animation-delay: 80ms; }
+.anim-cascata > *:nth-child(4) { animation-delay: 120ms; }
+.anim-cascata > *:nth-child(5) { animation-delay: 160ms; }
+.anim-cascata > *:nth-child(n + 6) { animation-delay: 200ms; }
+
+/* Esqueleto de carregamento (loading.tsx). */
+.esqueleto {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-rule) 0%,
+    var(--color-paper-raised) 50%,
+    var(--color-rule) 100%
+  );
+  background-size: 200% 100%;
+  animation: lanc-brilho 1.4s ease-in-out infinite;
+  opacity: 0.7;
+}
