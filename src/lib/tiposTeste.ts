@@ -18,6 +18,21 @@ export type CampoBruto = {
   rotulo: string;
 };
 
+/**
+ * Branco do reagente: tubo/poço com todos os reagentes e SEM amostra. É um
+ * valor da sessão (uma leitura por rodada — mesmo quando a bancada faz
+ * duplicata, só uma é registrada no site), não por
+ * rato — por isso fica fora da tabela de ratos. O branco DA AMOSTRA, ao
+ * contrário, é um por rato e entra como coluna em `camposBrutos`
+ * (chave `abs_branco_amostra`).
+ */
+export type BrancoReagenteConfig = {
+  rotulo: string;
+  /** Limite superior aceitável do manual (Abs), quando existe. */
+  max?: number;
+  dica?: string;
+};
+
 export type ConfigTeste = {
   familia: Familia;
   unidadeResultado: string;
@@ -25,6 +40,8 @@ export type ConfigTeste = {
   calculoAutomatico: boolean;
   /** Campos brutos por rato, só usado na família "simples". */
   camposBrutos?: CampoBruto[];
+  /** Branco do reagente da sessão (sem amostra), quando o ensaio usa. */
+  brancoReagente?: BrancoReagenteConfig;
   /** Controle de qualidade da sessão (checado uma vez, não por rato). */
   qc?: {
     rotulo: string;
@@ -80,28 +97,95 @@ const CONFIG_POR_FAMILIA: Record<Familia, Omit<ConfigTeste, "familia">> = {
   },
 };
 
-const CAMPOS_BRUTOS_POR_SLUG_PREFIXO: Record<string, CampoBruto[]> = {
-  tbars: [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (já zerada pelo branco)" }],
-  sulfidrilas: [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (T-SH)" }],
-  carboniladas: [
-    { chave: "abs_amostra", rotulo: "Absorbância da amostra (com DNPH)" },
-    { chave: "abs_branco_amostra", rotulo: "Absorbância do branco da amostra (com HCl)" },
-  ],
-  "tiois-dissulfetos": [
-    { chave: "abs_total", rotulo: "Absorbância — determinação total (tióis + dissulfetos)" },
-    { chave: "abs_tiois_livres", rotulo: "Absorbância — tióis livres" },
-  ],
-  "acido-ascorbico": [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (520 nm)" }],
-  h2o2: [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (610 nm)" }],
+// Ensaios da família "simples", por prefixo do slug. O match é pelo prefixo
+// mais LONGO (ver `ensaioSimplesDoSlug`). Brancos conferidos contra o manual:
+//  - Sulfidrilas (T-SH e NP-SH): branco do reagente (PBS + DTNB; a duplicata
+//    é só conferida na bancada, registra-se uma leitura)
+//    + branco da amostra por rato (amostra + PBS, sem DTNB).
+//  - Carboniladas: branco da amostra por rato (HCl sem DNPH) + branco do
+//    reagente (HCl 2 M) — no Infinite o equipamento não zera, subtrai depois.
+//  - TBARS: branco do reagente (KCl no lugar da amostra), QC ≤ 0,050.
+//  - H₂O₂: branco sem H₂O₂ (tampão dextrose no lugar do sobrenadante), QC ≤ 0,050.
+//  - Ácido ascórbico: branco do reagente (tampão citrato/acetato, sem DCIP).
+//  - Tióis/dissulfetos: o manual não define branco (só controle positivo de
+//    cisteína) — sem branco aqui.
+// CAT/SOD/Lowry não estão aqui: CAT e SOD são taxas (o branco não muda a
+// inclinação) e no Lowry o branco já é o ponto 0 da curva.
+const BRANCO_REAGENTE_DTNB: BrancoReagenteConfig = {
+  rotulo: "Branco do reagente (PBS + DTNB, sem amostra)",
+  max: 0.1,
+  dica: "DTNB contaminado com tióis ou degradado — descartar e preparar nova solução no dia.",
 };
+
+const ENSAIOS_SIMPLES: Record<
+  string,
+  { campos: CampoBruto[]; brancoReagente?: BrancoReagenteConfig }
+> = {
+  tbars: {
+    campos: [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (já zerada pelo branco)" }],
+    brancoReagente: {
+      rotulo: "Branco (KCl no lugar da amostra)",
+      max: 0.05,
+      dica: "Se > 0,080: TBA degradado (amarelado) ou contaminado — preparar novo estoque.",
+    },
+  },
+  "sulfidrilas-totais": {
+    campos: [
+      { chave: "abs_amostra", rotulo: "Absorbância da amostra (T-SH, com DTNB)" },
+      { chave: "abs_branco_amostra", rotulo: "Branco da amostra (sem DTNB)" },
+    ],
+    brancoReagente: BRANCO_REAGENTE_DTNB,
+  },
+  "sulfidrilas-np": {
+    campos: [
+      { chave: "abs_amostra", rotulo: "Absorbância da amostra (NP-SH, sobrenadante do ASS + DTNB)" },
+      { chave: "abs_branco_amostra", rotulo: "Branco da amostra (sobrenadante do ASS, sem DTNB)" },
+    ],
+    brancoReagente: BRANCO_REAGENTE_DTNB,
+  },
+  carboniladas: {
+    campos: [
+      { chave: "abs_amostra", rotulo: "Absorbância da amostra (com DNPH)" },
+      { chave: "abs_branco_amostra", rotulo: "Absorbância do branco da amostra (com HCl)" },
+    ],
+    brancoReagente: {
+      rotulo: "Branco do reagente (HCl 2 M, sem amostra)",
+    },
+  },
+  "tiois-dissulfetos": {
+    campos: [
+      { chave: "abs_total", rotulo: "Absorbância — determinação total (tióis + dissulfetos)" },
+      { chave: "abs_tiois_livres", rotulo: "Absorbância — tióis livres" },
+    ],
+  },
+  "acido-ascorbico": {
+    campos: [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (520 nm)" }],
+    brancoReagente: {
+      rotulo: "Branco do reagente (tampão citrato/acetato, sem DCIP)",
+    },
+  },
+  h2o2: {
+    campos: [{ chave: "abs_amostra", rotulo: "Absorbância da amostra (610 nm)" }],
+    brancoReagente: {
+      rotulo: "Branco sem H₂O₂ (tampão dextrose no lugar do sobrenadante)",
+      max: 0.05,
+      dica: "Se > 0,080: vermelho de fenol degradado ou solução contaminada.",
+    },
+  },
+};
+
+function ensaioSimplesDoSlug(slug: string) {
+  const prefixo = Object.keys(ENSAIOS_SIMPLES)
+    .filter((p) => slug.startsWith(p))
+    .sort((a, b) => b.length - a.length)[0];
+  return prefixo ? ENSAIOS_SIMPLES[prefixo] : null;
+}
 
 function familiaDoSlug(slug: string): Familia | null {
   if (slug.startsWith("lowry")) return "curva";
   if (slug.startsWith("cat-")) return "cat";
   if (slug.startsWith("sod-")) return "sod";
-  for (const prefixo of Object.keys(CAMPOS_BRUTOS_POR_SLUG_PREFIXO)) {
-    if (slug.startsWith(prefixo)) return "simples";
-  }
+  if (ensaioSimplesDoSlug(slug)) return "simples";
   return null; // preparo-amostras-*, valores-referencia-*, tampoes, referências
 }
 
@@ -136,10 +220,11 @@ export function configDoTeste(slug: string): ConfigTeste | null {
     return { familia, ...base };
   }
 
-  const prefixo = Object.keys(CAMPOS_BRUTOS_POR_SLUG_PREFIXO).find((p) =>
-    slug.startsWith(p)
-  );
-  const camposBrutos = prefixo ? CAMPOS_BRUTOS_POR_SLUG_PREFIXO[prefixo] : [];
-
-  return { familia, ...base, camposBrutos };
+  const ensaio = ensaioSimplesDoSlug(slug);
+  return {
+    familia,
+    ...base,
+    camposBrutos: ensaio?.campos ?? [],
+    brancoReagente: ensaio?.brancoReagente,
+  };
 }

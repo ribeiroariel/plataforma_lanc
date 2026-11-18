@@ -1,4 +1,4 @@
-12. SULFIDRILAS TOTAIS E NÃO-PROTEICAS – CEREBELO
+12. SULFIDRILAS NÃO-PROTEICAS E PROTEICAS (NP-SH / P-SH, com ácido sulfossalicílico) – CEREBELO
 Parâmetro
 Informação
 Tecido/Amostra

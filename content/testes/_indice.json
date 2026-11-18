@@ -20,8 +20,13 @@
     "tecido": "cortex"
   },
   {
-    "slug": "sulfidrilas-cortex",
-    "titulo": "Sulfidrilas totais e não-proteicas — córtex cerebral",
+    "slug": "sulfidrilas-totais-cortex",
+    "titulo": "Sulfidrilas totais (T-SH) — córtex cerebral",
+    "tecido": "cortex"
+  },
+  {
+    "slug": "sulfidrilas-np-cortex",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — córtex cerebral",
     "tecido": "cortex"
   },
   {
@@ -75,8 +80,13 @@
     "tecido": "hipocampo"
   },
   {
-    "slug": "sulfidrilas-hipocampo",
-    "titulo": "Sulfidrilas totais e não-proteicas — hipocampo",
+    "slug": "sulfidrilas-totais-hipocampo",
+    "titulo": "Sulfidrilas totais (T-SH) — hipocampo",
+    "tecido": "hipocampo"
+  },
+  {
+    "slug": "sulfidrilas-np-hipocampo",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — hipocampo",
     "tecido": "hipocampo"
   },
   {
@@ -130,8 +140,13 @@
     "tecido": "cerebelo"
   },
   {
-    "slug": "sulfidrilas-cerebelo",
-    "titulo": "Sulfidrilas totais e não-proteicas — cerebelo",
+    "slug": "sulfidrilas-totais-cerebelo",
+    "titulo": "Sulfidrilas totais (T-SH) — cerebelo",
+    "tecido": "cerebelo"
+  },
+  {
+    "slug": "sulfidrilas-np-cerebelo",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — cerebelo",
     "tecido": "cerebelo"
   },
   {
@@ -185,8 +200,13 @@
     "tecido": "rins"
   },
   {
-    "slug": "sulfidrilas-rins",
-    "titulo": "Sulfidrilas totais e não-proteicas — rins",
+    "slug": "sulfidrilas-totais-rins",
+    "titulo": "Sulfidrilas totais (T-SH) — rins",
+    "tecido": "rins"
+  },
+  {
+    "slug": "sulfidrilas-np-rins",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — rins",
     "tecido": "rins"
   },
   {
@@ -235,8 +255,13 @@
     "tecido": "eritrocitos"
   },
   {
-    "slug": "sulfidrilas-eritrocitos",
-    "titulo": "Sulfidrilas totais e não-proteicas — eritrócitos",
+    "slug": "sulfidrilas-totais-eritrocitos",
+    "titulo": "Sulfidrilas totais (T-SH) — eritrócitos",
+    "tecido": "eritrocitos"
+  },
+  {
+    "slug": "sulfidrilas-np-eritrocitos",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — eritrócitos",
     "tecido": "eritrocitos"
   },
   {
@@ -265,8 +290,13 @@
     "tecido": "plasma"
   },
   {
-    "slug": "sulfidrilas-plasma",
-    "titulo": "Sulfidrilas totais e não-proteicas — plasma",
+    "slug": "sulfidrilas-totais-plasma",
+    "titulo": "Sulfidrilas totais (T-SH) — plasma",
+    "tecido": "plasma"
+  },
+  {
+    "slug": "sulfidrilas-np-plasma",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — plasma",
     "tecido": "plasma"
   },
   {
@@ -310,8 +340,13 @@
     "tecido": "figado"
   },
   {
-    "slug": "sulfidrilas-figado",
-    "titulo": "Sulfidrilas totais e não-proteicas — fígado",
+    "slug": "sulfidrilas-totais-figado",
+    "titulo": "Sulfidrilas totais (T-SH) — fígado",
+    "tecido": "figado"
+  },
+  {
+    "slug": "sulfidrilas-np-figado",
+    "titulo": "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH) — fígado",
     "tecido": "figado"
   },
   {

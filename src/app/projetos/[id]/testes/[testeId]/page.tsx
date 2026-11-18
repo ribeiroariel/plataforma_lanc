@@ -32,6 +32,7 @@ type ProjetoTeste = {
   encerrado_por: string | null;
   encerrado_em: string | null;
   consideracoes: string | null;
+  branco_reagente: Record<string, string> | null;
 };
 
 type Resultado = {
@@ -65,7 +66,7 @@ export default async function PaginaResultado({
       supabase
         .from("projeto_testes")
         .select(
-          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em, consideracoes"
+          "id, projeto_id, teste_slug, status, responsavel_id, leva, aparelho, recipiente, leitura_inicio, leitura_fim, encerrado, encerrado_por, encerrado_em, consideracoes, branco_reagente"
         )
         .eq("id", testeId)
         .eq("projeto_id", projetoId)
@@ -247,6 +248,7 @@ export default async function PaginaResultado({
         config={config}
         roster={roster}
         resultadosExistentes={resultados ?? []}
+        brancoReagenteSalvo={projetoTeste.branco_reagente ?? {}}
         podeRegistrar={souResponsavel && !encerrado}
         podeAlterarStatus={podeEditar}
       />

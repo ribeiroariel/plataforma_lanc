@@ -376,6 +376,12 @@ alter table public.projeto_testes add column if not exists encerrado_em timestam
 -- Considerações gerais do teste (texto livre do bolsista sobre como foi o
 -- ensaio: imprevistos, observações, se deu tudo certo).
 alter table public.projeto_testes add column if not exists consideracoes text;
+-- Branco do reagente da sessão (tubo/poço com os reagentes e SEM amostra),
+-- uma leitura por rodada (a duplicata da bancada não é registrada). Guardado
+-- como {"abs": "0.045"} (texto como confirmado na tela). Imutável depois de
+-- confirmado (checado na server action). O
+-- branco DA AMOSTRA é por rato e fica em resultados_teste.leituras.colunas.
+alter table public.projeto_testes add column if not exists branco_reagente jsonb;
 
 -- Checks das colunas novas de forma idempotente (add column if not exists não
 -- aplica o check em bancos que já tinham a tabela).
@@ -987,6 +993,20 @@ drop trigger if exists travar_encerrado on public.projeto_testes;
 create trigger travar_encerrado
   before update on public.projeto_testes
   for each row execute function public.travar_teste_encerrado();
+
+-- Migração (2026-11-18): o ensaio "Sulfidrilas totais e não-proteicas" foi
+-- separado em dois testes — "sulfidrilas-totais-<tecido>" (T-SH, sem ácido
+-- sulfossalicílico, o que o laboratório faz normalmente) e
+-- "sulfidrilas-np-<tecido>" (NP-SH/P-SH, com ASS). Toda designação antiga
+-- ("sulfidrilas-<tecido>") passa a ser de sulfidrilas TOTAIS, inclusive as já
+-- encerradas — por isso o trigger de trava é desligado só durante este update
+-- (é renomeação do catálogo, não alteração do dado registrado). Idempotente:
+-- depois da primeira vez não sobra slug antigo para casar.
+alter table public.projeto_testes disable trigger travar_encerrado;
+update public.projeto_testes
+set teste_slug = regexp_replace(teste_slug, '^sulfidrilas-', 'sulfidrilas-totais-')
+where teste_slug ~ '^sulfidrilas-(cortex|hipocampo|cerebelo|rins|eritrocitos|plasma|figado)$';
+alter table public.projeto_testes enable trigger travar_encerrado;
 
 -- ----------------------------------------------------------------------------
 -- FOTOS DE PERFIL (Storage) — pro carrossel público "quem somos"

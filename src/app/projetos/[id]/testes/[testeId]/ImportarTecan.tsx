@@ -14,9 +14,13 @@ type Props = {
   familia: ConfigTeste["familia"];
   tempos: number[];
   camposBrutos: CampoBruto[];
+  /** O ensaio tem branco do reagente da sessão (painel "Brancos da sessão"). */
+  temBrancoReagente?: boolean;
   roster: RatoDoRoster[];
   // Recebe { [numeroRato]: { [colKey]: valorString } } para mesclar na tabela.
   onAplicar: (preenchimento: Record<string, Record<string, string>>) => void;
+  // Leituras de poços rotulados como "branco do reagente", em ordem.
+  onAplicarBrancoReagente?: (valores: number[]) => void;
 };
 
 const IGNORAR = "__ignorar__";
@@ -60,8 +64,10 @@ export default function ImportarTecan({
   familia,
   tempos,
   camposBrutos,
+  temBrancoReagente = false,
   roster,
   onAplicar,
+  onAplicarBrancoReagente,
 }: Props) {
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -146,7 +152,14 @@ export default function ImportarTecan({
   }
 
   const seqAmostra = ehEndpoint ? sequencia(["amostra", "desconhecido"]) : [];
-  const seqBranco = ehEndpoint ? sequencia(["branco", "branco_reagente"]) : [];
+  // Se o ensaio tem branco do reagente próprio (painel da sessão), os poços de
+  // "branco do reagente" vão pra lá e só os de "branco" (da amostra) entram na
+  // coluna por rato. Senão, mantém o comportamento antigo (qualquer branco).
+  const seqBranco = ehEndpoint
+    ? sequencia(temBrancoReagente ? ["branco"] : ["branco", "branco_reagente"])
+    : [];
+  const seqBrancoReagente =
+    ehEndpoint && temBrancoReagente ? sequencia(["branco_reagente"]) : [];
 
   // Do primeiro rato escolhido em diante, na ordem do roster.
   const ratosEmOrdem = roster.map((r) => String(r.numero));
@@ -170,6 +183,7 @@ export default function ImportarTecan({
       setErro("Não há valores de amostra para preencher.");
       return;
     }
+    if (seqBrancoReagente.length > 0) onAplicarBrancoReagente?.(seqBrancoReagente);
     onAplicar(preenchimento);
     setAberto(false);
   }
@@ -281,7 +295,9 @@ export default function ImportarTecan({
             <div className="mt-4">
               <p className="mb-2 text-xs text-ink-soft">
                 {seqAmostra.length} amostra(s)
-                {seqBranco.length > 0 && ` e ${seqBranco.length} branco(s)`}{" "}
+                {seqBranco.length > 0 && ` e ${seqBranco.length} branco(s)`}
+                {seqBrancoReagente.length > 0 &&
+                  ` + ${seqBrancoReagente.length} branco(s) do reagente (vão para o painel de brancos)`}{" "}
                 detectada(s), lidas em sequência. Escolha a partir de qual rato
                 a sequência começa.
               </p>

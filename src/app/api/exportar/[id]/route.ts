@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { testes as catalogoTestes } from "@/lib/testes";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 
-type ProjetoTeste = { id: string; teste_slug: string };
+type ProjetoTeste = {
+  id: string;
+  teste_slug: string;
+  branco_reagente: Record<string, string> | null;
+};
 type Resultado = {
   projeto_teste_id: string;
   rato: string;
@@ -55,7 +59,7 @@ export async function GET(
         .returns<GrupoComContagem[]>(),
       supabase
         .from("projeto_testes")
-        .select("id, teste_slug")
+        .select("id, teste_slug, branco_reagente")
         .eq("projeto_id", projetoId)
         .returns<ProjetoTeste[]>(),
     ]);
@@ -89,6 +93,13 @@ export async function GET(
   // Uma aba "Dados_Brutos" por teste designado, igual ao formato que o
   // Ariel já usa fora do site (ver Para análise estatísica/*_organizado_*.xlsx).
   for (const pt of projetoTestes) {
+    // Branco do reagente da sessão (sem amostra): repetido em toda linha, para
+    // a subtração ficar na mão no R (abs_amostra − branco_reagente ...).
+    const brAbs = Number(pt.branco_reagente?.abs);
+    const colunasBranco: Record<string, number> = Number.isFinite(brAbs)
+      ? { branco_reagente: brAbs }
+      : {};
+
     const linhas = (resultados ?? [])
       .filter((r) => r.projeto_teste_id === pt.id)
       .sort((a, b) => Number(a.rato) - Number(b.rato))
@@ -101,6 +112,7 @@ export async function GET(
           grupo: nomeGrupo.get(r.grupo_id) ?? "",
           leva: levaDoRato.get(r.rato) ?? "",
           ...colunas,
+          ...colunasBranco,
           valor_calculado: r.valor_calculado,
         };
       });

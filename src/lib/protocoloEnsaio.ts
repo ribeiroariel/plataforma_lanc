@@ -4,7 +4,7 @@
 //     reação acontece integralmente dentro da cubeta/poço, então os volumes
 //     multiplicam pelo fator do recipiente (microplaca 96 = 1×, microcubeta = 3×,
 //     microplaca 24 = 6×, cubeta normal = 10×; ver FATOR_RECIPIENTE).
-//   - TBARS, carboniladas, sulfidrilas, tióis/dissulfetos e Lowry são reação em
+//   - TBARS, carboniladas, sulfidrilas (totais e NP), tióis/dissulfetos e Lowry são reação em
 //     TUBO de volume fixo (lavagens, banho-maria, precipitação) — o volume não
 //     muda com o recipiente de leitura (`escala: false`).
 //
@@ -210,7 +210,19 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
     },
   },
   {
-    prefixos: ["sulfidrilas"],
+    prefixos: ["sulfidrilas-totais"],
+    protocolo: {
+      escala: false,
+      // Leitura a 412 nm (visível) — qualquer recipiente. Sem ASS.
+      modos: TODOS_MODOS,
+      reagentes: [
+        { nome: "PBS pH 7,4", origem: "estoque", ulBase: 980 },
+        { nome: "DTNB 10 mM", origem: "dia", ulBase: 30 },
+      ],
+    },
+  },
+  {
+    prefixos: ["sulfidrilas-np"],
     protocolo: {
       escala: false,
       // Leitura a 412 nm (visível) — qualquer recipiente.
@@ -222,7 +234,7 @@ const PROTOCOLOS: { prefixos: string[]; protocolo: ProtocoloEnsaio }[] = [
           nome: "Ácido sulfossalicílico (ASS) 5%",
           origem: "estoque",
           ulBase: 200,
-          obs: "só na fração não-proteica (NP-SH).",
+          obs: "precipita as proteínas (fração não-proteica).",
         },
       ],
     },

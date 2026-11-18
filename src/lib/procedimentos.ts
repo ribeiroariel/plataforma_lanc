@@ -279,54 +279,77 @@ const TBARS: PassoProcedimento[] = [
   },
 ];
 
-// ── Sulfidrilas (tióis totais e não-proteicos) ───────────────────────────────
-const SULFIDRILAS: PassoProcedimento[] = [
-  {
-    id: "sulf-qc",
-    texto:
-      "Controle de qualidade — branco do reagente (PBS + DTNB, sem amostra, em duplicata): A₄₁₂ estável e < 0,100 após 30 min no escuro. Se > 0,100: DTNB contaminado/degradado — preparar novo. Coloração amarela intensa antes da reação = oxidação, descartar.",
-    critico: true,
-  },
-  {
-    id: "sulf-prep-dtnb",
-    texto: "Preparar o DTNB 10 mM (em tampão fosfato de potássio 0,2 M pH 8).",
-    reagenteDia: "DTNB 10 mM",
-    obs: "Frasco com papel alumínio — sensível à luz e à temperatura.",
-  },
-  {
-    id: "sulf-centrifuga",
-    texto:
-      "Centrifugar as amostras a 1.000 × g por 10 minutos (NT 805 ≈ 3.300 rpm; centrífuga compacta ≈ 3.600 rpm). Manter no gelo.",
-  },
+// ── Sulfidrilas ──────────────────────────────────────────────────────────────
+// Dois ensaios separados no catálogo: TOTAIS (T-SH, sem ácido sulfossalicílico
+// — o que o laboratório faz normalmente) e NÃO-PROTEICAS/PROTEICAS (NP-SH, com
+// precipitação por ASS; P-SH = T-SH − NP-SH).
+const SULF_QC: PassoProcedimento = {
+  id: "sulf-qc",
+  texto:
+    "Controle de qualidade — branco do reagente (PBS + DTNB, sem amostra, em duplicata): A₄₁₂ estável e < 0,100 após 30 min no escuro. Se > 0,100: DTNB contaminado/degradado — preparar novo. Coloração amarela intensa antes da reação = oxidação, descartar.",
+  critico: true,
+};
+const SULF_PREP_DTNB: PassoProcedimento = {
+  id: "sulf-prep-dtnb",
+  texto: "Preparar o DTNB 10 mM (em tampão fosfato de potássio 0,2 M pH 8).",
+  reagenteDia: "DTNB 10 mM",
+  obs: "Frasco com papel alumínio — sensível à luz e à temperatura.",
+};
+const SULF_CENTRIFUGA: PassoProcedimento = {
+  id: "sulf-centrifuga",
+  texto:
+    "Centrifugar as amostras a 1.000 × g por 10 minutos (NT 805 ≈ 3.300 rpm; centrífuga compacta ≈ 3.600 rpm). Manter no gelo.",
+};
+const SULF_INCUBA: PassoProcedimento = {
+  id: "sulf-incuba",
+  texto:
+    "Vortexar e incubar à temperatura ambiente, no escuro, por 30 minutos. Zerar a 412 nm com água e ler (cubeta de plástico). Registrar no site a amostra, o branco da amostra e UMA leitura do branco do reagente (a duplicata é só conferida na bancada, não é registrada).",
+};
+const SULF_DESCARTE: PassoProcedimento = {
+  id: "sulf-descarte",
+  texto: "Descarte: bombona SULFIDRILAS-DTNB (FURB 40255).",
+};
+
+const SULFIDRILAS_TOTAIS: PassoProcedimento[] = [
+  SULF_QC,
+  SULF_PREP_DTNB,
+  SULF_CENTRIFUGA,
   {
     id: "sulf-tsh",
     texto:
-      "Tióis totais (T-SH), por amostra — Amostra: 50 µL de sobrenadante + 980 µL de PBS pH 7,4 + 30 µL de DTNB. Branco da amostra: 50 µL de sobrenadante + 1.010 µL de PBS (sem DTNB). Branco do reagente: 980 µL de PBS + 30 µL de DTNB (em duplicata).",
+      "Tióis totais (T-SH), por amostra — Amostra: 50 µL de sobrenadante + 980 µL de PBS pH 7,4 + 30 µL de DTNB. Branco da amostra: 50 µL de sobrenadante + 1.010 µL de PBS (sem DTNB). Branco do reagente: 1.030 µL de PBS + 30 µL de DTNB (em duplicata).",
     critico: true,
-    obs: "Volumes por recipiente conforme a calculadora de consumo acima.",
+    obs: "NÃO usar ácido sulfossalicílico (ASS) nos tióis totais — o homogeneizado reage direto com o DTNB. Volumes por recipiente conforme a calculadora de consumo acima.",
   },
-  {
-    id: "sulf-incuba",
-    texto:
-      "Vortexar e incubar à temperatura ambiente, no escuro, por 30 minutos. Zerar a 412 nm com água e ler (cubeta de plástico).",
-  },
+  SULF_INCUBA,
+  SULF_DESCARTE,
+];
+
+const SULFIDRILAS_NP: PassoProcedimento[] = [
+  SULF_QC,
+  SULF_PREP_DTNB,
   {
     id: "sulf-prep-ass",
-    texto: "Para a fração não-proteica (NP-SH): preparar o ácido sulfossalicílico (ASS) 5%.",
+    texto: "Preparar o ácido sulfossalicílico (ASS) 5%.",
     reagenteDia: "Ácido sulfossalicílico (ASS) 5%",
-    obs: "Manter em gelo. NÃO usar o ASS na determinação de tióis totais — só na NP-SH.",
+    obs: "Manter em gelo.",
   },
+  SULF_CENTRIFUGA,
   {
     id: "sulf-npsh",
     texto:
-      "Tióis não-proteicos (NP-SH): misturar 200 µL de sobrenadante + 200 µL de ASS 5%. Vortexar. Gelo por 5 minutos. Centrifugar a 1.000 × g por 10 minutos e usar o sobrenadante do ASS nas mesmas proporções da tabela.",
+      "Precipitação (NP-SH): misturar 200 µL de sobrenadante + 200 µL de ASS 5%. Vortexar. Gelo por 5 minutos. Centrifugar a 1.000 × g por 10 minutos — o sobrenadante do ASS contém os NP-SH.",
     critico: true,
-    obs: "O sobrenadante do ASS está diluído 1:2 — multiplicar o NP-SH por 2 (ou dobrar o volume pipetado). P-SH = T-SH − NP-SH.",
   },
   {
-    id: "sulf-descarte",
-    texto: "Descarte: bombona SULFIDRILAS-DTNB (FURB 40255).",
+    id: "sulf-npsh-tubos",
+    texto:
+      "Por amostra — Amostra: 50 µL do sobrenadante do ASS + 980 µL de PBS pH 7,4 + 30 µL de DTNB. Branco da amostra: 50 µL do sobrenadante do ASS + 1.010 µL de PBS (sem DTNB). Branco do reagente: 1.030 µL de PBS + 30 µL de DTNB (em duplicata).",
+    critico: true,
+    obs: "O sobrenadante do ASS está diluído 1:2 — multiplicar o NP-SH por 2 (ou dobrar o volume pipetado). P-SH = T-SH − NP-SH (precisa do ensaio de sulfidrilas totais da mesma amostra).",
   },
+  SULF_INCUBA,
+  SULF_DESCARTE,
 ];
 
 // ── Tióis e dissulfetos ──────────────────────────────────────────────────────
@@ -533,7 +556,8 @@ const PROCEDIMENTOS: { prefixos: string[]; passos: PassoProcedimento[] }[] = [
   { prefixos: ["cat"], passos: CAT },
   { prefixos: ["sod"], passos: SOD },
   { prefixos: ["tbars"], passos: TBARS },
-  { prefixos: ["sulfidrilas"], passos: SULFIDRILAS },
+  { prefixos: ["sulfidrilas-totais"], passos: SULFIDRILAS_TOTAIS },
+  { prefixos: ["sulfidrilas-np"], passos: SULFIDRILAS_NP },
   { prefixos: ["tiois-dissulfetos"], passos: TIOIS },
   { prefixos: ["acido-ascorbico"], passos: ACIDO_ASCORBICO },
   { prefixos: ["h2o2"], passos: H2O2 },

@@ -126,8 +126,24 @@ export const ENSAIOS_DIA: EnsaioDia[] = [
     ],
   },
   {
-    slugPrefixos: ["sulfidrilas"],
-    nome: "Sulfidrilas totais e não-proteicas",
+    slugPrefixos: ["sulfidrilas-totais"],
+    nome: "Sulfidrilas totais (T-SH)",
+    reagentes: [
+      {
+        nome: "DTNB 10 mM",
+        tipo: "escala",
+        componentesBase10: [
+          { nome: "DTNB", quantidade: 0.0016, unidade: "g" },
+          { nome: "Tampão fosfato de potássio 0,2 M pH 8 (q.s.p.)", quantidade: 400, unidade: "µL" },
+        ],
+        consumoPorAmostraUl: 30,
+        obs: "Frasco com papel alumínio; sensível à luz e à temperatura. Para N pequeno, preparar a receita mínima (a massa fica abaixo do peso prático).",
+      },
+    ],
+  },
+  {
+    slugPrefixos: ["sulfidrilas-np"],
+    nome: "Sulfidrilas não-proteicas e proteicas (NP-SH/P-SH)",
     reagentes: [
       {
         nome: "DTNB 10 mM",
