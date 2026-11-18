@@ -165,7 +165,7 @@ export default async function PaginaEtiquetas({
             return (
               <div
                 key={c.id}
-                className="flex break-inside-avoid flex-col justify-between border-2 border-neutral-800 px-4 py-3"
+                className="flex break-inside-avoid flex-col justify-between rounded-lg border-2 border-neutral-800 px-4 py-3"
                 style={{ minHeight: "58mm" }}
               >
                 <div>
