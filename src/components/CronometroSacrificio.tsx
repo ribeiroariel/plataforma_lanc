@@ -72,7 +72,7 @@ export default function CronometroSacrificio() {
   return (
     <Link
       href={`/projetos/${sac.projeto_id}/sacrificio/${sac.id}`}
-      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full border border-rule bg-paper-raised px-3 py-1.5 shadow-md transition-colors hover:border-signal"
+      className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 rounded-full md:bottom-4 border border-rule bg-paper-raised px-3 py-1.5 shadow-md transition-colors hover:border-signal"
       title={`Sacrifício em andamento${sac.projetos?.nome ? " — " + sac.projetos.nome : ""}`}
     >
       <span aria-hidden className="text-sm">

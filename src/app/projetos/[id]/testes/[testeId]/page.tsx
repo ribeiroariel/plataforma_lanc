@@ -16,6 +16,9 @@ import FotosCaderno from "./FotosCaderno";
 import EncerramentoTeste from "./EncerramentoTeste";
 import ConsumoReal from "./ConsumoReal";
 import ConsideracoesTeste from "./ConsideracoesTeste";
+import { procedimentoDoSlug } from "@/lib/procedimentos";
+import { Abas } from "@/components/ui/Abas";
+import { Badge } from "@/components/ui/Badge";
 
 type ProjetoTeste = {
   id: string;
@@ -54,10 +57,13 @@ type PassoRegistro = {
 
 export default async function PaginaResultado({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string; testeId: string }>;
+  searchParams: Promise<{ aba?: string }>;
 }) {
   const { id: projetoId, testeId } = await params;
+  const { aba: abaPedida } = await searchParams;
   const supabase = await createClient();
   const usuario = await getUsuarioAtual();
 
@@ -191,123 +197,253 @@ export default async function PaginaResultado({
     };
   }
 
+  // --- Progresso (cabeçalho e indicadores das abas) ---
+  const totalPassos = procedimentoDoSlug(projetoTeste.teste_slug)?.length ?? 0;
+  const passosFeitos = (passos ?? []).filter((p) => p.feito).length;
+  const ratosConfirmados = (resultados ?? []).filter(
+    (r) => r.confirmado && roster.some((x) => String(x.numero) === r.rato)
+  ).length;
+  const ratosIniciados = (resultados ?? []).length;
+  const preparado = Boolean(projetoTeste.aparelho && projetoTeste.recipiente);
+  const procedimentoFeito = totalPassos > 0 && passosFeitos >= totalPassos;
+  const registroFeito = roster.length > 0 && ratosConfirmados >= roster.length;
+
+  // Abre na etapa em que o teste está, a menos que o link peça outra.
+  const abaInicial =
+    abaPedida ??
+    (encerrado || registroFeito
+      ? "fechamento"
+      : ratosIniciados > 0 || procedimentoFeito
+      ? "registro"
+      : passosFeitos > 0 || preparado
+      ? "procedimento"
+      : "preparar");
+
+  const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <Link
-        href={`/projetos/${projetoId}`}
-        className="text-sm text-ink-soft hover:text-absorbance"
+        href={`/projetos/${projetoId}?aba=testes`}
+        className="text-sm text-ink-soft transition-colors hover:text-absorbance"
       >
         ← {projeto?.nome ?? "Projeto"}
       </Link>
-      {teste && (
-        <p className="mt-2 font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
-          {nomeTecido(teste.tecido)}
-        </p>
-      )}
-      <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
-        {teste ? tituloSemTecido(teste.titulo, teste.tecido) : projetoTeste.teste_slug}
-      </h1>
-      {projetoTeste.leva && (
-        <p className="mt-1 font-mono text-xs text-ink-soft">
-          Leva {projetoTeste.leva}
-        </p>
-      )}
 
-      <PreparacaoTeste
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        slug={projetoTeste.teste_slug}
-        aparelho={ehAparelho(projetoTeste.aparelho) ? projetoTeste.aparelho : null}
-        recipiente={
-          ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
-        }
-        podeEditar={podeEditar}
-      />
+      <header className="mt-3 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          {teste && (
+            <p className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
+              {nomeTecido(teste.tecido)}
+              {projetoTeste.leva ? ` · Leva ${projetoTeste.leva}` : ""}
+            </p>
+          )}
+          <h1 className="mt-1 font-display text-3xl leading-tight text-ink sm:text-4xl">
+            {teste ? tituloSemTecido(teste.titulo, teste.tecido) : projetoTeste.teste_slug}
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {encerrado ? (
+            <Badge tom="neutro">🔒 encerrado</Badge>
+          ) : (
+            <Badge tom={projetoTeste.status === "concluido" ? "sucesso" : "atencao"}>
+              {projetoTeste.status === "concluido" ? "concluído" : "em andamento"}
+            </Badge>
+          )}
+          {souResponsavel ? (
+            <Badge tom="info">você é o responsável</Badge>
+          ) : souAjudante ? (
+            <Badge tom="neutro">ajudante</Badge>
+          ) : souOrientador ? (
+            <Badge tom="roxo">acompanhando</Badge>
+          ) : null}
+        </div>
+      </header>
 
-      <CalculadorasDoDia
-        slug={projetoTeste.teste_slug}
-        nRoster={roster.length}
-        recipiente={
-          ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
-        }
-      />
-
-      <ChecklistProcedimento
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        slug={projetoTeste.teste_slug}
-        nRoster={roster.length}
-        estado={estadoPassos}
-        podeMarcar={podeEditar}
-      />
-
-      <RegistroResultado
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        statusAtual={projetoTeste.status}
-        config={config}
-        roster={roster}
-        resultadosExistentes={resultados ?? []}
-        brancoReagenteSalvo={projetoTeste.branco_reagente ?? {}}
-        podeRegistrar={souResponsavel && !encerrado}
-        podeAlterarStatus={podeEditar}
-      />
-
-      <MetadadosLeitura
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        aparelhoLabel={
-          ehAparelho(projetoTeste.aparelho)
-            ? nomeAparelho(projetoTeste.aparelho)
-            : ""
-        }
-        inicio={projetoTeste.leitura_inicio}
-        fim={projetoTeste.leitura_fim}
-        podeEditar={podeEditar}
-      />
-
-      <ConsumoReal
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        slug={projetoTeste.teste_slug}
-        nRoster={roster.length}
-        recipiente={
-          ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
-        }
-        existentes={consumoExistente}
-        podeRegistrar={podeEditar}
-      />
-
-      <ConsideracoesTeste
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        inicial={projetoTeste.consideracoes ?? ""}
-        podeEditar={podeEditar}
-      />
-
-      <EncerramentoTeste
-        projetoId={projetoId}
-        projetoTesteId={projetoTeste.id}
-        encerrado={encerrado}
-        encerradoPorNome={
-          projetoTeste.encerrado_por
-            ? nomesPorId.get(projetoTeste.encerrado_por) ?? null
-            : null
-        }
-        encerradoEm={projetoTeste.encerrado_em}
-        podeEncerrar={souResponsavel || souCoautor}
-      />
-
-      {/* A foto da tabela colada no caderno só faz sentido depois de encerrar
-          e imprimir — por isso aparece só aqui, junto do encerramento. */}
-      {encerrado && (
-        <FotosCaderno
-          projetoId={projetoId}
-          projetoTesteId={projetoTeste.id}
-          fotos={fotosCaderno}
-          podeAnexar={souResponsavel}
+      {/* Painel de progresso — onde o teste está, de relance. */}
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Progresso
+          rotulo="Procedimento"
+          valor={`${passosFeitos}/${totalPassos} passos`}
+          pct={pct(passosFeitos, totalPassos)}
+          cor="var(--color-pyrogallol)"
         />
-      )}
+        <Progresso
+          rotulo="Ratos confirmados"
+          valor={`${ratosConfirmados}/${roster.length}`}
+          pct={pct(ratosConfirmados, roster.length)}
+          cor="var(--color-absorbance)"
+        />
+        <Progresso
+          rotulo="Fechamento"
+          valor={encerrado ? "encerrado" : "aberto"}
+          pct={encerrado ? 100 : 0}
+          cor="var(--color-sucesso)"
+        />
+      </div>
+
+      <Abas
+        className="mt-6"
+        inicial={abaInicial}
+        abas={[
+          {
+            id: "preparar",
+            passo: 1,
+            rotulo: "Preparar",
+            feita: preparado,
+            conteudo: (
+              <>
+                <PreparacaoTeste
+                  projetoId={projetoId}
+                  projetoTesteId={projetoTeste.id}
+                  slug={projetoTeste.teste_slug}
+                  aparelho={ehAparelho(projetoTeste.aparelho) ? projetoTeste.aparelho : null}
+                  recipiente={
+                    ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
+                  }
+                  podeEditar={podeEditar}
+                />
+                <CalculadorasDoDia
+                  slug={projetoTeste.teste_slug}
+                  nRoster={roster.length}
+                  recipiente={
+                    ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
+                  }
+                />
+              </>
+            ),
+          },
+          {
+            id: "procedimento",
+            passo: 2,
+            rotulo: "Procedimento",
+            feita: procedimentoFeito,
+            indicador: totalPassos > 0 ? `${passosFeitos}/${totalPassos}` : undefined,
+            conteudo: (
+              <ChecklistProcedimento
+                projetoId={projetoId}
+                projetoTesteId={projetoTeste.id}
+                slug={projetoTeste.teste_slug}
+                nRoster={roster.length}
+                estado={estadoPassos}
+                podeMarcar={podeEditar}
+              />
+            ),
+          },
+          {
+            id: "registro",
+            passo: 3,
+            rotulo: "Registro",
+            feita: registroFeito,
+            indicador: `${ratosConfirmados}/${roster.length}`,
+            conteudo: (
+              <>
+                <RegistroResultado
+                  projetoId={projetoId}
+                  projetoTesteId={projetoTeste.id}
+                  statusAtual={projetoTeste.status}
+                  config={config}
+                  roster={roster}
+                  resultadosExistentes={resultados ?? []}
+                  brancoReagenteSalvo={projetoTeste.branco_reagente ?? {}}
+                  podeRegistrar={souResponsavel && !encerrado}
+                  podeAlterarStatus={podeEditar}
+                />
+                <MetadadosLeitura
+                  projetoId={projetoId}
+                  projetoTesteId={projetoTeste.id}
+                  aparelhoLabel={
+                    ehAparelho(projetoTeste.aparelho)
+                      ? nomeAparelho(projetoTeste.aparelho)
+                      : ""
+                  }
+                  inicio={projetoTeste.leitura_inicio}
+                  fim={projetoTeste.leitura_fim}
+                  podeEditar={podeEditar}
+                />
+              </>
+            ),
+          },
+          {
+            id: "fechamento",
+            passo: 4,
+            rotulo: "Fechamento",
+            feita: encerrado,
+            conteudo: (
+              <>
+                <ConsumoReal
+                  projetoId={projetoId}
+                  projetoTesteId={projetoTeste.id}
+                  slug={projetoTeste.teste_slug}
+                  nRoster={roster.length}
+                  recipiente={
+                    ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
+                  }
+                  existentes={consumoExistente}
+                  podeRegistrar={podeEditar}
+                />
+                <ConsideracoesTeste
+                  projetoId={projetoId}
+                  projetoTesteId={projetoTeste.id}
+                  inicial={projetoTeste.consideracoes ?? ""}
+                  podeEditar={podeEditar}
+                />
+                <EncerramentoTeste
+                  projetoId={projetoId}
+                  projetoTesteId={projetoTeste.id}
+                  encerrado={encerrado}
+                  encerradoPorNome={
+                    projetoTeste.encerrado_por
+                      ? nomesPorId.get(projetoTeste.encerrado_por) ?? null
+                      : null
+                  }
+                  encerradoEm={projetoTeste.encerrado_em}
+                  podeEncerrar={souResponsavel || souCoautor}
+                />
+                {/* A foto da tabela colada no caderno só faz sentido depois
+                    de encerrar e imprimir. */}
+                {encerrado && (
+                  <FotosCaderno
+                    projetoId={projetoId}
+                    projetoTesteId={projetoTeste.id}
+                    fotos={fotosCaderno}
+                    podeAnexar={souResponsavel}
+                  />
+                )}
+              </>
+            ),
+          },
+        ]}
+      />
     </main>
+  );
+}
+
+function Progresso({
+  rotulo,
+  valor,
+  pct,
+  cor,
+}: {
+  rotulo: string;
+  valor: string;
+  pct: number;
+  cor: string;
+}) {
+  return (
+    <div className="rounded-lg border border-rule bg-paper-raised px-4 py-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft">
+          {rotulo}
+        </span>
+        <span className="font-mono text-sm text-ink">{valor}</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-rule">
+        <div
+          className="h-full rounded-full transition-[width] duration-500"
+          style={{ width: `${pct}%`, background: cor }}
+        />
+      </div>
+    </div>
   );
 }

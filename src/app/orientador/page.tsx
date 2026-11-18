@@ -8,6 +8,9 @@ import {
   type FuncaoBruta,
 } from "@/lib/painel";
 import PainelDebora from "./PainelDebora";
+import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
+import { Abas } from "@/components/ui/Abas";
+import { Badge } from "@/components/ui/Badge";
 
 type Bolsista = { id: string; nome: string };
 type Projeto = { id: string; nome: string; created_at: string; finalizado: boolean };
@@ -28,6 +31,9 @@ function primeiroNome(nome: string | undefined): string {
   return (nome ?? "").split(" ")[0] || "orientadora";
 }
 
+// Fora do componente: o lint de React não aceita relógio direto no render.
+const agoraMs = () => Date.now();
+
 const dataHoje = () =>
   new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
@@ -47,6 +53,7 @@ export default async function PainelOrientadora() {
     { data: membros },
     { data: sessoes },
     { data: funcoes },
+    { data: registros },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -78,6 +85,15 @@ export default async function PainelOrientadora() {
       .from("sacrificio_funcoes")
       .select("profile_id, sacrificio_id")
       .returns<FuncaoBruta[]>(),
+    // Só o necessário para atividade recente e testes parados.
+    supabase
+      .from("resultados_teste")
+      .select("projeto_teste_id, registrado_por, created_at, confirmado")
+      .order("created_at", { ascending: false })
+      .limit(2000)
+      .returns<
+        { projeto_teste_id: string; registrado_por: string; created_at: string; confirmado: boolean }[]
+      >(),
   ]);
 
   const metricas = calcularMetricas({
@@ -103,6 +119,130 @@ export default async function PainelOrientadora() {
     { rotulo: "Testes pendentes", valor: totalPendentes, cor: "var(--color-reagent)" },
     { rotulo: "Horas no laboratório", valor: horasTotais, cor: "var(--color-absorbance)" },
   ];
+
+  // --- Atividade recente: leituras agrupadas por teste + pessoa + dia.
+  const nomeDe = new Map((bolsistas ?? []).map((b) => [b.id, b.nome]));
+  const testePorId = new Map((testes ?? []).map((t) => [t.id, t]));
+  const projetoPorId = new Map((projetos ?? []).map((p) => [p.id, p]));
+  const tituloTeste = (slug: string) => {
+    const c = catalogoTestes.find((x) => x.slug === slug);
+    return c ? `${tituloSemTecido(c.titulo, c.tecido)} — ${nomeTecido(c.tecido)}` : slug;
+  };
+  const diaBR = (iso: string) =>
+    new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const blocos = new Map<
+    string,
+    { testeId: string; pessoa: string; dia: string; quando: string; n: number }
+  >();
+  for (const r of registros ?? []) {
+    const chave = `${r.projeto_teste_id}|${r.registrado_por}|${diaBR(r.created_at)}`;
+    const b = blocos.get(chave);
+    if (b) b.n += 1;
+    else
+      blocos.set(chave, {
+        testeId: r.projeto_teste_id,
+        pessoa: r.registrado_por,
+        dia: diaBR(r.created_at),
+        quando: r.created_at,
+        n: 1,
+      });
+  }
+  const atividade = Array.from(blocos.values())
+    .sort((a, b) => b.quando.localeCompare(a.quando))
+    .slice(0, 12);
+
+  // --- Precisa de atenção: testes pendentes sem leitura há 14+ dias (ou
+  // nunca iniciados há 14+ dias desde a designação).
+  const ultimaLeitura = new Map<string, string>();
+  for (const r of registros ?? []) {
+    if (!ultimaLeitura.has(r.projeto_teste_id)) ultimaLeitura.set(r.projeto_teste_id, r.created_at);
+  }
+  const agora = agoraMs();
+  const DIA = 86_400_000;
+  const parados = (testes ?? [])
+    .filter((t) => t.status === "pendente" && !t.encerrado_em)
+    .map((t) => {
+      const ref = ultimaLeitura.get(t.id) ?? t.created_at;
+      const dias = ref ? Math.floor((agora - new Date(ref).getTime()) / DIA) : null;
+      return { t, dias, iniciado: ultimaLeitura.has(t.id) };
+    })
+    .filter((x) => x.dias !== null && x.dias >= 14)
+    .sort((a, b) => (b.dias ?? 0) - (a.dias ?? 0));
+
+  const hojeBR = diaBR(new Date().toISOString());
+  const ontemBR = diaBR(new Date(agora - DIA).toISOString());
+  const rotuloDia = (d: string) => (d === hojeBR ? "hoje" : d === ontemBR ? "ontem" : d);
+
+  const listaAtividade = (
+    <section className="mt-6">
+      {atividade.length === 0 ? (
+        <p className="text-sm text-ink-soft">Nenhuma leitura registrada ainda.</p>
+      ) : (
+        <ol className="relative ml-2 border-l border-rule">
+          {atividade.map((a) => {
+            const t = testePorId.get(a.testeId);
+            const proj = t ? projetoPorId.get(t.projeto_id) : undefined;
+            return (
+              <li key={`${a.testeId}${a.pessoa}${a.dia}`} className="relative pb-4 pl-5 last:pb-0">
+                <span
+                  aria-hidden
+                  className="absolute top-1.5 -left-[5px] h-2.5 w-2.5 rounded-full border-2 border-paper bg-absorbance"
+                />
+                <p className="text-sm text-ink">
+                  <span className="font-medium">{(nomeDe.get(a.pessoa) ?? "Alguém").split(" ")[0]}</span>{" "}
+                  registrou {a.n} leitura{a.n > 1 ? "s" : ""} em{" "}
+                  {t ? (
+                    <Link
+                      href={`/projetos/${t.projeto_id}/testes/${t.id}?aba=registro`}
+                      className="text-absorbance hover:underline"
+                    >
+                      {tituloTeste(t.teste_slug)}
+                    </Link>
+                  ) : (
+                    "um teste"
+                  )}
+                </p>
+                <p className="font-mono text-[11px] text-ink-soft">
+                  {rotuloDia(a.dia)}
+                  {proj ? ` · ${proj.nome}` : ""}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  );
+
+  const listaAtencao = (
+    <section className="mt-6">
+      {parados.length === 0 ? (
+        <p className="text-sm text-ink-soft">
+          Nenhum teste parado: todos os pendentes tiveram leitura nos últimos 14 dias.
+        </p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {parados.map(({ t, dias, iniciado }) => (
+            <Link
+              key={t.id}
+              href={`/projetos/${t.projeto_id}/testes/${t.id}`}
+              className="rounded-lg border border-rule bg-paper-raised p-3 transition-colors hover:border-reagent"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-medium leading-snug text-ink">{tituloTeste(t.teste_slug)}</p>
+                <Badge tom="atencao">{dias} dias</Badge>
+              </div>
+              <p className="mt-1 text-xs text-ink-soft">
+                {projetoPorId.get(t.projeto_id)?.nome ?? "projeto"} ·{" "}
+                {(nomeDe.get(t.responsavel_id) ?? "?").split(" ")[0]} ·{" "}
+                {iniciado ? "sem leitura nova" : "não iniciado"}
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
@@ -146,6 +286,22 @@ export default async function PainelOrientadora() {
         ))}
       </section>
 
+      {/* Acompanhamento: o que aconteceu e o que está parado */}
+      <Abas
+        className="mt-10"
+        parametro="acomp"
+        inicial={parados.length > 0 ? "atencao" : "atividade"}
+        abas={[
+          { id: "atividade", rotulo: "Atividade recente", conteudo: listaAtividade },
+          {
+            id: "atencao",
+            rotulo: "Precisa de atenção",
+            indicador: parados.length,
+            conteudo: listaAtencao,
+          },
+        ]}
+      />
+
       {/* Equipe + comparativos */}
       {!bolsistas || bolsistas.length === 0 ? (
         <p className="mt-12 text-sm text-ink-soft">
@@ -177,8 +333,8 @@ export default async function PainelOrientadora() {
             return (
               <Link
                 key={p.id}
-                href={`/projetos/${p.id}`}
-                className="group block rounded-lg border border-rule bg-paper-raised p-4 transition-colors hover:border-signal"
+                href={`/projetos/${p.id}?aba=resultados`}
+                className="group block rounded-lg border border-rule bg-paper-raised p-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-signal"
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-display text-lg leading-snug text-ink group-hover:text-signal">

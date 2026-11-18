@@ -24,7 +24,16 @@ export async function login(
     return { erro: "E-mail ou senha incorretos." };
   }
 
-  redirect("/");
+  // Cai direto na "casa" de cada papel (painel da orientadora ou início do
+  // bolsista), não no hall público de notícias. Cadastro ainda em análise vai
+  // pro /bolsista, que mostra o aviso de aguardando aprovação.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: perfil } = user
+    ? await supabase.from("profiles").select("papel").eq("id", user.id).maybeSingle()
+    : { data: null };
+  redirect(perfil?.papel === "orientador" ? "/orientador" : "/bolsista");
 }
 
 // Cadastro público cria SEMPRE papel = "bolsista". O papel "orientador" não

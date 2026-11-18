@@ -3,9 +3,10 @@ import { Newsreader, Public_Sans, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
-import { getUsuarioAtual, podeAprovarCadastros } from "@/lib/supabase/profile";
+import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { logout } from "@/lib/actions/auth";
 import { NavPrincipal } from "@/components/NavPrincipal";
+import { AppShell } from "@/components/layout/AppShell";
 import CronometroSacrificio from "@/components/CronometroSacrificio";
 
 const newsreader = Newsreader({
@@ -43,40 +44,12 @@ export default async function RootLayout({
     // Supabase ainda sem configurar (.env.local) — segue como visitante.
   }
 
-  // Navegação principal (abas horizontais), por papel.
+  // Área logada (aprovado): moldura com menu lateral/abas — ver AppShell.
+  // Visitante e cadastro em análise: cabeçalho editorial com a aba Notícias.
+  const naMoldura = Boolean(usuario?.aprovado);
   const navPrincipal: { href: string; rotulo: string }[] = [
     { href: "/", rotulo: "Notícias" },
   ];
-  if (usuario?.papel === "bolsista") {
-    navPrincipal.push(
-      { href: "/meus-testes", rotulo: "Meus testes" },
-      { href: "/minhas-funcoes", rotulo: "Minhas funções" },
-      { href: "/bioterio", rotulo: "Biotério" },
-      { href: "/projetos", rotulo: "Projetos" },
-      { href: "/comportamental", rotulo: "Comportamental" },
-      { href: "/testes", rotulo: "Protocolos" },
-      { href: "/reagentes", rotulo: "Reagentes" },
-      { href: "/estoque", rotulo: "Estoque" },
-      { href: "/laboratorio", rotulo: "Laboratório" }
-    );
-  } else if (usuario?.papel === "orientador") {
-    navPrincipal.push(
-      { href: "/orientador", rotulo: "Painel" },
-      { href: "/bioterio", rotulo: "Biotério" },
-      { href: "/projetos", rotulo: "Projetos" },
-      { href: "/comportamental", rotulo: "Comportamental" },
-      { href: "/testes", rotulo: "Protocolos" },
-      { href: "/reagentes", rotulo: "Reagentes" },
-      { href: "/estoque", rotulo: "Estoque" }
-    );
-  }
-  // Abas de gestão: só para quem pode (orientadora ou Ariel).
-  if (podeAprovarCadastros(usuario)) {
-    navPrincipal.push(
-      { href: "/pedidos", rotulo: "Pedidos" },
-      { href: "/cadastros", rotulo: "Cadastros" }
-    );
-  }
 
   return (
     <html
@@ -84,161 +57,170 @@ export default async function RootLayout({
       className={`${newsreader.variable} ${publicSans.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-paper font-sans text-ink">
-        <header className="sticky top-0 z-50 bg-paper shadow-[0_1px_0_var(--color-rule)]">
-          {/* Barra utilitária */}
-          <div className="border-b border-rule bg-paper-raised">
-            <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 sm:px-6">
-              <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft sm:block">
-                Universidade Regional de Blumenau · FURB
-              </span>
-              <div className="flex items-center gap-4 text-xs">
-                {!usuario && (
-                  <>
-                    <Link href="/login" className="text-ink-soft hover:text-ink">
-                      Entrar
-                    </Link>
-                    <Link
-                      href="/cadastro"
-                      className="rounded-sm bg-signal px-2.5 py-1 font-medium text-white hover:brightness-110"
-                    >
-                      Cadastro de bolsista
-                    </Link>
-                  </>
-                )}
-                {usuario && (
-                  <>
-                    <Link
-                      href="/perfil"
-                      className="flex items-center gap-1.5 text-ink-soft hover:text-ink"
-                    >
-                      <span className="font-medium text-ink">{usuario.nome}</span>
-                      <span className="rounded-sm bg-signal/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
-                        {usuario.papel === "orientador" ? "Orientadora" : "Bolsista"}
-                      </span>
-                    </Link>
-                    <form action={logout}>
-                      <button
-                        type="submit"
-                        className="text-ink-soft hover:text-ink"
-                      >
-                        Sair
-                      </button>
-                    </form>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Cabeçalho principal com logo + wordmark (banda tijolo editorial) */}
-          <div className="bg-signal text-white">
-            <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-              <Link href="/" className="flex items-center gap-3">
-                <Image
-                  src="/logo-lanc.jpg"
-                  alt="Logo do LANC"
-                  width={56}
-                  height={56}
-                  className="h-12 w-12 shrink-0 rounded-full border border-white/40 object-cover sm:h-14 sm:w-14"
-                  priority
-                />
-                <span className="leading-none">
-                  <span className="block font-display text-2xl font-medium tracking-tight text-white sm:text-3xl">
-                    LANC
+        {naMoldura && usuario ? (
+          <AppShell usuario={usuario}>
+            <div className="flex-1">{children}</div>
+            <CronometroSacrificio />
+          </AppShell>
+        ) : (
+          <>
+            <header className="sticky top-0 z-50 bg-paper shadow-[0_1px_0_var(--color-rule)]">
+              {/* Barra utilitária */}
+              <div className="border-b border-rule bg-paper-raised">
+                <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 sm:px-6">
+                  <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft sm:block">
+                    Universidade Regional de Blumenau · FURB
                   </span>
-                  <span className="mt-0.5 block font-display text-sm italic text-white/80">
-                    Laboratório de Neurociências e Comportamento
-                  </span>
-                </span>
-              </Link>
-            </div>
-          </div>
-
-          <NavPrincipal itens={navPrincipal} />
-        </header>
-
-        <div className="flex-1">{children}</div>
-
-        {usuario && <CronometroSacrificio />}
-
-        <footer className="mt-16 border-t-2 border-ink bg-paper-raised">
-          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="lg:col-span-1">
-                <div className="flex items-center gap-2">
-                  <Image
-                    src="/logo-lanc.jpg"
-                    alt=""
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 rounded-full border border-rule object-cover"
-                  />
-                  <span className="font-display text-lg text-ink">LANC</span>
+                  <div className="flex items-center gap-4 text-xs">
+                    {!usuario && (
+                      <>
+                        <Link href="/login" className="text-ink-soft hover:text-ink">
+                          Entrar
+                        </Link>
+                        <Link
+                          href="/cadastro"
+                          className="rounded-sm bg-signal px-2.5 py-1 font-medium text-white hover:brightness-110"
+                        >
+                          Cadastro de bolsista
+                        </Link>
+                      </>
+                    )}
+                    {usuario && (
+                      <>
+                        <Link
+                          href="/perfil"
+                          className="flex items-center gap-1.5 text-ink-soft hover:text-ink"
+                        >
+                          <span className="font-medium text-ink">{usuario.nome}</span>
+                          <span className="rounded-sm bg-signal/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+                            {usuario.papel === "orientador" ? "Orientadora" : "Bolsista"}
+                          </span>
+                        </Link>
+                        <form action={logout}>
+                          <button
+                            type="submit"
+                            className="text-ink-soft hover:text-ink"
+                          >
+                            Sair
+                          </button>
+                        </form>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-                  Laboratório de Neurociências e Comportamento, sediado na
-                  Universidade Regional de Blumenau (FURB). Pesquisa em
-                  estresse oxidativo aplicada a modelos de depressão,
-                  diabetes e neurotoxicidade.
+              </div>
+
+              {/* Cabeçalho principal com logo + wordmark (banda tijolo editorial) */}
+              <div className="bg-signal text-white">
+                <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
+                  <Link href="/" className="flex items-center gap-3">
+                    <Image
+                      src="/logo-lanc.jpg"
+                      alt="Logo do LANC"
+                      width={56}
+                      height={56}
+                      className="h-12 w-12 shrink-0 rounded-full border border-white/40 object-cover sm:h-14 sm:w-14"
+                      priority
+                    />
+                    <span className="leading-none">
+                      <span className="block font-display text-2xl font-medium tracking-tight text-white sm:text-3xl">
+                        LANC
+                      </span>
+                      <span className="mt-0.5 block font-display text-sm italic text-white/80">
+                        Laboratório de Neurociências e Comportamento
+                      </span>
+                    </span>
+                  </Link>
+                </div>
+              </div>
+
+              <NavPrincipal itens={navPrincipal} />
+            </header>
+
+            <div className="flex-1">{children}</div>
+
+            {usuario && <CronometroSacrificio />}
+
+            <footer className="mt-16 border-t-2 border-ink bg-paper-raised">
+              <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="lg:col-span-1">
+                    <div className="flex items-center gap-2">
+                      <Image
+                        src="/logo-lanc.jpg"
+                        alt=""
+                        width={36}
+                        height={36}
+                        className="h-9 w-9 rounded-full border border-rule object-cover"
+                      />
+                      <span className="font-display text-lg text-ink">LANC</span>
+                    </div>
+                    <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+                      Laboratório de Neurociências e Comportamento, sediado na
+                      Universidade Regional de Blumenau (FURB). Pesquisa em
+                      estresse oxidativo aplicada a modelos de depressão,
+                      diabetes e neurotoxicidade.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-wider text-signal">
+                      Coordenação
+                    </p>
+                    <p className="mt-2 text-sm text-ink">
+                      Profa. Dra. Débora Delwing Dal Magro
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-wider text-signal">
+                      Contato
+                    </p>
+                    <ul className="mt-2 flex flex-col gap-1 text-sm">
+                      <li>
+                        <a
+                          href="mailto:lancfurb@outlook.com"
+                          className="text-ink hover:text-signal"
+                        >
+                          lancfurb@outlook.com
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="https://www.instagram.com/lancfurb/"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-ink hover:text-signal"
+                        >
+                          @lancfurb
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-wider text-signal">
+                      Acesso
+                    </p>
+                    <ul className="mt-2 flex flex-col gap-1 text-sm">
+                      <li>
+                        <Link href="/login" className="text-ink hover:text-signal">
+                          Entrar
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/cadastro" className="text-ink hover:text-signal">
+                          Cadastro de bolsista
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <p className="mt-10 font-mono text-[11px] text-ink-soft/70">
+                  © {new Date().getFullYear()} LANC / FURB. Todos os direitos
+                  reservados.
                 </p>
               </div>
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-signal">
-                  Coordenação
-                </p>
-                <p className="mt-2 text-sm text-ink">
-                  Profa. Dra. Débora Delwing Dal Magro
-                </p>
-              </div>
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-signal">
-                  Contato
-                </p>
-                <ul className="mt-2 flex flex-col gap-1 text-sm">
-                  <li>
-                    <a
-                      href="mailto:lancfurb@outlook.com"
-                      className="text-ink hover:text-signal"
-                    >
-                      lancfurb@outlook.com
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://www.instagram.com/lancfurb/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-ink hover:text-signal"
-                    >
-                      @lancfurb
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-signal">
-                  Acesso
-                </p>
-                <ul className="mt-2 flex flex-col gap-1 text-sm">
-                  <li>
-                    <Link href="/login" className="text-ink hover:text-signal">
-                      Entrar
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/cadastro" className="text-ink hover:text-signal">
-                      Cadastro de bolsista
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <p className="mt-10 font-mono text-[11px] text-ink-soft/70">
-              © {new Date().getFullYear()} LANC / FURB. Todos os direitos
-              reservados.
-            </p>
-          </div>
-        </footer>
+            </footer>
+          </>
+        )}
       </body>
     </html>
   );
