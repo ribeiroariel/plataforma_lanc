@@ -14,6 +14,7 @@ import { ehAparelho, nomeAparelhoEn } from "@/lib/recipientes";
 type ProjetoTeste = {
   id: string;
   teste_slug: string;
+  branco_reagente: Record<string, string> | null;
   responsavel_id: string;
   leva: number | null;
   aparelho: string | null;
@@ -48,7 +49,8 @@ const ENSAIO_EN: { prefixo: string; nome: string }[] = [
   { prefixo: "cat-", nome: "Catalase (CAT)" },
   { prefixo: "sod-", nome: "Superoxide dismutase (SOD)" },
   { prefixo: "tbars", nome: "TBARS (lipid peroxidation)" },
-  { prefixo: "sulfidrilas", nome: "Sulfhydryls (thiol groups)" },
+  { prefixo: "sulfidrilas-totais", nome: "Total sulfhydryls (T-SH)" },
+  { prefixo: "sulfidrilas-np", nome: "Non-protein / protein sulfhydryls (NP-SH, P-SH)" },
   { prefixo: "carboniladas", nome: "Protein carbonyls" },
   { prefixo: "tiois-dissulfetos", nome: "Thiols and disulfides" },
   { prefixo: "acido-ascorbico", nome: "Ascorbic acid (vitamin C)" },
@@ -115,7 +117,7 @@ export async function GET(
       supabase
         .from("projeto_testes")
         .select(
-          "id, teste_slug, responsavel_id, leva, aparelho, aparelho_leitura, leitura_inicio, leitura_fim"
+          "id, teste_slug, branco_reagente, responsavel_id, leva, aparelho, aparelho_leitura, leitura_inicio, leitura_fim"
         )
         .eq("projeto_id", projetoId)
         .returns<ProjetoTeste[]>(),
@@ -215,6 +217,14 @@ export async function GET(
       ["Reading start", pt.leitura_inicio ? pt.leitura_inicio.replace("T", " ") : "—"],
       ["Reading end", pt.leitura_fim ? pt.leitura_fim.replace("T", " ") : "—"],
       ["Result unit", config?.unidadeResultado || "—"],
+      ...(config?.brancoReagente
+        ? [
+            [
+              "Reagent blank (no sample)",
+              pt.branco_reagente?.abs ?? "—",
+            ],
+          ]
+        : []),
       ["Responsible", nomePessoa.get(pt.responsavel_id) ?? "—"],
       ["Batch", pt.leva ?? "all"],
       [],

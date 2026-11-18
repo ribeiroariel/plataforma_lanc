@@ -39,7 +39,8 @@ export const VOLUME_AMOSTRA_UL: Record<string, number> = {
   sod: 10, // 10 µL de sobrenadante na diluição
   tbars: 200, // 200 µL de sobrenadante
   carboniladas: 200, // 200 µL de homogenato (+ 200 do branco — não somado aqui)
-  sulfidrilas: 50, // 50 µL (T-SH); NP-SH usa 200 µL — não somado aqui
+  "sulfidrilas-totais": 50, // 50 µL (T-SH) + 50 µL do branco da amostra — não somado
+  "sulfidrilas-np": 200, // 200 µL vão pro ASS (o sobrenadante do ASS é que reage)
   "tiois-dissulfetos": 200, // 200 µL (total); tióis livres +200 — não somado
   "acido-ascorbico": 600, // 600 µL (convencional); Infinite usa 125 µL
   lowry: 10, // 10 µL de homogenato

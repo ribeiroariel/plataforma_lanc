@@ -17,6 +17,7 @@ import type { RatoDoRoster } from "@/lib/roster";
 import type { ConfigTeste } from "@/lib/tiposTeste";
 import {
   confirmarCelula as confirmarCelulaServer,
+  confirmarBrancoReagente,
   definirStatusTeste,
 } from "@/lib/actions/resultados";
 import { INPUT_SM } from "@/lib/estilos";
@@ -46,6 +47,8 @@ type Props = {
   config: ConfigTeste;
   roster: RatoDoRoster[];
   resultadosExistentes: Resultado[];
+  /** Branco do reagente já confirmado nesta designação ({ r1, r2, ... }). */
+  brancoReagenteSalvo: Record<string, string>;
   podeRegistrar: boolean;
   podeAlterarStatus: boolean;
 };
@@ -115,6 +118,7 @@ export default function RegistroResultado({
   config,
   roster,
   resultadosExistentes,
+  brancoReagenteSalvo,
   podeRegistrar,
   podeAlterarStatus,
 }: Props) {
@@ -156,6 +160,14 @@ export default function RegistroResultado({
     }
   );
 
+  // Branco do reagente da sessão (sem amostra) — uma leitura só; trava ao confirmar.
+  const [brancoReag, setBrancoReag] = useState(brancoReagenteSalvo.abs ?? "");
+  const [brancoReagConf, setBrancoReagConf] = useState(
+    brancoReagenteSalvo.abs !== undefined
+  );
+  const [brancoReagErro, setBrancoReagErro] = useState<string | null>(null);
+  const [confirmandoBranco, setConfirmandoBranco] = useState(false);
+
   const [qcCat, setQcCat] = useState("");
   const [controleSod, setControleSod] = useState<Record<string, string>>({});
   const [curva, setCurva] = useState<Record<string, string>>({});
@@ -191,6 +203,34 @@ export default function RegistroResultado({
       return novo;
     });
     setMensagem(null);
+  }
+
+  // Branco do reagente vindo da planilha do Tecan (primeiro poço marcado como
+  // "branco do reagente"). Não sobrescreve se já confirmado.
+  function aplicarBrancoReagenteTecan(valores: number[]) {
+    if (!brancoReagConf && valores.length > 0) setBrancoReag(valores[0].toFixed(3));
+  }
+
+  async function confirmarBranco() {
+    setBrancoReagErro(null);
+    const v = absReal(brancoReag);
+    if (Number.isNaN(v)) {
+      setBrancoReagErro("Valor inválido.");
+      return;
+    }
+    setBrancoReag(v.toFixed(3));
+    setConfirmandoBranco(true);
+    const res = await confirmarBrancoReagente({
+      projetoId,
+      projetoTesteId,
+      valor: v.toFixed(3),
+    });
+    setConfirmandoBranco(false);
+    if ("erro" in res) {
+      setBrancoReagErro(res.erro);
+      return;
+    }
+    setBrancoReagConf(true);
   }
 
   function setCelula(rato: string, col: string, valor: string) {
@@ -444,8 +484,27 @@ export default function RegistroResultado({
           familia={config.familia}
           tempos={tempos}
           camposBrutos={config.camposBrutos ?? []}
+          temBrancoReagente={!!config.brancoReagente}
           roster={roster}
           onAplicar={aplicarImportacaoTecan}
+          onAplicarBrancoReagente={aplicarBrancoReagenteTecan}
+        />
+      )}
+
+      {config.brancoReagente && (
+        <PainelBrancos
+          config={config}
+          valor={brancoReag}
+          confirmado={brancoReagConf}
+          erro={brancoReagErro}
+          confirmando={confirmandoBranco}
+          podeRegistrar={podeRegistrar}
+          onChange={setBrancoReag}
+          onBlur={() => {
+            const v = absReal(brancoReag);
+            if (!Number.isNaN(v)) setBrancoReag(v.toFixed(3));
+          }}
+          onConfirmar={confirmarBranco}
         />
       )}
 
@@ -647,9 +706,10 @@ export default function RegistroResultado({
 
       {config.familia === "simples" && (
         <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
-          Registre apenas as absorbâncias brutas. A normalização por proteína e
-          o fator de diluição são aplicados depois, na análise dos dados (R) —
-          a plataforma não fecha um valor final aqui.
+          Registre apenas as absorbâncias brutas (amostra e brancos, sem
+          subtrair). A subtração dos brancos, a normalização por proteína e o
+          fator de diluição são aplicados depois, na análise dos dados (R) — a
+          plataforma não fecha um valor final aqui.
         </p>
       )}
 
@@ -799,5 +859,89 @@ function AvisoQC({ ok, config }: { ok: boolean; config: ConfigTeste }) {
         ? "Dentro do padrão do manual."
         : `Fora do padrão (esperado ${config.qc.min}–${config.qc.max}). ${config.qc.dica}`}
     </p>
+  );
+}
+
+// Branco do reagente da sessão (tubo/poço sem amostra): uma leitura só. O
+// branco DA AMOSTRA é por rato e fica na tabela principal.
+function PainelBrancos({
+  config,
+  valor,
+  confirmado,
+  erro,
+  confirmando,
+  podeRegistrar,
+  onChange,
+  onBlur,
+  onConfirmar,
+}: {
+  config: ConfigTeste;
+  valor: string;
+  confirmado: boolean;
+  erro: string | null;
+  confirmando: boolean;
+  podeRegistrar: boolean;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  onConfirmar: () => void;
+}) {
+  const br = config.brancoReagente;
+  if (!br) return null;
+  const temBrancoAmostra = (config.camposBrutos ?? []).some(
+    (c) => c.chave === "abs_branco_amostra"
+  );
+  const v = absReal(valor);
+  return (
+    <PainelSessao titulo="Brancos da sessão">
+      <p className="mb-2 text-xs text-ink-soft">
+        <span className="text-ink">{br.rotulo}</span>. Uma leitura por rodada,
+        vale para todos os ratos.
+        {temBrancoAmostra &&
+          " O branco da amostra é um por rato — fica na coluna própria da tabela abaixo."}
+      </p>
+      <div className="flex items-center gap-1 text-xs text-ink-soft">
+        <input
+          type="text"
+          inputMode="decimal"
+          aria-label={br.rotulo}
+          value={valor}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          disabled={!podeRegistrar || confirmado}
+          className={`${INPUT_SM} w-20`}
+        />
+        {confirmado ? (
+          <span title="confirmado" className="text-sucesso">
+            {podeRegistrar ? "✓" : "🔒"}
+          </span>
+        ) : (
+          podeRegistrar && (
+            <button
+              type="button"
+              title="confirmar branco do reagente"
+              onClick={onConfirmar}
+              disabled={confirmando}
+              className="rounded border border-rule px-1 text-xs leading-none text-ink-soft transition-colors hover:border-signal hover:text-signal disabled:opacity-50"
+            >
+              ✓
+            </button>
+          )
+        )}
+      </div>
+      {erro && <p className="mt-1 text-[10px] text-alerta">{erro}</p>}
+      {br.max !== undefined && !Number.isNaN(v) && (
+        <p className="mt-2 text-xs">
+          {v <= br.max ? (
+            <span className="text-sucesso">
+              Dentro do padrão (≤ {br.max.toFixed(3).replace(".", ",")}).
+            </span>
+          ) : (
+            <span className="text-alerta">
+              Acima de {br.max.toFixed(3).replace(".", ",")}. {br.dica}
+            </span>
+          )}
+        </p>
+      )}
+    </PainelSessao>
   );
 }

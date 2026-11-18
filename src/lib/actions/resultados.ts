@@ -324,6 +324,51 @@ export async function confirmarCelula(dados: {
   return { sucesso: true };
 }
 
+// Confirma o branco do reagente da sessão (tubo sem amostra) — uma leitura só
+// (a duplicata da bancada não é registrada). Guardado em
+// projeto_testes.branco_reagente como { abs: "0.045" }. Mesma regra das células
+// da tabela: depois de confirmado é imutável.
+export async function confirmarBrancoReagente(dados: {
+  projetoId: string;
+  projetoTesteId: string;
+  valor: string;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const valor = Number(dados.valor);
+  if (dados.valor.trim() === "" || !Number.isFinite(valor)) {
+    return { erro: "Valor inválido." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Você precisa estar logado." };
+
+  const { data: pt } = await supabase
+    .from("projeto_testes")
+    .select("branco_reagente, encerrado")
+    .eq("id", dados.projetoTesteId)
+    .maybeSingle();
+  if (!pt) return { erro: "Teste não encontrado." };
+  if (pt.encerrado) return { erro: "Este teste já está encerrado." };
+
+  const atual = (pt.branco_reagente ?? {}) as Record<string, string>;
+  if (atual.abs !== undefined) {
+    return { erro: "O branco do reagente já foi confirmado." };
+  }
+
+  const { error } = await supabase
+    .from("projeto_testes")
+    .update({ branco_reagente: { abs: valor.toFixed(3) } })
+    .eq("id", dados.projetoTesteId);
+  if (error) {
+    return { erro: "Não foi possível salvar o branco: " + error.message };
+  }
+
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
 // Encerra o teste de forma IRREVERSÍVEL: depois disso, nada mais pode ser
 // gravado (o banco bloqueia via triggers bloquear_encerrado_* e travar_encerrado).
 // Só então a aba libera a impressão da tabela (PDF, para colar no caderno de
