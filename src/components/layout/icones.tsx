@@ -80,24 +80,28 @@ export const IconePasta = (
   </Icone>
 );
 
-// Biotério — rato de perfil (orelha, olho, focinho com bigode, patas, rabo).
+// Biotério — rato de perfil: corpo alongado, focinho fino, orelha, olho,
+// patas e rabo.
 export const IconeRato = (
   <Icone>
-    <path d="M6.2 17.5c-.9 0-1.5-.7-1.4-1.5.4-3.4 3.2-5.7 6.7-5.7 2.4 0 4.2.9 5.4 2.3l3.5 1.7c.6.3.5 1.2-.2 1.4l-2.6.6c-.7.8-1.8 1.2-3 1.2z" />
-    <path d="M13.4 10.7a2 2 0 1 1 3.4 1.5" />
-    <circle cx="17.2" cy="13.5" r="0.55" fill="currentColor" stroke="none" />
-    <path d="M20.1 13.8l2-.8M20.4 15.5l1.9.6" />
-    <path d="M8.6 17.5v1.6M13.8 17.5v1.6" />
-    <path d="M5 16.3c-2.2.1-3 1.7-2 3 .9 1.1 2.9.9 4.5 1.7" />
+    <path d="M4.5 15.2c0-2.6 2.6-4.7 6.6-4.7 2.6 0 4.6.9 5.9 2.4l3.8 1.6c.5.2.5.9 0 1.1l-3.6 1.2c-1 .8-2.4 1.2-4 1.2H6.6c-1.2 0-2.1-1-2.1-1.8z" />
+    <path d="M14.4 11c-.4-1.6.4-2.8 1.6-2.8s1.8 1.3 1.2 2.6" />
+    <circle cx="17.4" cy="13.4" r="0.55" fill="currentColor" stroke="none" />
+    <path d="M8.5 18v1.3M14 18v1.3" />
+    <path d="M4.7 16.2c-1.6.6-2.3 1.8-1.7 2.8.8 1.3 3.1 1 5 .3" />
   </Icone>
 );
 
-// Comportamental — labirinto em cruz elevado visto de cima, com o animal no centro.
+// Comportamental — labirinto visto de cima, com entrada, saída e o animal
+// na entrada.
 export const IconeLabirinto = (
   <Icone>
-    <path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6z" />
-    <path d="M9.5 9.5h5v5h-5" strokeDasharray="1.5 1.5" />
-    <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+    <path d="M3.5 8.5V3.5h17v8" />
+    <path d="M20.5 15.5v5h-17v-8" />
+    <path d="M8 3.5v5h4" />
+    <path d="M12 8.5v4H8v4h8.5" />
+    <path d="M16.5 7.5v5" />
+    <circle cx="5.8" cy="10.5" r="1" fill="currentColor" stroke="none" />
   </Icone>
 );
 
