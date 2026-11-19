@@ -582,11 +582,10 @@ export default async function DetalheProjeto({
 function Numero({
   rotulo,
   valor,
-  cor,
 }: {
   rotulo: string;
   valor: number | string;
-  cor: string;
+  cor?: string;
 }) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-rule bg-paper-raised px-4 py-3">
