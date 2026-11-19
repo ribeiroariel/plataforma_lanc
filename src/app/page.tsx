@@ -2,10 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
-import type { Papel } from "@/lib/supabase/profile";
 import { IlustracaoRedox, varianteNoticia } from "@/components/IlustracaoRedox";
 import { Avatar } from "@/components/Avatar";
 import { LinksContato } from "@/components/Contato";
+import { carregarPessoasPublicas, rotuloVinculo, type PessoaPublica } from "@/lib/vinculo";
 
 type Noticia = {
   id: string;
@@ -17,13 +17,7 @@ type Noticia = {
   data: string;
 };
 
-type Pessoa = {
-  id: string;
-  nome: string;
-  papel: Papel;
-  foto_url: string | null;
-  apresentacao: string | null;
-};
+type Pessoa = PessoaPublica;
 
 const LINHAS_DE_PESQUISA = [
   "Estresse oxidativo",
@@ -36,18 +30,14 @@ const LINHAS_DE_PESQUISA = [
 async function buscarDadosPublicos() {
   const supabase = await createClient();
 
-  const [{ data: noticias }, { data: pessoas }] = await Promise.all([
+  const [{ data: noticias }, pessoas] = await Promise.all([
     supabase
       .from("noticias")
       .select("id, titulo, tipo, resumo, link_artigo, imagem_url, data")
       .eq("publicado", true)
       .order("data", { ascending: false })
       .returns<Noticia[]>(),
-    supabase
-      .from("profiles")
-      .select("id, nome, papel, foto_url, apresentacao")
-      .eq("aprovado", true)
-      .returns<Pessoa[]>(),
+    carregarPessoasPublicas(supabase),
   ]);
 
   let projetosAtivos: number | null = null;
@@ -282,6 +272,9 @@ export default async function Home() {
           {(orientadora || bolsistas.length > 0) && (
             <Widget titulo="Quem somos">
               <div className="flex flex-col gap-4">
+                <Link href="/quem-somos" className="-mt-1 text-sm text-signal hover:text-ink">
+                  Ver toda a equipe ({pessoas.length})
+                </Link>
                 {orientadora && <PessoaLinha pessoa={orientadora} />}
                 {bolsistas.length > 0 && (
                   // Com muitos bolsistas a coluna ficava enorme e esticava a
@@ -291,7 +284,7 @@ export default async function Home() {
                     <div
                       tabIndex={0}
                       aria-label={`Bolsistas (${bolsistas.length})`}
-                      className="flex max-h-[26rem] flex-col gap-4 overflow-y-auto overscroll-contain pr-2 pb-6 [scrollbar-color:var(--color-rule)_transparent] [scrollbar-width:thin]"
+                      className="flex max-h-[24rem] flex-col gap-4 overflow-y-auto overscroll-contain pr-2 pb-6 [scrollbar-color:var(--color-rule)_transparent] [scrollbar-width:thin]"
                     >
                       {bolsistas.map((b) => (
                         <PessoaLinha key={b.id} pessoa={b} />
@@ -353,7 +346,7 @@ function PessoaLinha({ pessoa }: { pessoa: Pessoa }) {
       <div className="min-w-0">
         <p className="text-sm font-medium text-ink">{pessoa.nome}</p>
         <p className="text-xs text-signal font-medium">
-          {pessoa.papel === "orientador" ? "Orientadora" : "Bolsista"}
+          {pessoa.papel === "orientador" ? "Coordenação" : rotuloVinculo(pessoa.vinculo)}
         </p>
         {pessoa.apresentacao && (
           <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">

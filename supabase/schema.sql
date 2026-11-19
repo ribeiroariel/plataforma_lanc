@@ -38,6 +38,15 @@ create table if not exists public.profiles (
 alter table public.profiles add column if not exists email text not null default '';
 alter table public.profiles add column if not exists aprovado boolean not null default false;
 alter table public.profiles add column if not exists pode_exportar_dados boolean not null default false;
+-- Vínculo com o laboratório (bolsista de IC, voluntário, mestrado, doutorado).
+alter table public.profiles add column if not exists vinculo text not null default 'voluntario';
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_vinculo_check') then
+    alter table public.profiles
+      add constraint profiles_vinculo_check
+      check (vinculo in ('bolsista', 'voluntario', 'mestrado', 'doutorado'));
+  end if;
+end $$;
 
 alter table public.profiles enable row level security;
 alter table public.profiles force row level security;
@@ -50,7 +59,7 @@ revoke select on public.profiles from anon, authenticated;
 -- getUsuarioAtual/proxy leem de profiles. `pode_aprovar_cadastros` estava
 -- faltando aqui — rodar o schema inteiro revogava a leitura dessa coluna e
 -- derrubava o login (todo usuário aparecia deslogado). Ver src/lib/supabase/profile.ts.
-grant select (id, nome, papel, aprovado, pode_exportar_dados, pode_aprovar_cadastros, foto_url, apresentacao, created_at)
+grant select (id, nome, papel, aprovado, pode_exportar_dados, pode_aprovar_cadastros, foto_url, apresentacao, vinculo, created_at)
   on public.profiles to anon, authenticated;
 
 drop policy if exists "Perfis são públicos para leitura" on public.profiles;
@@ -75,22 +84,29 @@ create policy "Usuário atualiza o próprio perfil"
 revoke update (papel, aprovado, pode_exportar_dados) on public.profiles from authenticated;
 
 -- Quando alguém se cadastra (auth.users), cria automaticamente a linha
--- correspondente em profiles, lendo nome/papel que o formulário de cadastro
--- vai enviar. "aprovado" nasce sempre false — todo cadastro novo fica
--- pendente até o Ariel revisar e aprovar manualmente.
+-- correspondente em profiles com o nome e o vínculo do formulário. O papel é
+-- SEMPRE "bolsista" — não é lido do formulário (antes era, e dava para criar
+-- conta como "orientador" chamando o Supabase direto). "aprovado" nasce
+-- sempre false — todo cadastro novo fica pendente até ser aprovado.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v text := coalesce(new.raw_user_meta_data ->> 'vinculo', 'voluntario');
 begin
-  insert into public.profiles (id, nome, email, papel)
+  if v not in ('bolsista', 'voluntario', 'mestrado', 'doutorado') then
+    v := 'voluntario';
+  end if;
+  insert into public.profiles (id, nome, email, papel, vinculo)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'nome', ''),
     new.email,
-    coalesce(new.raw_user_meta_data ->> 'papel', 'bolsista')
+    'bolsista',
+    v
   );
   return new;
 end;
@@ -2151,6 +2167,48 @@ create policy "Autor troca a própria imagem de notícia" on storage.objects for
 drop policy if exists "Autor apaga a própria imagem de notícia" on storage.objects;
 create policy "Autor apaga a própria imagem de notícia" on storage.objects for delete
   using (bucket_id = 'noticias' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- CRONÔMETRO DE TESTE (tempo de bancada de cada teste, dentro das horas no lab)
+-- ════════════════════════════════════════════════════════════════════════════
+-- Cada vez que alguém aperta "iniciar" num teste vira uma execução, ligada à
+-- sessão de laboratório aberta da pessoa (se não havia sessão aberta, o site
+-- abre uma junto). Assim o tempo do teste conta dentro das horas no lab.
+create table if not exists public.teste_execucoes (
+  id uuid primary key default gen_random_uuid(),
+  projeto_teste_id uuid not null references public.projeto_testes (id) on delete cascade,
+  profile_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  sessao_lab_id uuid references public.sessoes_lab (id) on delete set null,
+  inicio timestamptz not null default now(),
+  fim timestamptz,
+  constraint teste_execucoes_fim_depois check (fim is null or fim >= inicio)
+);
+create index if not exists teste_execucoes_abertas
+  on public.teste_execucoes (profile_id) where fim is null;
+
+alter table public.teste_execucoes enable row level security;
+alter table public.teste_execucoes force row level security;
+
+drop policy if exists "Vê as próprias execuções e as do projeto" on public.teste_execucoes;
+create policy "Vê as próprias execuções e as do projeto" on public.teste_execucoes for select
+  using (
+    profile_id = auth.uid()
+    or public.is_orientador()
+    or exists (
+      select 1 from public.projeto_testes pt
+      where pt.id = projeto_teste_id and public.eh_membro_projeto(pt.projeto_id)
+    )
+  );
+drop policy if exists "Registra a própria execução" on public.teste_execucoes;
+create policy "Registra a própria execução" on public.teste_execucoes for insert
+  with check (profile_id = auth.uid());
+drop policy if exists "Fecha a própria execução" on public.teste_execucoes;
+create policy "Fecha a própria execução" on public.teste_execucoes for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+drop policy if exists "Apaga a própria execução" on public.teste_execucoes;
+create policy "Apaga a própria execução" on public.teste_execucoes for delete
+  using (profile_id = auth.uid());
 
 -- ── Sacrifício: sincronização em tempo real entre aparelhos ─────────────────
 -- Sem isso, a página do dia de sacrifício (DiaSacrificio.tsx) escuta o canal

@@ -324,6 +324,50 @@ export async function confirmarCelula(dados: {
   return { sucesso: true };
 }
 
+// Fecha um rato cujas leituras já estão todas gravadas mas que ficou sem o
+// valor calculado (a curva/controle da sessão não estava preenchida quando a
+// última célula foi confirmada). Não altera nenhuma leitura: só grava o
+// valor, a sessão usada e marca o rato como confirmado.
+export async function fecharRato(dados: {
+  projetoId: string;
+  projetoTesteId: string;
+  rato: string;
+  sessao: Record<string, unknown>;
+  valorCalculado: number | null;
+  dentroDoPadrao: boolean | null;
+}): Promise<{ erro: string } | { sucesso: true }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Você precisa estar logado." };
+
+  const { data: atual } = await supabase
+    .from("resultados_teste")
+    .select("leituras, confirmado")
+    .eq("projeto_teste_id", dados.projetoTesteId)
+    .eq("rato", dados.rato)
+    .maybeSingle();
+  if (!atual) return { erro: "Esse rato ainda não tem leituras gravadas." };
+  if (atual.confirmado) return { sucesso: true };
+
+  const leituras = (atual.leituras ?? {}) as { colunas?: Record<string, unknown> };
+  const { error } = await supabase
+    .from("resultados_teste")
+    .update({
+      leituras: { ...leituras, sessao: dados.sessao },
+      valor_calculado: dados.valorCalculado,
+      dentro_do_padrao: dados.dentroDoPadrao,
+      confirmado: true,
+    })
+    .eq("projeto_teste_id", dados.projetoTesteId)
+    .eq("rato", dados.rato);
+  if (error) return { erro: "Não foi possível fechar: " + error.message };
+
+  revalidatePath(`/projetos/${dados.projetoId}/testes/${dados.projetoTesteId}`);
+  return { sucesso: true };
+}
+
 // Confirma o branco do reagente da sessão (tubo sem amostra) — uma leitura só
 // (a duplicata da bancada não é registrada). Guardado em
 // projeto_testes.branco_reagente como { abs: "0.045" }. Mesma regra das células

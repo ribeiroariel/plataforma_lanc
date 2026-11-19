@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUsuarioAtual } from "@/lib/supabase/profile";
+import { createClient } from "@/lib/supabase/server";
+import { carregarVinculo } from "@/lib/vinculo";
 import PerfilForm from "./PerfilForm";
 import TrocarSenha from "./TrocarSenha";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -9,6 +11,7 @@ export default async function PaginaPerfil() {
   const usuario = await getUsuarioAtual();
 
   if (!usuario) redirect("/login");
+  const vinculo = await carregarVinculo(await createClient(), usuario.id);
 
   return (
     <main className="mx-auto max-w-lg px-4 py-10 sm:px-6">
@@ -17,15 +20,15 @@ export default async function PaginaPerfil() {
         titulo="Meu perfil"
         descricao={
           <>
-            Foto e apresentação aparecem no carrossel público &quot;Quem
-            somos&quot; da página inicial
+            Foto, vínculo e apresentação aparecem na página pública &quot;Quem
+            somos&quot; e na página de notícias
             {!usuario.aprovado && " assim que seu cadastro for aprovado"}.
           </>
         }
       />
 
       <div className="mt-8">
-        <PerfilForm usuario={usuario} />
+        <PerfilForm usuario={usuario} vinculo={vinculo} />
       </div>
 
       <section className="mt-12 border-t border-rule pt-8">

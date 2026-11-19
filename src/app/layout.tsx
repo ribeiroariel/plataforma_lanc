@@ -8,7 +8,7 @@ import { logout } from "@/lib/actions/auth";
 import { NavPrincipal } from "@/components/NavPrincipal";
 import { AppShell } from "@/components/layout/AppShell";
 import { RodapeInterno } from "@/components/Contato";
-import CronometroSacrificio from "@/components/CronometroSacrificio";
+import Cronometros from "@/components/Cronometros";
 
 const newsreader = Newsreader({
   variable: "--font-newsreader",
@@ -50,6 +50,7 @@ export default async function RootLayout({
   const naMoldura = Boolean(usuario?.aprovado);
   const navPrincipal: { href: string; rotulo: string }[] = [
     { href: "/", rotulo: "Notícias" },
+    { href: "/quem-somos", rotulo: "Quem somos" },
   ];
 
   return (
@@ -62,7 +63,7 @@ export default async function RootLayout({
           <AppShell usuario={usuario}>
             <div className="flex-1">{children}</div>
             <RodapeInterno />
-            <CronometroSacrificio />
+            <Cronometros />
           </AppShell>
         ) : (
           <>
@@ -141,7 +142,7 @@ export default async function RootLayout({
 
             <div className="flex-1">{children}</div>
 
-            {usuario && <CronometroSacrificio />}
+            {usuario && <Cronometros />}
 
             <footer className="mt-16 border-t-2 border-ink bg-paper-raised">
               <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">

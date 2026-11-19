@@ -5,6 +5,7 @@ import { useActionState, useEffect, useState } from "react";
 import { salvarNoticia, type ResultadoNoticia } from "@/lib/actions/noticias";
 import { LIMITES_NOTICIA, type NoticiaEditavel } from "@/lib/noticias";
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO, INPUT } from "@/lib/estilos";
+import { reduzirImagem, trocarArquivoDoInput } from "@/lib/reduzirImagem";
 
 function hoje() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
@@ -38,6 +39,8 @@ export function EditorNoticia({
   const [previaImagem, setPreviaImagem] = useState<string | null>(inicial?.imagem_url ?? null);
   const [removerImagem, setRemoverImagem] = useState(false);
   const [mudou, setMudou] = useState(false);
+  const [preparandoImagem, setPreparandoImagem] = useState(false);
+  const [erroImagem, setErroImagem] = useState<string | null>(null);
 
   // Não perder o texto ao fechar a aba sem querer.
   useEffect(() => {
@@ -167,18 +170,30 @@ export function EditorNoticia({
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-ink">Imagem (opcional)</span>
           <span className="-mt-1 text-xs text-ink-soft">
-            JPEG, PNG ou WebP até 5 MB. Sem imagem, o site usa uma ilustração.
+            Qualquer foto serve; o site reduz o tamanho antes de enviar. Sem imagem, o site usa uma ilustração.
             Use só fotos que o laboratório pode divulgar.
           </span>
           <input
             name="imagem"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => {
+            accept="image/*,.heic,.heif"
+            onChange={async (e) => {
               const f = e.target.files?.[0];
-              if (f) {
-                setPreviaImagem(URL.createObjectURL(f));
+              setErroImagem(null);
+              if (!f) return;
+              const input = e.target;
+              setPreparandoImagem(true);
+              try {
+                // Reduz no navegador: foto de celular passava do limite de envio.
+                const reduzida = await reduzirImagem(f, { lado: 1600 });
+                trocarArquivoDoInput(input, reduzida);
+                setPreviaImagem(URL.createObjectURL(reduzida));
                 setRemoverImagem(false);
+              } catch (err) {
+                setErroImagem((err as Error).message);
+                input.value = "";
+              } finally {
+                setPreparandoImagem(false);
               }
             }}
             className="text-sm text-ink-soft file:mr-3 file:rounded file:border file:border-rule file:bg-paper-raised file:px-3 file:py-1.5 file:text-sm file:text-ink"
@@ -196,6 +211,8 @@ export function EditorNoticia({
               Tirar a imagem
             </button>
           )}
+          {preparandoImagem && <span className="text-xs text-ink-soft">Preparando a imagem...</span>}
+          {erroImagem && <span className="text-xs text-alerta">{erroImagem}</span>}
           {erroEm("imagem") && <span className="text-xs text-alerta">{erroEm("imagem")}</span>}
         </div>
 
@@ -206,7 +223,7 @@ export function EditorNoticia({
             type="submit"
             name="acao"
             value="publicar"
-            disabled={enviando}
+            disabled={enviando || preparandoImagem}
             onClick={() => setMudou(false)}
             className={BOTAO_PRIMARIO}
           >

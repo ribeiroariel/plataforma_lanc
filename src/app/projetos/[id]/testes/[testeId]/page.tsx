@@ -21,6 +21,7 @@ import { Abas } from "@/components/ui/Abas";
 import { Badge } from "@/components/ui/Badge";
 import { calcularRatosEfetivos, carregarDestinoRatos } from "@/lib/ratosEfetivos";
 import { AmostrasDoDiaProvider } from "./AmostrasDoDia";
+import CronometroTeste from "./CronometroTeste";
 
 type ProjetoTeste = {
   id: string;
@@ -237,6 +238,36 @@ export default async function PaginaResultado({
 
   const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0);
 
+  // Cronômetro do teste: execuções deste teste (tempo total) e o que a pessoa
+  // tem aberto agora. Se a tabela ainda não existir (migração pendente), o
+  // botão simplesmente não aparece.
+  const [{ data: execucoes, error: erroExec }, { data: abertasMinhas }, { data: labAberto }] =
+    await Promise.all([
+      supabase
+        .from("teste_execucoes")
+        .select("id, inicio, fim, profile_id")
+        .eq("projeto_teste_id", projetoTeste.id)
+        .returns<{ id: string; inicio: string; fim: string | null; profile_id: string }[]>(),
+      supabase
+        .from("teste_execucoes")
+        .select("id, projeto_teste_id, inicio")
+        .eq("profile_id", usuario?.id ?? "")
+        .is("fim", null)
+        .returns<{ id: string; projeto_teste_id: string; inicio: string }[]>(),
+      supabase
+        .from("sessoes_lab")
+        .select("id")
+        .eq("profile_id", usuario?.id ?? "")
+        .is("fim", null)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+  const minutosTeste = (execucoes ?? [])
+    .filter((e) => e.fim)
+    .reduce((soma, e) => soma + (new Date(e.fim!).getTime() - new Date(e.inicio).getTime()) / 60000, 0);
+  const minhaAberta = (abertasMinhas ?? []).find((e) => e.projeto_teste_id === projetoTeste.id) ?? null;
+  const outroAberto = (abertasMinhas ?? []).some((e) => e.projeto_teste_id !== projetoTeste.id);
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <Link
@@ -258,6 +289,18 @@ export default async function PaginaResultado({
             {teste ? tituloSemTecido(teste.titulo, teste.tecido) : projetoTeste.teste_slug}
           </h1>
         </div>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+        {!erroExec && (
+          <CronometroTeste
+            projetoId={projetoId}
+            projetoTesteId={projetoTeste.id}
+            aberta={minhaAberta ? { id: minhaAberta.id, inicio: minhaAberta.inicio } : null}
+            outroTesteAberto={outroAberto}
+            labAberto={Boolean(labAberto)}
+            minutosAnteriores={Math.round(minutosTeste)}
+            podeIniciar={podeEditar}
+          />
+        )}
         <div className="flex flex-wrap items-center gap-2">
           {encerrado ? (
             <Badge tom="neutro">encerrado</Badge>
@@ -273,6 +316,7 @@ export default async function PaginaResultado({
           ) : souOrientador ? (
             <Badge tom="roxo">acompanhando</Badge>
           ) : null}
+        </div>
         </div>
       </header>
 

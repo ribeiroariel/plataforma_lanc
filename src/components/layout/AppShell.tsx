@@ -53,6 +53,7 @@ function gruposDe(usuario: Profile): { grupos: GrupoNav[]; abas: string[] } {
     titulo: "Site",
     itens: [
       { href: "/", rotulo: "Notícias", icone: IconeJornal, exato: true },
+      { href: "/quem-somos", rotulo: "Quem somos", icone: IconePessoas },
       { href: "/noticias/minhas", rotulo: "Escrever notícia", icone: IconeCaneta, tambem: ["/noticias/nova"] },
     ],
   };

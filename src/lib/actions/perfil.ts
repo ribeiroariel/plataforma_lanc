@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ehVinculo } from "@/lib/vinculo";
 
 export type ResultadoPerfil = { erro: string } | { sucesso: true } | undefined;
 
@@ -50,9 +51,17 @@ export async function atualizarPerfil(
   const apresentacao = String(formData.get("apresentacao") ?? "").trim();
   const foto = formData.get("foto");
 
-  const atualizacao: { apresentacao: string; foto_url?: string } = {
+  if (apresentacao.length > 300) {
+    return { erro: "A apresentação pode ter no máximo 300 caracteres." };
+  }
+  const atualizacao: { apresentacao: string; foto_url?: string | null; vinculo?: string } = {
     apresentacao,
   };
+  const vinculo = formData.get("vinculo");
+  if (ehVinculo(vinculo)) atualizacao.vinculo = vinculo;
+  if (String(formData.get("remover_foto") ?? "") === "1") {
+    atualizacao.foto_url = null;
+  }
 
   if (foto instanceof File && foto.size > 0) {
     if (foto.size > TAMANHO_MAXIMO_BYTES) {
@@ -100,5 +109,6 @@ export async function atualizarPerfil(
 
   revalidatePath("/perfil");
   revalidatePath("/");
+  revalidatePath("/quem-somos");
   return { sucesso: true };
 }
