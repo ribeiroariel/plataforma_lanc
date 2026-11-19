@@ -1,5 +1,6 @@
 "use client";
 
+import { avisarCronometro } from "@/components/Cronometros";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -17,7 +18,25 @@ export type SessaoRow = {
   fim: string | null;
   topicos: string[] | null;
   descricao: string | null;
+  /** Testes cronometrados dentro desta ida ao lab. */
+  testes?: { nome: string; minutos: number; contando: boolean }[];
 };
+
+function TestesDaSessao({ testes }: { testes?: SessaoRow["testes"] }) {
+  if (!testes || testes.length === 0) return null;
+  return (
+    <p className="mt-1 text-xs text-ink-soft">
+      Testes:{" "}
+      {testes.map((t, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          <span className="text-absorbance">{t.nome}</span> ({fmtDuracao(Math.round(t.minutos))}
+          {t.contando ? ", contando" : ""})
+        </span>
+      ))}
+    </p>
+  );
+}
 
 function dataHora(iso: string): string {
   const d = new Date(iso);
@@ -126,7 +145,10 @@ function SessaoAberta({ sessao }: { sessao: SessaoRow }) {
         descricao: descricao || null,
       });
       if ("erro" in r) setErro(r.erro);
-      else router.refresh();
+      else {
+        avisarCronometro();
+        router.refresh();
+      }
     });
   }
 
@@ -141,6 +163,7 @@ function SessaoAberta({ sessao }: { sessao: SessaoRow }) {
         Começou às <span className="font-mono">{dataHora(sessao.inicio)}</span> ·
         já são <span className="font-mono">{decorrido}</span>.
       </p>
+      <TestesDaSessao testes={sessao.testes} />
 
       {!encerrando ? (
         <button
@@ -206,7 +229,10 @@ function SessaoParada() {
     iniciar(async () => {
       const r = await iniciarSessao();
       if ("erro" in r) setErro(r.erro);
-      else router.refresh();
+      else {
+        avisarCronometro();
+        router.refresh();
+      }
     });
   }
 
@@ -362,6 +388,7 @@ function LinhaSessao({ sessao }: { sessao: SessaoRow }) {
           remover
         </button>
       </div>
+      <TestesDaSessao testes={sessao.testes} />
       {sessao.descricao && (
         <p className="mt-1 text-xs text-ink-soft">{sessao.descricao}</p>
       )}

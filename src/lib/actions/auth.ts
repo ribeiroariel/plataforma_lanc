@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { ehVinculo } from "@/lib/vinculo";
 
 export type ResultadoAcao = { erro: string } | void;
 
@@ -51,6 +52,8 @@ export async function cadastrar(
   const senha = String(formData.get("senha") ?? "");
   const confirmarSenha = String(formData.get("confirmar_senha") ?? "");
   const nome = String(formData.get("nome") ?? "");
+  const vinculoBruto = String(formData.get("vinculo") ?? "");
+  const vinculo = ehVinculo(vinculoBruto) ? vinculoBruto : "voluntario";
 
   if (!nome.trim()) {
     return { erro: "Informe seu nome." };
@@ -70,7 +73,9 @@ export async function cadastrar(
     email,
     password: senha,
     options: {
-      data: { nome, papel: "bolsista" },
+      // O papel não é mais lido daqui pelo banco (sempre "bolsista"); o
+      // vínculo é validado de novo no trigger handle_new_user.
+      data: { nome, papel: "bolsista", vinculo },
       // Com a confirmação de e-mail ligada, o link do e-mail passa por
       // /auth/confirmar (troca o token por sessão) e cai em
       // /cadastro-confirmado — uma página PÚBLICA de "aguardando aprovação".

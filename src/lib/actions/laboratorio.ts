@@ -42,11 +42,28 @@ export async function encerrarSessao(dados: {
   descricao: string | null;
 }): Promise<{ erro: string } | { sucesso: true }> {
   const supabase = await createClient();
+  const agora = new Date().toISOString();
+
+  // Teste que ainda estava contando dentro desta sessão para junto. Se a
+  // sessão teve teste, o tópico "Teste bioquímico" entra sozinho.
+  await supabase
+    .from("teste_execucoes")
+    .update({ fim: agora })
+    .eq("sessao_lab_id", dados.id)
+    .is("fim", null);
+  const { count: nTestes } = await supabase
+    .from("teste_execucoes")
+    .select("id", { count: "exact", head: true })
+    .eq("sessao_lab_id", dados.id);
+  const topicos = Array.from(
+    new Set([...dados.topicos, ...((nTestes ?? 0) > 0 ? ["teste_bioquimico"] : [])])
+  );
+
   const { error } = await supabase
     .from("sessoes_lab")
     .update({
-      fim: new Date().toISOString(),
-      topicos: dados.topicos,
+      fim: agora,
+      topicos,
       descricao: dados.descricao?.trim() || null,
     })
     .eq("id", dados.id);

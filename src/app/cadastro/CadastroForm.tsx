@@ -5,6 +5,7 @@ import { cadastrar } from "@/lib/actions/auth";
 import { CampoSenha } from "@/components/auth/CampoSenha";
 import { MedidorForcaSenha } from "@/components/auth/MedidorForcaSenha";
 import { INPUT, BOTAO_PRIMARIO } from "@/lib/estilos";
+import { VINCULOS } from "@/lib/vinculo";
 
 export function CadastroForm() {
   const [estado, formAction, pendente] = useActionState(cadastrar, undefined);
@@ -24,6 +25,24 @@ export function CadastroForm() {
         Nome
         <input type="text" name="nome" required className={INPUT} />
       </label>
+
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1 text-sm text-ink">Vínculo com o laboratório</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {VINCULOS.map((v, i) => (
+            <label
+              key={v.valor}
+              className="flex cursor-pointer items-start gap-2 rounded border border-rule p-2.5 text-sm has-[:checked]:border-ink has-[:checked]:bg-paper-raised"
+            >
+              <input type="radio" name="vinculo" value={v.valor} defaultChecked={i === 0} required className="mt-0.5" />
+              <span>
+                <span className="block text-ink">{v.rotulo}</span>
+                <span className="block text-xs text-ink-soft">{v.descricao}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <label className="flex flex-col gap-1 text-sm text-ink">
         E-mail

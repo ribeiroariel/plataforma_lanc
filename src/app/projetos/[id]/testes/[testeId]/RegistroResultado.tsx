@@ -19,6 +19,7 @@ import {
   confirmarCelula as confirmarCelulaServer,
   confirmarBrancoReagente,
   definirStatusTeste,
+  fecharRato,
 } from "@/lib/actions/resultados";
 import { INPUT_SM } from "@/lib/estilos";
 import ImportarTecan from "./ImportarTecan";
@@ -199,9 +200,31 @@ export default function RegistroResultado({
   const [brancoReagErro, setBrancoReagErro] = useState<string | null>(null);
   const [confirmandoBranco, setConfirmandoBranco] = useState(false);
 
-  const [qcCat, setQcCat] = useState("");
-  const [controleSod, setControleSod] = useState<Record<string, string>>({});
-  const [curva, setCurva] = useState<Record<string, string>>({});
+  // Dados da sessão (curva do Lowry, controle do SOD, QC da CAT) vêm do que
+  // já foi gravado junto das leituras. Antes começavam vazios ao reabrir a
+  // página, e a última célula de cada rato não conseguia fechar o valor —
+  // o rato ficava "não confirmado".
+  const sessaoSalva = useMemo(() => {
+    const comSessao = [...resultadosExistentes]
+      .reverse()
+      .map((r) => (r.leituras?.sessao ?? null) as Record<string, unknown> | null)
+      .filter((x): x is Record<string, unknown> => !!x && Object.keys(x).length > 0);
+    return comSessao[0] ?? {};
+  }, [resultadosExistentes]);
+  const paraTexto = (o: unknown): Record<string, string> =>
+    o && typeof o === "object"
+      ? Object.fromEntries(
+          Object.entries(o as Record<string, unknown>).map(([k, v]) => [k, v == null ? "" : String(v)])
+        )
+      : {};
+  const [qcCat, setQcCat] = useState(() =>
+    typeof sessaoSalva.qc_h2o2 === "number" ? sessaoSalva.qc_h2o2.toFixed(3) : ""
+  );
+  const [controleSod, setControleSod] = useState<Record<string, string>>(() =>
+    paraTexto(sessaoSalva.controle)
+  );
+  const [curva, setCurva] = useState<Record<string, string>>(() => paraTexto(sessaoSalva.curva));
+  const [fechando, setFechando] = useState<string | null>(null);
 
   const [status, setStatus] = useState(statusAtual);
   const [confirmandoCelula, setConfirmandoCelula] = useState<string | null>(null);
@@ -420,11 +443,18 @@ export default function RegistroResultado({
         return;
       }
     } else {
-      valor = bruto.trim();
+      valor = bruto.trim().replace(",", ".");
+      // Diluição em branco = sem diluição (1). Antes barrava a confirmação.
+      if (valor === "" && col.key === "dil") valor = "1";
       if (valor === "") {
         setErroCelula((p) => ({ ...p, [chave]: "Preencha antes de confirmar." }));
         return;
       }
+      if (col.key === "dil" && !(Number(valor) > 0)) {
+        setErroCelula((p) => ({ ...p, [chave]: "Diluição precisa ser um número maior que zero." }));
+        return;
+      }
+      setCelula(rato, col.key, valor);
     }
 
     const jaConf = new Set(confirmadas[rato] ?? []);
@@ -438,7 +468,10 @@ export default function RegistroResultado({
       if (valorCalc === null && config.familia !== "simples") {
         setErroCelula((p) => ({
           ...p,
-          [chave]: "Faltam dados da sessão (curva/controle) para fechar o valor.",
+          [chave]:
+            config.familia === "curva"
+              ? "Preencha a curva padrão (BSA) acima para fechar o valor."
+              : "Preencha o controle da sessão acima para fechar o valor.",
         }));
         return;
       }
@@ -508,6 +541,44 @@ export default function RegistroResultado({
     window.addEventListener("beforeunload", aviso);
     return () => window.removeEventListener("beforeunload", aviso);
   }, [temNaoConfirmado]);
+
+  // Rato com todas as leituras já gravadas mas sem o valor fechado (ficou
+  // preso pelo bug da curva não recarregada): fecha agora com a sessão atual.
+  const ratosPresos = roster
+    .map((r) => String(r.numero))
+    .filter(
+      (rato) =>
+        !confirmados.has(rato) && colunas.every((c) => confirmadas[rato]?.has(c.key))
+    );
+
+  async function fechar(rato: string) {
+    const valorCalc = valorDoRato(rato);
+    if (valorCalc === null && config.familia !== "simples") {
+      setErroCelula((p) => ({
+        ...p,
+        [`${rato}:fechar`]:
+          config.familia === "curva"
+            ? "Preencha a curva padrão acima primeiro."
+            : "Preencha o controle da sessão acima primeiro.",
+      }));
+      return;
+    }
+    setFechando(rato);
+    const res = await fecharRato({
+      projetoId,
+      projetoTesteId,
+      rato,
+      sessao: montarSessao(),
+      valorCalculado: valorCalc,
+      dentroDoPadrao: qcSessaoOk,
+    });
+    setFechando(null);
+    if ("erro" in res) {
+      setErroCelula((p) => ({ ...p, [`${rato}:fechar`]: res.erro }));
+      return;
+    }
+    setConfirmados((prev) => new Set(prev).add(rato));
+  }
 
   async function alternarStatus() {
     const novo = status === "concluido" ? "pendente" : "concluido";
@@ -674,6 +745,36 @@ export default function RegistroResultado({
         </PainelSessao>
       )}
 
+      {podeRegistrar && ratosPresos.length > 0 && (
+        <div className="mb-4 rounded border border-reagent/40 bg-reagent/[0.07] p-3 text-sm">
+          <p className="text-ink">
+            {ratosPresos.length === 1 ? "1 rato tem" : `${ratosPresos.length} ratos têm`} todas as
+            leituras gravadas, mas o valor não fechou
+            {config.familia === "curva" ? " (faltava a curva padrão)" : config.familia !== "simples" ? " (faltava o controle da sessão)" : ""}.
+            {config.familia !== "simples" && " Confira os dados da sessão acima e feche:"}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ratosPresos.map((rato) => (
+              <span key={rato} className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => fechar(rato)}
+                  disabled={fechando === rato}
+                  className="rounded border border-rule bg-paper px-2 py-1 text-xs text-ink hover:border-signal disabled:opacity-50"
+                >
+                  {fechando === rato ? "Fechando..." : `Fechar rato ${rato}`}
+                </button>
+                {erroCelula[`${rato}:fechar`] && (
+                  <span className="mt-0.5 max-w-[10rem] text-[11px] text-alerta">
+                    {erroCelula[`${rato}:fechar`]}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -721,6 +822,7 @@ export default function RegistroResultado({
                             type="text"
                             inputMode="decimal"
                             data-cel={chaveCel}
+                            placeholder={c.key === "dil" ? "1" : undefined}
                             aria-label={`Rato ${rato}, ${c.label}`}
                             value={linhas[rato]?.[c.key] ?? ""}
                             onChange={(e) => {
