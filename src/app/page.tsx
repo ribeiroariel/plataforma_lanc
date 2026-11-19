@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getUsuarioAtual } from "@/lib/supabase/profile";
 import type { Papel } from "@/lib/supabase/profile";
 import { IlustracaoRedox, varianteNoticia } from "@/components/IlustracaoRedox";
 import { Avatar } from "@/components/Avatar";
@@ -103,6 +104,12 @@ function ImagemNoticia({
 }
 
 export default async function Home() {
+  let podeEscrever = false;
+  try {
+    podeEscrever = Boolean((await getUsuarioAtual())?.aprovado);
+  } catch {
+    podeEscrever = false;
+  }
   let noticias: Noticia[] = [];
   let pessoas: Pessoa[] = [];
   let projetosAtivos: number | null = null;
@@ -133,9 +140,19 @@ export default async function Home() {
       <div className="grid gap-x-10 gap-y-8 lg:grid-cols-3">
         {/* Coluna principal */}
         <div className="lg:col-span-2">
-          <p className="mb-4 border-b border-ink pb-2 text-xs font-medium text-ink">
-            Divulgação científica
-          </p>
+          <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-ink pb-2">
+            <p className="text-xs font-medium text-ink">Divulgação científica</p>
+            {podeEscrever && (
+              <span className="flex gap-4 text-sm">
+                <Link href="/noticias/minhas" className="text-ink-soft hover:text-ink">
+                  Minhas notícias
+                </Link>
+                <Link href="/noticias/nova" className="font-medium text-signal hover:text-ink">
+                  Escrever notícia
+                </Link>
+              </span>
+            )}
+          </div>
 
           {!destaque && !configuracaoPendente && (
             <div className="rounded border border-dashed border-rule px-6 py-16 text-center">
@@ -151,12 +168,12 @@ export default async function Home() {
                 noticia={destaque}
                 className="h-72 w-full rounded sm:h-96"
               />
-              {destaque.imagem_url && (
+              {destaque.imagem_url && destaque.tipo === "publicacao" && (
                 <p className="mt-1.5 mb-4 font-mono text-[10px] text-ink-soft/70">
                   Imagem: figura do artigo original.
                 </p>
               )}
-              {!destaque.imagem_url && <div className="mb-4" />}
+              {!(destaque.imagem_url && destaque.tipo === "publicacao") && <div className="mb-4" />}
               <Eyebrow tipo={destaque.tipo} />
               <h1 className="mt-2 font-display text-3xl leading-tight text-ink hover:text-signal sm:text-4xl">
                 <Link href={`/noticias/${destaque.id}`}>{destaque.titulo}</Link>

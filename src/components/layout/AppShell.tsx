@@ -9,6 +9,7 @@ import {
   IconeFuncoes,
   IconeInicio,
   IconeJornal,
+  IconeCaneta,
   IconeLabirinto,
   IconeLivro,
   IconePainel,
@@ -50,7 +51,10 @@ function gruposDe(usuario: Profile): { grupos: GrupoNav[]; abas: string[] } {
     : null;
   const site: GrupoNav = {
     titulo: "Site",
-    itens: [{ href: "/", rotulo: "Notícias", icone: IconeJornal, exato: true, tambem: ["/noticias"] }],
+    itens: [
+      { href: "/", rotulo: "Notícias", icone: IconeJornal, exato: true },
+      { href: "/noticias/minhas", rotulo: "Escrever notícia", icone: IconeCaneta, tambem: ["/noticias/nova"] },
+    ],
   };
 
   if (usuario.papel === "orientador") {
