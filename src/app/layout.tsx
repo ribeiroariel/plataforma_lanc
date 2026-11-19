@@ -7,6 +7,7 @@ import { getUsuarioAtual } from "@/lib/supabase/profile";
 import { logout } from "@/lib/actions/auth";
 import { NavPrincipal } from "@/components/NavPrincipal";
 import { AppShell } from "@/components/layout/AppShell";
+import { RodapeInterno } from "@/components/Contato";
 import CronometroSacrificio from "@/components/CronometroSacrificio";
 
 const newsreader = Newsreader({
@@ -60,6 +61,7 @@ export default async function RootLayout({
         {naMoldura && usuario ? (
           <AppShell usuario={usuario}>
             <div className="flex-1">{children}</div>
+            <RodapeInterno />
             <CronometroSacrificio />
           </AppShell>
         ) : (
@@ -68,7 +70,7 @@ export default async function RootLayout({
               {/* Barra utilitária */}
               <div className="border-b border-rule bg-paper-raised">
                 <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-1.5 sm:px-6">
-                  <span className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft sm:block">
+                  <span className="hidden text-xs text-ink-soft sm:block font-medium">
                     Universidade Regional de Blumenau · FURB
                   </span>
                   <div className="flex items-center gap-4 text-xs">
@@ -92,7 +94,7 @@ export default async function RootLayout({
                           className="flex items-center gap-1.5 text-ink-soft hover:text-ink"
                         >
                           <span className="font-medium text-ink">{usuario.nome}</span>
-                          <span className="rounded-sm bg-signal/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+                          <span className="rounded-sm bg-signal/10 px-1.5 py-0.5 text-xs text-signal font-medium">
                             {usuario.papel === "orientador" ? "Orientadora" : "Bolsista"}
                           </span>
                         </Link>
@@ -163,7 +165,7 @@ export default async function RootLayout({
                     </p>
                   </div>
                   <div>
-                    <p className="font-mono text-xs uppercase tracking-wider text-signal">
+                    <p className="text-xs text-signal font-medium">
                       Coordenação
                     </p>
                     <p className="mt-2 text-sm text-ink">
@@ -171,7 +173,7 @@ export default async function RootLayout({
                     </p>
                   </div>
                   <div>
-                    <p className="font-mono text-xs uppercase tracking-wider text-signal">
+                    <p className="text-xs text-signal font-medium">
                       Contato
                     </p>
                     <ul className="mt-2 flex flex-col gap-1 text-sm">
@@ -196,7 +198,7 @@ export default async function RootLayout({
                     </ul>
                   </div>
                   <div>
-                    <p className="font-mono text-xs uppercase tracking-wider text-signal">
+                    <p className="text-xs text-signal font-medium">
                       Acesso
                     </p>
                     <ul className="mt-2 flex flex-col gap-1 text-sm">

@@ -54,13 +54,13 @@ export default function PainelDebora({
     <div className="mt-14 flex flex-col gap-14">
       {/* ── Equipe ── */}
       <section>
-        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-signal">
+        <p className="mb-4 text-xs text-signal font-medium">
           Equipe
         </p>
         <div className="overflow-x-auto rounded-lg border border-rule">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-rule bg-paper-raised text-left font-mono text-[10px] uppercase tracking-[0.08em] text-ink-soft">
+              <tr className="border-b border-rule bg-paper-raised text-left text-xs text-ink-soft font-medium">
                 <th className="py-2.5 pl-4 pr-3 font-normal">Bolsista</th>
                 <th className="py-2.5 pr-3 text-right font-normal">Proj.</th>
                 <th className="py-2.5 pr-3 text-right font-normal">Concl.</th>
@@ -94,7 +94,7 @@ export default function PainelDebora({
 
       {/* ── Comparativos ── */}
       <section>
-        <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.16em] text-signal">
+        <p className="mb-1 text-xs text-signal font-medium">
           Comparativos
         </p>
         <p className="mb-5 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -205,7 +205,7 @@ function ChartCard({
         {cor && !legenda && (
           <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: cor }} />
         )}
-        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-soft">
+        <p className="text-xs text-ink-soft font-medium">
           {titulo}
         </p>
       </div>

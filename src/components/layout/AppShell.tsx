@@ -2,6 +2,7 @@ import type { Profile } from "@/lib/supabase/profile";
 import { podeAprovarCadastros } from "@/lib/supabase/profile";
 import { Sidebar, type GrupoNav } from "./Sidebar";
 import {
+  IconeAgenda,
   IconeCaixa,
   IconeCarrinho,
   IconeFrasco,
@@ -24,6 +25,7 @@ function gruposDe(usuario: Profile): { grupos: GrupoNav[]; abas: string[] } {
   const pesquisa: GrupoNav = {
     titulo: "Pesquisa",
     itens: [
+      { href: "/agenda", rotulo: "Agenda", icone: IconeAgenda },
       { href: "/projetos", rotulo: "Projetos", icone: IconePasta },
       { href: "/bioterio", rotulo: "Biotério", icone: IconeRato },
       { href: "/comportamental", rotulo: "Comportamental", icone: IconeLabirinto },
@@ -59,7 +61,7 @@ function gruposDe(usuario: Profile): { grupos: GrupoNav[]; abas: string[] } {
       ...(gestao ? [gestao] : []),
       site,
     ];
-    return { grupos, abas: ["/orientador", "/projetos", "/bioterio", "/testes"] };
+    return { grupos, abas: ["/orientador", "/projetos", "/agenda", "/bioterio"] };
   }
 
   const grupos: GrupoNav[] = [
@@ -77,7 +79,7 @@ function gruposDe(usuario: Profile): { grupos: GrupoNav[]; abas: string[] } {
     ...(gestao ? [gestao] : []),
     site,
   ];
-  return { grupos, abas: ["/bolsista", "/meus-testes", "/projetos", "/testes"] };
+  return { grupos, abas: ["/bolsista", "/meus-testes", "/agenda", "/projetos"] };
 }
 
 export function AppShell({

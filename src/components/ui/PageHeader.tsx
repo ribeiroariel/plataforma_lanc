@@ -18,7 +18,7 @@ export function PageHeader({
     <div className="flex items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+          <p className="text-xs text-ink-soft font-medium">
             {eyebrow}
           </p>
         )}

@@ -34,6 +34,48 @@ function celulasTabela(linha: string): string[] {
     .map((c) => c.trim());
 }
 
+// Siglas que continuam em maiúscula quando o título sai da caixa alta.
+const SIGLAS = new Set([
+  "DTNB", "TNB", "TBARS", "TBA", "SOD", "CAT", "ASS", "PBS", "BSA", "HRP", "DCIP",
+  "DNPH", "DTT", "GSH", "TCA", "HCL", "KCL", "SDS", "EDTA", "NT", "POP", "FURB", "IBAMA",
+  "UV", "UV-VIS", "TECAN", "H₂O₂", "H2O2", "TRIS", "MDA",
+]);
+
+// O manual escreve os títulos de seção em CAIXA ALTA; na tela isso grita.
+// Passa para frase, mantendo siglas (DTNB, T-SH, NP-SH, H₂O₂...).
+export function tituloFrase(t: string): string {
+  let primeira = true;
+  return t
+    .split(/(\s+)/)
+    .map((w) => {
+      if (/^\s+$/.test(w)) return w;
+      const limpo = w.replace(/[(),:;.—–]/g, "");
+      const ehSigla =
+        SIGLAS.has(limpo.toUpperCase()) ||
+        /\d/.test(limpo) ||
+        /^[A-Z]{1,3}-[A-Z]{1,3}$/.test(limpo);
+      let out = ehSigla ? w : w.toLocaleLowerCase("pt-BR");
+      if (primeira && /[A-Za-zÀ-ÿ]/.test(w)) {
+        if (!ehSigla) out = out.charAt(0).toLocaleUpperCase("pt-BR") + out.slice(1);
+        primeira = false;
+      }
+      return out;
+    })
+    .join("");
+}
+
+function ancora(t: string): string {
+  return (
+    "sec-" +
+    t
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+  );
+}
+
 function classeParagrafo(texto: string): string {
   if (/^Controle de Qualidade/i.test(texto)) {
     return "rounded border-l-2 border-reagent bg-reagent/5 px-3 py-2 text-sm leading-relaxed text-ink";
@@ -75,7 +117,7 @@ export function ProtocoloTeste({ conteudo }: { conteudo: string }) {
       >
         {pares.map(([k, v], idx) => (
           <Fragment key={idx}>
-            <dt className="font-mono text-xs uppercase tracking-wide text-ink-soft">
+            <dt className="text-xs text-ink-soft font-medium">
               {k}
             </dt>
             <dd className="text-ink">{v}</dd>
@@ -139,18 +181,16 @@ export function ProtocoloTeste({ conteudo }: { conteudo: string }) {
       const nivel = m[1].split(".").length;
       blocos.push(
         nivel >= 3 ? (
-          <h3
-            key={i}
-            className="mt-5 font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-ink"
-          >
-            {m[2]}
+          <h3 key={i} className="mt-5 text-sm font-semibold text-ink">
+            {tituloFrase(m[2])}
           </h3>
         ) : (
           <h2
             key={i}
-            className="mt-7 font-mono text-xs font-medium uppercase tracking-[0.12em] text-absorbance"
+            id={ancora(m[2])}
+            className="mt-8 scroll-mt-24 border-b border-rule pb-1.5 font-display text-xl text-ink"
           >
-            {m[2]}
+            {tituloFrase(m[2])}
           </h2>
         )
       );
@@ -164,7 +204,31 @@ export function ProtocoloTeste({ conteudo }: { conteudo: string }) {
     i++;
   }
 
-  return <div className="flex flex-col gap-2.5">{blocos}</div>;
+  // Sumário: as seções de 2º nível (Princípio, Reagentes, Procedimento...).
+  const secoes = corpo
+    .map((l) => l.match(RE_SECAO))
+    .filter((m): m is RegExpMatchArray => Boolean(m) && m![1].split(".").length === 2)
+    .map((m) => ({ id: ancora(m[2]), titulo: tituloFrase(m[2]) }));
+
+  return (
+    <div>
+      {secoes.length > 2 && (
+        <nav aria-label="Nesta página" className="mb-6 rounded border border-rule px-4 py-3 text-sm">
+          <p className="mb-1.5 text-xs font-medium text-ink-soft">Nesta página</p>
+          <ol className="flex flex-wrap gap-x-4 gap-y-1">
+            {secoes.map((sec) => (
+              <li key={sec.id}>
+                <a href={`#${sec.id}`} className="text-absorbance hover:underline">
+                  {sec.titulo}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )}
+      <div className="flex flex-col gap-2.5">{blocos}</div>
+    </div>
+  );
 }
 
 function TabelaProtocolo({
@@ -178,7 +242,7 @@ function TabelaProtocolo({
     <div className="my-2 overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+          <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
             {cabecalho.map((c, idx) => (
               <th key={idx} className="py-2 pr-4 font-normal">
                 {c}

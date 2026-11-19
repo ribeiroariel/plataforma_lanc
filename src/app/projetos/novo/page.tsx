@@ -81,7 +81,7 @@ export default function NovoProjeto() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
       <VoltarLink href="/projetos">Meus projetos</VoltarLink>
-      <p className="mt-2 font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="mt-2 text-xs text-ink-soft font-medium">
         Pesquisa
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
@@ -195,7 +195,7 @@ export default function NovoProjeto() {
           <div className="overflow-x-auto">
             <table className="text-sm">
               <thead>
-                <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                <tr className="text-left text-xs text-ink-soft font-medium">
                   <th className="pb-2 pr-3 font-normal">Grupo</th>
                   {Array.from({ length: numeroLevas }, (_, l) => (
                     <th key={l} className="pb-2 pr-2 font-normal">

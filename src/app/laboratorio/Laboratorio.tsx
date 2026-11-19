@@ -73,7 +73,7 @@ export default function Laboratorio({
 
       <section>
         <div className="mb-2 flex items-baseline justify-between">
-          <p className="font-mono text-xs uppercase tracking-[0.12em] text-signal">
+          <p className="text-xs text-signal font-medium">
             Minhas sessões
           </p>
           <p className="font-mono text-xs text-ink-soft">
@@ -134,7 +134,7 @@ function SessaoAberta({ sessao }: { sessao: SessaoRow }) {
 
   return (
     <div className="rounded border border-signal/50 bg-signal/5 p-4">
-      <p className="font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      <p className="text-xs text-signal font-medium">
         ● Sessão em andamento
       </p>
       <p className="mt-1 text-sm text-ink">

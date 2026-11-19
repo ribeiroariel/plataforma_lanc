@@ -48,7 +48,7 @@ export default function MetadadosLeitura({
   if (!podeEditar) {
     return (
       <div className="mt-6 rounded border border-rule bg-paper-raised p-3 text-sm text-ink-soft">
-        <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em]">
+        <p className="mb-1 text-xs font-medium">
           Leitura
         </p>
         <p>
@@ -64,7 +64,7 @@ export default function MetadadosLeitura({
 
   return (
     <div className="mt-6 rounded border border-dashed border-rule p-4">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-1 text-xs text-ink-soft font-medium">
         Leitura (para a planilha de transparência)
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">

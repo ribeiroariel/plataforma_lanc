@@ -1,12 +1,12 @@
 "use client";
 
+import { CampoAmostras, useAmostrasDoDia } from "./AmostrasDoDia";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { marcarPasso } from "@/lib/actions/resultados";
 import { procedimentoDoSlug } from "@/lib/procedimentos";
 import { ensaioDiaDoSlug, escalarEnsaioDia } from "@/lib/reagentesDia";
-import { INPUT_SM } from "@/lib/estilos";
 
 export type EstadoPasso = {
   feito: boolean;
@@ -64,7 +64,7 @@ function ReceitaReagente({
 
   return (
     <div className="mt-2 rounded border border-reagent/30 bg-reagent/[0.04] p-2">
-      <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-reagent">
+      <p className="mb-1 text-xs text-reagent font-medium">
         Preparar para {nTubos} tubo(s)
         {dobra ? ` (${n} amostras + ${n} brancos)` : " (1 por amostra)"}
         {reagente.tipo === "escala" ? " (+10%)" : ""}
@@ -121,14 +121,12 @@ export default function ChecklistProcedimento({
   projetoId,
   projetoTesteId,
   slug,
-  nRoster,
   estado,
   podeMarcar,
 }: {
   projetoId: string;
   projetoTesteId: string;
   slug: string;
-  nRoster: number;
   estado: Record<string, EstadoPasso>;
   podeMarcar: boolean;
 }) {
@@ -136,18 +134,13 @@ export default function ChecklistProcedimento({
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [emAndamento, setEmAndamento] = useState<string | null>(null);
-  const [amostras, setAmostras] = useState(String(nRoster > 0 ? nRoster : 10));
-
-  const n = useMemo(() => {
-    const v = parseInt(amostras, 10);
-    return Number.isFinite(v) && v > 0 ? v : NaN;
-  }, [amostras]);
+  const { n } = useAmostrasDoDia();
 
   const passos = procedimentoDoSlug(slug);
   if (!passos) {
     return (
       <div className="mt-6 rounded border border-rule bg-paper-raised p-4 text-sm text-ink-soft">
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em]">
+        <p className="mb-1 text-xs font-medium">
           Procedimento
         </p>
         <p>
@@ -180,7 +173,7 @@ export default function ChecklistProcedimento({
   return (
     <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-mono text-xs uppercase tracking-[0.12em] text-absorbance">
+        <p className="text-xs text-absorbance font-medium">
           Procedimento — passo a passo
         </p>
         <span className="font-mono text-xs text-ink-soft">
@@ -189,16 +182,9 @@ export default function ChecklistProcedimento({
       </div>
 
       {temReceita && (
-        <label className="mb-3 flex w-fit flex-col gap-1 text-xs text-ink-soft">
-          Nº de amostras (para as receitas de preparo abaixo)
-          <input
-            type="text"
-            inputMode="numeric"
-            value={amostras}
-            onChange={(e) => setAmostras(e.target.value)}
-            className={`${INPUT_SM} w-24`}
-          />
-        </label>
+        <div className="mb-3">
+          <CampoAmostras rotulo="Nº de amostras (para as receitas de preparo abaixo)" />
+        </div>
       )}
 
       <ol className="flex flex-col gap-2">
@@ -232,7 +218,7 @@ export default function ChecklistProcedimento({
                       {i + 1}.
                     </span>
                     {p.critico && !feito && (
-                      <span className="mr-1 font-mono text-[10px] uppercase tracking-wide text-alerta">
+                      <span className="mr-1 text-xs text-alerta font-medium">
                         [atenção]
                       </span>
                     )}

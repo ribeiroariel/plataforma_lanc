@@ -28,10 +28,10 @@ function Grade({ itens, vazio }: { itens: MeuTeste[]; vazio: string }) {
               href={`/projetos/${projetoId}?aba=testes`}
               className="shrink-0 text-xs text-absorbance hover:underline"
             >
-              Abrir projeto →
+              Abrir projeto
             </Link>
           </div>
-          <div className="anim-cascata grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {lista.map((t) => (
               <CartaoTeste key={t.id} t={t} />
             ))}

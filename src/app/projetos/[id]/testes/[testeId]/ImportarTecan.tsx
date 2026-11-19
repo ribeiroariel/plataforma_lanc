@@ -194,7 +194,7 @@ export default function ImportarTecan({
     <div className="mt-6 rounded border border-dashed border-rule bg-paper-raised p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          <p className="text-xs text-ink-soft font-medium">
             Importar planilha do Tecan (Infinite 200Pro)
           </p>
           <p className="mt-1 text-xs text-ink-soft">
@@ -240,7 +240,7 @@ export default function ImportarTecan({
               <div className="max-h-72 overflow-y-auto rounded border border-rule">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-paper-raised">
-                    <tr className="text-left font-mono uppercase tracking-wide text-ink-soft">
+                    <tr className="text-left text-ink-soft font-medium">
                       <th className="p-2 font-normal">Aba</th>
                       <th className="p-2 font-normal">Poço</th>
                       <th className="p-2 font-normal">1ª leitura</th>
@@ -318,7 +318,7 @@ export default function ImportarTecan({
               <div className="mt-3 max-h-64 overflow-y-auto rounded border border-rule">
                 <table className="w-full text-xs">
                   <thead className="sticky top-0 bg-paper-raised">
-                    <tr className="text-left font-mono uppercase tracking-wide text-ink-soft">
+                    <tr className="text-left text-ink-soft font-medium">
                       <th className="p-2 font-normal">Rato</th>
                       {campoAmostra && <th className="p-2 font-normal">Amostra</th>}
                       {campoBranco && <th className="p-2 font-normal">Branco</th>}

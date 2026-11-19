@@ -9,7 +9,7 @@ import Link from "next/link";
 export default function PaginaCadastroConfirmado() {
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-16">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="text-xs text-ink-soft font-medium">
         Cadastro confirmado
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">

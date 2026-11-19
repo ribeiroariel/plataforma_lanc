@@ -32,8 +32,8 @@ export default async function LayoutTestes({
   );
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:gap-12">
-      <aside className="shrink-0 lg:sticky lg:top-28 lg:w-64 lg:self-start">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:gap-12">
+      <aside className="shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:w-64 lg:self-start lg:overflow-y-auto lg:pr-2">
         <TestesNav grupos={grupos} />
       </aside>
       <div className="min-w-0 flex-1">{children}</div>

@@ -26,13 +26,6 @@ const ATALHOS = [
   { href: "/projetos/novo", titulo: "Novo projeto", texto: "Grupos, levas e tecidos" },
 ];
 
-function saudacao() {
-  const h = Number(
-    new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" })
-  );
-  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
-}
-
 export default async function AreaBolsista() {
   const usuario = await getUsuarioAtual();
   const supabase = await createClient();
@@ -73,19 +66,11 @@ export default async function AreaBolsista() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-rule pb-6">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-signal">
-            Área do bolsista
-          </p>
-          <h1 className="mt-2 font-display text-4xl leading-tight text-ink">
-            {saudacao()}, {(usuario?.nome ?? "").split(" ")[0]}.
-          </h1>
-          <p className="mt-2 text-sm text-ink-soft">
-            {abertos.length === 0
-              ? "Nenhum teste em aberto — tudo em dia."
-              : `${abertos.length} teste(s) em aberto · ${leiturasPendentes} leitura(s) a confirmar.`}
-          </p>
-        </div>
+        <h1 className="font-display text-2xl leading-snug text-ink">
+          {abertos.length === 0
+            ? "Nenhum teste em aberto."
+            : `${abertos.length} ${abertos.length === 1 ? "teste em aberto" : "testes em aberto"}, ${leiturasPendentes} ${leiturasPendentes === 1 ? "leitura" : "leituras"} a confirmar.`}
+        </h1>
         <Link
           href="/laboratorio"
           className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors ${
@@ -117,9 +102,8 @@ export default async function AreaBolsista() {
           { rotulo: "Funções de sacrifício", valor: funcoesAtivas.length, cor: "var(--color-pyrogallol)" },
         ].map((k) => (
           <div key={k.rotulo} className="relative overflow-hidden rounded-lg border border-rule bg-paper-raised px-4 py-3">
-            <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: k.cor }} />
             <p className="font-display text-3xl leading-none tabular-nums text-ink">{k.valor}</p>
-            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft">{k.rotulo}</p>
+            <p className="mt-1.5 text-xs text-ink-soft font-medium">{k.rotulo}</p>
           </div>
         ))}
       </div>
@@ -130,7 +114,7 @@ export default async function AreaBolsista() {
             contagem={abertos.length}
             acao={
               <Link href="/meus-testes" className="text-xs text-absorbance hover:underline">
-                Todos os testes →
+                Todos os testes
               </Link>
             }
           >
@@ -142,12 +126,12 @@ export default async function AreaBolsista() {
               descricao="Quando um coautor designar um ensaio a você, ele aparece aqui com o progresso."
               acao={
                 <Link href="/projetos" className="text-sm text-absorbance hover:underline">
-                  Ver projetos →
+                  Ver projetos
                 </Link>
               }
             />
           ) : (
-            <div className="anim-cascata grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {abertos.slice(0, 6).map((t, i) => (
                 <CartaoTeste key={t.id} t={t} destaque={i === 0 && t.confirmados > 0} />
               ))}

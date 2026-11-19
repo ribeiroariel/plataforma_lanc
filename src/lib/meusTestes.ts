@@ -4,6 +4,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { gerarRoster, type GrupoComContagem } from "@/lib/roster";
 import { testes as catalogoTestes, nomeTecido, tituloSemTecido } from "@/lib/testes";
+import { calcularRatosEfetivos, carregarDestinoRatos } from "@/lib/ratosEfetivos";
 
 type TesteRow = {
   id: string;
@@ -59,12 +60,14 @@ export async function carregarMeusTestes(usuarioId: string): Promise<MeuTeste[]>
 
   const idsTestes = itens.map((i) => i.row.id);
   const idsProjetos = Array.from(new Set(itens.map((i) => i.row.projeto_id)));
-  const [{ data: resultados }, { data: grupos }] = await Promise.all([
+  const [{ data: resultados }, { data: grupos }, destinos] = await Promise.all([
     supabase
       .from("resultados_teste")
-      .select("projeto_teste_id, confirmado, created_at")
+      .select("projeto_teste_id, rato, confirmado, created_at")
       .in("projeto_teste_id", idsTestes)
-      .returns<{ projeto_teste_id: string; confirmado: boolean; created_at: string | null }[]>(),
+      .returns<
+        { projeto_teste_id: string; rato: string; confirmado: boolean; created_at: string | null }[]
+      >(),
     supabase
       .from("projeto_grupos")
       .select("id, nome, numero_ratos, ratos_por_leva, projeto_id")
@@ -72,6 +75,7 @@ export async function carregarMeusTestes(usuarioId: string): Promise<MeuTeste[]>
       .order("ordem", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true })
       .returns<(GrupoComContagem & { projeto_id: string })[]>(),
+    carregarDestinoRatos(supabase, idsProjetos),
   ]);
 
   return itens.map(({ row, papel }) => {
@@ -80,8 +84,17 @@ export async function carregarMeusTestes(usuarioId: string): Promise<MeuTeste[]>
       (grupos ?? []).filter((g) => g.projeto_id === row.projeto_id),
       row.projetos?.numero_levas ?? 1
     );
-    const total = row.leva ? roster.filter((r) => r.leva === row.leva).length : roster.length;
     const doTeste = (resultados ?? []).filter((r) => r.projeto_teste_id === row.id);
+    // Desconta mortos/excluídos (biotério + sacrifício) — mesma regra da
+    // página do teste, para o progresso bater nos dois lugares.
+    const d = destinos.get(row.projeto_id);
+    const total = calcularRatosEfetivos({
+      roster: row.leva ? roster.filter((r) => r.leva === row.leva) : roster,
+      tecido: cat?.tecido ?? null,
+      caixas: d?.caixas ?? [],
+      sacrificio: d?.sacrificio ?? [],
+      comResultado: new Set(doTeste.map((r) => r.rato)),
+    }).nEfetivo;
     const ultimo = doTeste
       .map((r) => r.created_at)
       .filter((d): d is string => Boolean(d))

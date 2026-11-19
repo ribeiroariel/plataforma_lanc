@@ -160,7 +160,7 @@ export default function CalculadoraLowry() {
       </p>
 
       <section className="mb-8">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <h2 className="mb-3 text-xs text-ink-soft font-medium">
           1 · Absorbância dos tubos padrão (BSA)
         </h2>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
@@ -182,7 +182,7 @@ export default function CalculadoraLowry() {
 
       {regressao && (
         <section className="mb-8">
-          <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          <h2 className="mb-3 text-xs text-ink-soft font-medium">
             2 · Resultado da curva
           </h2>
           <p
@@ -237,13 +237,13 @@ export default function CalculadoraLowry() {
       )}
 
       <section className="mb-8">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <h2 className="mb-3 text-xs text-ink-soft font-medium">
           3 · Amostras
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <tr className="text-left text-xs text-ink-soft font-medium">
                 <th className="pb-2 font-normal">Rótulo</th>
                 <th className="pb-2 font-normal">Absorbância</th>
                 <th className="pb-2 font-normal">Fator diluição</th>

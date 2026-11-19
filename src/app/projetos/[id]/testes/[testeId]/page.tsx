@@ -19,6 +19,8 @@ import ConsideracoesTeste from "./ConsideracoesTeste";
 import { procedimentoDoSlug } from "@/lib/procedimentos";
 import { Abas } from "@/components/ui/Abas";
 import { Badge } from "@/components/ui/Badge";
+import { calcularRatosEfetivos, carregarDestinoRatos } from "@/lib/ratosEfetivos";
+import { AmostrasDoDiaProvider } from "./AmostrasDoDia";
 
 type ProjetoTeste = {
   id: string;
@@ -138,9 +140,23 @@ export default async function PaginaResultado({
   const rosterCompleto = gerarRoster(grupos ?? [], projeto?.numero_levas ?? 1);
   // Se o teste foi designado para uma leva específica, o registro só mostra
   // os ratos daquela leva. Sem leva definida, mostra todos.
-  const roster = projetoTeste.leva
+  const rosterPrevisto = projetoTeste.leva
     ? rosterCompleto.filter((r) => r.leva === projetoTeste.leva)
     : rosterCompleto;
+
+  // Cruza com biotério (mortes por caixa) e sacrifício (quem não sobreviveu,
+  // tecido que não foi coletado): o teste só lista e conta quem de fato tem
+  // amostra. Rato que já tem leitura registrada nunca some da tabela.
+  const destinos = (await carregarDestinoRatos(supabase, [projetoId])).get(projetoId);
+  const efetivos = calcularRatosEfetivos({
+    roster: rosterPrevisto,
+    tecido: teste?.tecido ?? null,
+    caixas: destinos?.caixas ?? [],
+    sacrificio: destinos?.sacrificio ?? [],
+    comResultado: new Set((resultados ?? []).map((r) => r.rato)),
+  });
+  const roster = efetivos.ativos;
+  const nEfetivo = efetivos.nEfetivo;
 
   if (!config) {
     return (
@@ -206,7 +222,7 @@ export default async function PaginaResultado({
   const ratosIniciados = (resultados ?? []).length;
   const preparado = Boolean(projetoTeste.aparelho && projetoTeste.recipiente);
   const procedimentoFeito = totalPassos > 0 && passosFeitos >= totalPassos;
-  const registroFeito = roster.length > 0 && ratosConfirmados >= roster.length;
+  const registroFeito = nEfetivo > 0 && ratosConfirmados >= nEfetivo;
 
   // Abre na etapa em que o teste está, a menos que o link peça outra.
   const abaInicial =
@@ -233,7 +249,7 @@ export default async function PaginaResultado({
       <header className="mt-3 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           {teste && (
-            <p className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
+            <p className="text-xs font-medium text-signal">
               {nomeTecido(teste.tecido)}
               {projetoTeste.leva ? ` · Leva ${projetoTeste.leva}` : ""}
             </p>
@@ -244,7 +260,7 @@ export default async function PaginaResultado({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {encerrado ? (
-            <Badge tom="neutro">🔒 encerrado</Badge>
+            <Badge tom="neutro">encerrado</Badge>
           ) : (
             <Badge tom={projetoTeste.status === "concluido" ? "sucesso" : "atencao"}>
               {projetoTeste.status === "concluido" ? "concluído" : "em andamento"}
@@ -270,8 +286,8 @@ export default async function PaginaResultado({
         />
         <Progresso
           rotulo="Ratos confirmados"
-          valor={`${ratosConfirmados}/${roster.length}`}
-          pct={pct(ratosConfirmados, roster.length)}
+          valor={`${ratosConfirmados}/${nEfetivo}`}
+          pct={pct(ratosConfirmados, nEfetivo)}
           cor="var(--color-absorbance)"
         />
         <Progresso
@@ -282,6 +298,7 @@ export default async function PaginaResultado({
         />
       </div>
 
+      <AmostrasDoDiaProvider nEfetivo={nEfetivo} previstos={efetivos.previstos}>
       <Abas
         className="mt-6"
         inicial={abaInicial}
@@ -305,7 +322,6 @@ export default async function PaginaResultado({
                 />
                 <CalculadorasDoDia
                   slug={projetoTeste.teste_slug}
-                  nRoster={roster.length}
                   recipiente={
                     ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
                   }
@@ -324,7 +340,6 @@ export default async function PaginaResultado({
                 projetoId={projetoId}
                 projetoTesteId={projetoTeste.id}
                 slug={projetoTeste.teste_slug}
-                nRoster={roster.length}
                 estado={estadoPassos}
                 podeMarcar={podeEditar}
               />
@@ -335,9 +350,25 @@ export default async function PaginaResultado({
             passo: 3,
             rotulo: "Registro",
             feita: registroFeito,
-            indicador: `${ratosConfirmados}/${roster.length}`,
+            indicador: `${ratosConfirmados}/${nEfetivo}`,
             conteudo: (
               <>
+                {!preparado && !encerrado && (
+                  <p className="mt-6 rounded border border-reagent/40 bg-reagent/[0.06] px-3 py-2 text-sm text-ink">
+                    Aparelho e recipiente ainda não foram escolhidos na etapa
+                    Preparar. Escolha antes de registrar: eles definem os volumes
+                    e entram na planilha de dados brutos.{" "}
+                    <a href="#aba-preparar" className="text-absorbance underline">
+                      Ir para Preparar
+                    </a>
+                  </p>
+                )}
+                <AvisoRatosFora
+                  excluidos={efetivos.excluidos}
+                  semIdentificar={efetivos.semIdentificar}
+                  previstos={efetivos.previstos}
+                  nEfetivo={nEfetivo}
+                />
                 <RegistroResultado
                   projetoId={projetoId}
                   projetoTesteId={projetoTeste.id}
@@ -375,7 +406,6 @@ export default async function PaginaResultado({
                   projetoId={projetoId}
                   projetoTesteId={projetoTeste.id}
                   slug={projetoTeste.teste_slug}
-                  nRoster={roster.length}
                   recipiente={
                     ehRecipiente(projetoTeste.recipiente) ? projetoTeste.recipiente : null
                   }
@@ -415,7 +445,48 @@ export default async function PaginaResultado({
           },
         ]}
       />
+      </AmostrasDoDiaProvider>
     </main>
+  );
+}
+
+function AvisoRatosFora({
+  excluidos,
+  semIdentificar,
+  previstos,
+  nEfetivo,
+}: {
+  excluidos: { numero: number; grupoNome: string; motivo: string }[];
+  semIdentificar: { grupoNome: string; n: number }[];
+  previstos: number;
+  nEfetivo: number;
+}) {
+  if (excluidos.length === 0 && semIdentificar.length === 0) return null;
+  return (
+    <div className="mt-6 rounded-lg border border-reagent/40 bg-reagent/[0.06] p-4 text-sm">
+      <p className="font-medium text-ink">
+        {previstos} ratos previstos → <span className="text-reagent">{nEfetivo} efetivos</span>{" "}
+        neste teste
+      </p>
+      {excluidos.length > 0 && (
+        <ul className="mt-2 flex flex-col gap-0.5 text-xs text-ink-soft">
+          {excluidos.map((e) => (
+            <li key={e.numero}>
+              <span className="font-mono text-ink">Rato {e.numero}</span> ({e.grupoNome}) —{" "}
+              {e.motivo}. Fora da tabela.
+            </li>
+          ))}
+        </ul>
+      )}
+      {semIdentificar.length > 0 && (
+        <p className="mt-2 text-xs leading-relaxed text-ink-soft">
+          Mortes no biotério ainda sem número de rato:{" "}
+          {semIdentificar.map((g) => `${g.n} no ${g.grupoNome}`).join(", ")}. A contagem
+          já desconta; deixe em branco os ratos que morreram. Quando o dia do
+          sacrifício marcar quem não sobreviveu, eles saem da tabela sozinhos.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -433,7 +504,7 @@ function Progresso({
   return (
     <div className="rounded-lg border border-rule bg-paper-raised px-4 py-3">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft">
+        <span className="text-xs text-ink-soft font-medium">
           {rotulo}
         </span>
         <span className="font-mono text-sm text-ink">{valor}</span>

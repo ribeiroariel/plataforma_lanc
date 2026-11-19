@@ -22,7 +22,7 @@ export default async function PaginaTeste({
 
   return (
     <article>
-      <p className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
+      <p className="text-xs font-medium text-signal">
         {nomeTecido(teste.tecido)}
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
@@ -34,7 +34,7 @@ export default async function PaginaTeste({
           href="/testes/lowry-cortex-rins/calculadora"
           className="mt-3 inline-block border-b border-absorbance text-sm text-absorbance hover:border-ink hover:text-ink"
         >
-          Abrir calculadora da curva padrão →
+          Abrir calculadora da curva padrão
         </Link>
       )}
 

@@ -72,6 +72,8 @@ type Props = {
   // Tipos de análise do projeto — gatilham as seções.
   temBioquimico?: boolean;
   temHistologia?: boolean;
+  /** Mortes registradas no biotério por grupo (desta leva), para conferir a sobrevivência. */
+  mortosBioterio?: Record<string, number>;
 };
 
 // Mantém a tela sincronizada entre aparelhos: sacrificio_ratos e sacrificios
@@ -174,6 +176,7 @@ export default function DiaSacrificio({
   testesDesignados,
   temBioquimico = true,
   temHistologia = true,
+  mortosBioterio,
 }: Props) {
   const salvosPorRato = new Map(ratos.map((r) => [r.rato, r]));
   // Grupo exato de cada rato (para etiquetar o pote da histologia e não errar
@@ -190,6 +193,7 @@ export default function DiaSacrificio({
   );
   const [pend, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+  const [confirmaEncerrar, setConfirmaEncerrar] = useState(false);
 
   const concluido = status === "concluido";
   const mostra = (s: SecaoSacrificio) => !secoes || secoes.includes(s);
@@ -293,7 +297,7 @@ export default function DiaSacrificio({
         <div className="flex flex-wrap items-center gap-3 rounded border border-rule bg-paper-raised px-4 py-3">
           {concluido ? (
             <>
-              <span className="font-mono text-xs uppercase tracking-wide text-sucesso">
+              <span className="text-xs text-sucesso font-medium">
                 ● Sacrifício encerrado
               </span>
               <span className="text-xs text-ink-soft">
@@ -312,17 +316,34 @@ export default function DiaSacrificio({
             </>
           ) : (
             <>
-              <span className="font-mono text-xs uppercase tracking-wide text-ink-soft">
+              <span className="text-xs text-ink-soft font-medium">
                 Sacrifício em andamento
               </span>
-              <button
-                type="button"
-                onClick={encerrar}
-                disabled={pend}
-                className="ml-auto rounded border border-alerta/50 px-3 py-1 text-xs text-alerta transition-colors hover:bg-alerta/10"
-              >
-                {pend ? "..." : "Encerrar sacrifício"}
-              </button>
+              {confirmaEncerrar ? (
+                <span className="ml-auto flex items-center gap-2 text-xs">
+                  Encerrar trava a edição de todas as etapas.
+                  <button
+                    type="button"
+                    onClick={encerrar}
+                    disabled={pend}
+                    className="rounded border border-alerta/50 px-3 py-1 text-alerta transition-colors hover:bg-alerta/10"
+                  >
+                    {pend ? "Encerrando..." : "Encerrar agora"}
+                  </button>
+                  <button type="button" onClick={() => setConfirmaEncerrar(false)} className="text-ink-soft hover:underline">
+                    Voltar
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmaEncerrar(true)}
+                  disabled={pend}
+                  className="ml-auto rounded border border-alerta/50 px-3 py-1 text-xs text-alerta transition-colors hover:bg-alerta/10"
+                >
+                  Encerrar sacrifício
+                </button>
+              )}
             </>
           )}
         </div>
@@ -330,7 +351,7 @@ export default function DiaSacrificio({
 
       {mostra("sobrevivencia") && (
       <section>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Sobrevivência
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -338,10 +359,11 @@ export default function DiaSacrificio({
           etc.) — a justificativa é opcional, mas ajuda no registro. Salvar gera
           a fila de contagem abaixo.
         </p>
+        <ConferenciaBioterio roster={roster} sobrev={sobrev} mortosBioterio={mortosBioterio} />
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
                 <th className="py-2 pr-3 font-normal">Nº</th>
                 <th className="py-2 pr-3 font-normal">Grupo</th>
                 <th className="py-2 pr-3 font-normal">Sobreviveu</th>
@@ -403,7 +425,7 @@ export default function DiaSacrificio({
 
       {mostra("contagem") && (
       <section>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Contagem ao vivo
         </p>
         {sobreviventes.length === 0 ? (
@@ -420,7 +442,7 @@ export default function DiaSacrificio({
 
             {pendentes.length > 0 && (
               <div className="mb-4">
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                <p className="mb-2 text-xs text-ink-soft font-medium">
                   Pendentes
                 </p>
                 <div className="flex flex-col gap-1.5">
@@ -440,7 +462,7 @@ export default function DiaSacrificio({
                         </span>
                       )}
                       {i === 0 && (
-                        <span className="rounded-full bg-signal/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+                        <span className="rounded-full bg-signal/12 px-2 py-0.5 text-xs text-signal font-medium">
                           próximo
                         </span>
                       )}
@@ -475,7 +497,7 @@ export default function DiaSacrificio({
 
             {dissecados.length > 0 && (
               <div>
-                <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                <p className="mb-2 text-xs text-ink-soft font-medium">
                   Dissecados
                 </p>
                 <div className="flex flex-col gap-1">
@@ -516,7 +538,7 @@ export default function DiaSacrificio({
 
       {mostra("coleta") && (
       <section>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           {temHistologia ? "Coleta e histologia" : "Coleta"}
         </p>
         {dissecados.length === 0 ? (
@@ -546,7 +568,7 @@ export default function DiaSacrificio({
 
       {mostra("homogeneizacao") && temBioquimico && (
       <section>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Homogeneização (peso → tampão)
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -577,7 +599,7 @@ export default function DiaSacrificio({
 
       {mostra("sangue") && temBioquimico && (
       <section>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Preparo de plasma/eritrócito
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -611,7 +633,7 @@ export default function DiaSacrificio({
 
       {mostra("aliquotas") && temBioquimico && (
       <section>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Separação de alíquotas
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -722,7 +744,7 @@ function PainelAliquotas({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+            <tr className="text-left text-xs text-ink-soft font-medium">
               <th className="py-1 pr-3 font-normal">Órgão</th>
               <th className="py-1 pr-3 font-normal">Peso (g)</th>
               <th className="py-1 pr-3 font-normal">Tampão (µL)</th>
@@ -1060,7 +1082,7 @@ function PainelColeta({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+            <tr className="text-left text-xs text-ink-soft font-medium">
               <th className="py-1 pr-3 font-normal">Órgão</th>
               <th className="py-1 pr-3 font-normal">Destino</th>
               <th className="py-1 font-normal">Se não coletado, por quê</th>
@@ -1213,7 +1235,7 @@ function PainelSeparacaoAliquotas({
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                      <tr className="text-left text-xs text-ink-soft font-medium">
                         <th className="py-1 pr-3 font-normal">Ependorf (categoria)</th>
                         <th className="py-1 pr-3 font-normal">Volume (µL)</th>
                         <th className="py-1 font-normal"></th>
@@ -1268,6 +1290,43 @@ function PainelSeparacaoAliquotas({
         })}
       </div>
       {erro && <p className="mt-1 text-sm text-alerta">{erro}</p>}
+    </div>
+  );
+}
+
+// Confere a sobrevivência marcada aqui com as mortes já registradas nas caixas
+// do biotério, grupo a grupo: se o biotério diz 2 mortos no grupo DM e só um
+// rato está desmarcado, avisa antes de salvar.
+function ConferenciaBioterio({
+  roster,
+  sobrev,
+  mortosBioterio,
+}: {
+  roster: { numero: number; grupoId: string; grupoNome: string }[];
+  sobrev: Record<string, boolean>;
+  mortosBioterio?: Record<string, number>;
+}) {
+  const grupos = Array.from(new Map(roster.map((r) => [r.grupoId, r.grupoNome])).entries());
+  const linhas = grupos.map(([id, nome]) => {
+    const doGrupo = roster.filter((r) => r.grupoId === id);
+    const fora = doGrupo.filter((r) => sobrev[String(r.numero)] === false).length;
+    return { id, nome, total: doGrupo.length, fora, bioterio: mortosBioterio?.[id] ?? 0 };
+  });
+  const vivos = linhas.reduce((s, l) => s + l.total - l.fora, 0);
+  const divergentes = linhas.filter((l) => mortosBioterio && l.fora < l.bioterio);
+  return (
+    <div className="mb-3 rounded border border-rule bg-paper-raised px-3 py-2 text-xs text-ink-soft">
+      <p>
+        <span className="font-medium text-ink">{vivos}</span> de {roster.length} entram no sacrifício
+        {" · "}
+        {linhas.map((l) => `${l.nome}: ${l.total - l.fora}/${l.total}`).join(" · ")}
+      </p>
+      {divergentes.map((l) => (
+        <p key={l.id} className="mt-1 text-reagent">
+          O biotério registrou {l.bioterio} {l.bioterio === 1 ? "morte" : "mortes"} no {l.nome}, mas só{" "}
+          {l.fora} {l.fora === 1 ? "rato está desmarcado" : "ratos estão desmarcados"} aqui. Desmarque quem morreu.
+        </p>
+      ))}
     </div>
   );
 }

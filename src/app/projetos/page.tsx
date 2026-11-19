@@ -74,12 +74,6 @@ export default async function ListaProjetos() {
                     </p>
                   )}
                 </div>
-                <span
-                  aria-hidden="true"
-                  className="mt-1 shrink-0 text-ink-soft/50 transition-transform group-hover:translate-x-0.5 group-hover:text-absorbance"
-                >
-                  →
-                </span>
               </Link>
             </li>
           ))}

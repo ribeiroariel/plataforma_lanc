@@ -45,7 +45,7 @@ export function Marca({ claro = false }: { claro?: boolean }) {
           LANC
         </span>
         <span
-          className={`mt-0.5 block font-mono text-[9px] uppercase tracking-[0.14em] ${
+          className={`mt-0.5 block text-xs font-medium ${
             claro ? "text-white/70" : "text-ink-soft"
           }`}
         >
@@ -97,7 +97,7 @@ export function Sidebar({
         <Avatar fotoUrl={fotoUrl} nome={nome} tamanho={34} />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-ink">{nome}</span>
-          <span className="block font-mono text-[10px] uppercase tracking-[0.12em] text-signal">
+          <span className="block text-xs text-signal font-medium">
             {papelRotulo}
           </span>
         </span>
@@ -121,7 +121,7 @@ export function Sidebar({
         {grupos.map((g, gi) => (
           <div key={g.titulo ?? gi} className={gi > 0 ? "mt-5" : ""}>
             {g.titulo && (
-              <p className="mb-1.5 px-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-soft/70">
+              <p className="mb-1.5 px-3 text-xs text-ink-soft/70 font-medium">
                 {g.titulo}
               </p>
             )}

@@ -44,7 +44,7 @@ export default function CalculadoraReagentes() {
 
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.12em] text-absorbance">
+      <p className="mb-1 text-xs font-medium text-absorbance">
         Calculadora de preparo
       </p>
       <p className="mb-4 text-xs leading-relaxed text-ink-soft">
@@ -100,7 +100,7 @@ export default function CalculadoraReagentes() {
           <div className="mt-4 overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
                   <th className="py-2 pr-4 font-normal">Reagente</th>
                   <th className="py-2 font-normal">
                     Quantidade para {fmtVol(volumeMl)}
@@ -131,7 +131,7 @@ export default function CalculadoraReagentes() {
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {reagente.preparoNoDia && (
-              <span className="rounded-full bg-reagent/12 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-reagent">
+              <span className="rounded-full bg-reagent/12 px-2 py-0.5 text-xs text-reagent font-medium">
                 preparar no dia
               </span>
             )}

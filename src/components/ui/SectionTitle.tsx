@@ -15,7 +15,7 @@ export function SectionTitle({
 }) {
   return (
     <div className={`mb-3 flex items-baseline justify-between gap-3 ${className}`}>
-      <h2 className="font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <h2 className="text-xs text-ink-soft font-medium">
         {children}
         {contagem !== undefined && (
           <span className="ml-2 text-ink-soft/60">{contagem}</span>

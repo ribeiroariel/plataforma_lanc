@@ -8,6 +8,7 @@ import { configDoTeste, ehTesteDesignavel } from "@/lib/tiposTeste";
 import { rotuloValor, valorResumo } from "@/lib/resumoResultados";
 import { tituloSemTecido } from "@/lib/testes";
 import { gerarRoster } from "@/lib/roster";
+import { calcularRatosEfetivos, carregarDestinoRatos } from "@/lib/ratosEfetivos";
 import { Abas } from "@/components/ui/Abas";
 import ResultadosProjeto, { type TesteResumo } from "./ResultadosProjeto";
 import FormularioMembro from "./FormularioMembro";
@@ -180,6 +181,7 @@ export default async function DetalheProjeto({
           .returns<ResultadoRow[]>()
       : { data: [] as ResultadoRow[] };
   const rosterProjeto = gerarRoster(grupos ?? [], projeto.numero_levas ?? 1);
+  const destinoProjeto = (await carregarDestinoRatos(supabase, [id])).get(id);
   const resumos: TesteResumo[] = (testesDesignados ?? []).flatMap((t) => {
     const config = configDoTeste(t.teste_slug);
     if (!config) return [];
@@ -199,9 +201,17 @@ export default async function DetalheProjeto({
           ? []
           : [{ rato: r.rato, grupoId: r.grupo_id, valor: v }];
       });
-    const totalRatos = t.leva
-      ? rosterProjeto.filter((r) => r.leva === t.leva).length
-      : rosterProjeto.length;
+    // Total = ratos efetivos (desconta mortos no biotério e quem ficou fora
+    // no sacrifício), a mesma regra da página do teste.
+    const totalRatos = calcularRatosEfetivos({
+      roster: t.leva ? rosterProjeto.filter((r) => r.leva === t.leva) : rosterProjeto,
+      tecido: cat?.tecido ?? null,
+      caixas: destinoProjeto?.caixas ?? [],
+      sacrificio: destinoProjeto?.sacrificio ?? [],
+      comResultado: new Set(
+        (resultadosRows ?? []).filter((r) => r.projeto_teste_id === t.id).map((r) => r.rato)
+      ),
+    }).nEfetivo;
     return [
       {
         id: t.id,
@@ -239,13 +249,13 @@ export default async function DetalheProjeto({
   const ratosEsperadosTotal = resumos.reduce((soma, r) => soma + r.totalRatos, 0);
 
   const visaoGeral = (
-    <div className="anim-cascata mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <section className="rounded-lg border border-rule bg-paper-raised p-4">
         <SectionTitle>Grupos experimentais</SectionTitle>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <tr className="text-left text-xs text-ink-soft font-medium">
                 <th className="pb-2 pr-4 font-normal">Grupo</th>
                 {Array.from({ length: projeto.numero_levas ?? 1 }, (_, l) => (
                   <th key={l} className="pb-2 pr-4 text-right font-normal">
@@ -268,7 +278,7 @@ export default async function DetalheProjeto({
                 </tr>
               ))}
               <tr className="border-t-2 border-rule">
-                <td className="py-1.5 pr-4 font-mono text-[11px] uppercase text-ink-soft">Total</td>
+                <td className="py-1.5 pr-4 text-xs text-ink-soft font-medium">Total</td>
                 {Array.from({ length: projeto.numero_levas ?? 1 }, (_, l) => (
                   <td key={l} className="py-1.5 pr-4" />
                 ))}
@@ -282,7 +292,7 @@ export default async function DetalheProjeto({
             href={`/projetos/${projeto.id}/editar`}
             className="mt-3 inline-block text-xs text-signal hover:text-ink"
           >
-            Editar grupos e levas →
+            Editar grupos e levas
           </Link>
         )}
       </section>
@@ -300,9 +310,6 @@ export default async function DetalheProjeto({
               Planejar o dia, funções da equipe e alíquotas por tecido.
             </span>
           </span>
-          <span aria-hidden className="text-ink-soft transition-transform group-hover:translate-x-0.5">
-            →
-          </span>
         </Link>
         <a
           href="#aba-resultados"
@@ -317,14 +324,11 @@ export default async function DetalheProjeto({
               {resumos.length} teste(s).
             </span>
           </span>
-          <span aria-hidden className="text-ink-soft transition-transform group-hover:translate-x-0.5">
-            →
-          </span>
         </a>
 
         {souCoautor && (
           <div className="rounded-lg border border-dashed border-rule p-4">
-            <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-soft">
+            <p className="mb-2 text-xs text-ink-soft font-medium">
               Ações do projeto
             </p>
             <div className="flex flex-wrap items-center gap-4">
@@ -359,7 +363,7 @@ export default async function DetalheProjeto({
           }
         />
       )}
-      <div className="anim-cascata grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         {testesDesignados?.map((t) => {
           const teste = catalogoTestes.find((c) => c.slug === t.teste_slug);
           const souResponsavel = t.responsavel_id === usuario?.id;
@@ -372,7 +376,7 @@ export default async function DetalheProjeto({
             <>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-signal">
+                  <p className="text-xs text-signal font-medium">
                     {teste ? nomeTecido(teste.tecido as Tecido) : ""}
                     {t.leva ? ` · Leva ${t.leva}` : ""}
                   </p>
@@ -405,7 +409,7 @@ export default async function DetalheProjeto({
               </div>
               {podeAbrir && (
                 <p className="mt-2 font-mono text-[11px] text-absorbance">
-                  {souResponsavel && !t.encerrado ? "Registrar →" : "Ver resultados →"}
+                  {souResponsavel && !t.encerrado ? "Registrar" : "Ver resultados"}
                 </p>
               )}
             </>
@@ -438,7 +442,7 @@ export default async function DetalheProjeto({
 
   const abaEquipe = (
     <section className="mt-6 max-w-2xl">
-      <div className="anim-cascata flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         {membros?.map((m, i) => (
           <div
             key={i}
@@ -493,7 +497,7 @@ export default async function DetalheProjeto({
 
       <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-mono text-xs uppercase tracking-[0.14em] text-signal">
+          <p className="text-xs text-signal font-medium">
             Projeto{projeto.finalizado ? " · finalizado" : ""}
           </p>
           <h1 className="mt-1 font-display text-3xl leading-tight text-ink sm:text-4xl">
@@ -586,9 +590,8 @@ function Numero({
 }) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-rule bg-paper-raised px-4 py-3">
-      <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: cor }} />
       <p className="font-display text-3xl leading-none tabular-nums text-ink">{valor}</p>
-      <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-soft">
+      <p className="mt-1.5 text-xs text-ink-soft font-medium">
         {rotulo}
       </p>
     </div>

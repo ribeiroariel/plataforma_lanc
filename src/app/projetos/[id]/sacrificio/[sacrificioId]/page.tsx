@@ -93,6 +93,19 @@ export default async function PaginaDiaSacrificio({
     redirect("/minhas-funcoes");
   }
 
+  // Mortes do biotério desta leva, por grupo (para conferir a sobrevivência).
+  const { data: caixasMortos } = await supabase
+    .from("bioterio_caixas")
+    .select("grupo_id, mortos, leva")
+    .eq("projeto_id", sacrificio.projeto_id)
+    .eq("leva", sacrificio.leva ?? 1)
+    .gt("mortos", 0)
+    .returns<{ grupo_id: string; mortos: number; leva: number }[]>();
+  const mortosBioterio: Record<string, number> = {};
+  for (const c of caixasMortos ?? []) {
+    mortosBioterio[c.grupo_id] = (mortosBioterio[c.grupo_id] ?? 0) + c.mortos;
+  }
+
   const { roster, ratos, ratosErro } = await carregarDia(
     supabase,
     id,
@@ -166,7 +179,7 @@ export default async function PaginaDiaSacrificio({
             href={`/comportamental/${id}`}
             className="text-sm text-absorbance hover:underline"
           >
-            Testes comportamentais deste projeto →
+            Testes comportamentais deste projeto
           </Link>
           <p className="mt-1 text-xs text-ink-soft">
             Campo aberto e nado forçado, registrados por rato.
@@ -181,6 +194,7 @@ export default async function PaginaDiaSacrificio({
         podeEncerrar={podeEncerrar}
         status={sacrificio.status}
         roster={roster}
+        mortosBioterio={mortosBioterio}
         ratos={ratos}
         testesDesignados={(testesDesignados ?? []).map((t) => t.teste_slug)}
         temBioquimico={projeto?.tem_bioquimico ?? true}
