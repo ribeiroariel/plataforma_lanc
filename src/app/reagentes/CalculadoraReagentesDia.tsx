@@ -49,20 +49,20 @@ function TabelaComponentes({ componentes }: { componentes: Componente[] }) {
 function Badge({ tipo }: { tipo: ReagenteDiaEscalado["tipo"] }) {
   if (tipo === "pendente") {
     return (
-      <span className="rounded-full bg-alerta/12 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-alerta">
+      <span className="rounded-full bg-alerta/12 px-2 py-0.5 text-xs text-alerta font-medium">
         pendente
       </span>
     );
   }
   if (tipo === "loteMinimo") {
     return (
-      <span className="rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+      <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs text-ink-soft font-medium">
         lote mínimo
       </span>
     );
   }
   return (
-    <span className="rounded-full bg-reagent/12 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide text-reagent">
+    <span className="rounded-full bg-reagent/12 px-2 py-0.5 text-xs text-reagent font-medium">
       preparar no dia
     </span>
   );
@@ -112,7 +112,7 @@ export default function CalculadoraReagentesDia() {
 
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-1 font-mono text-xs font-medium uppercase tracking-[0.12em] text-absorbance">
+      <p className="mb-1 text-xs font-medium text-absorbance">
         Reagentes do dia por nº de amostras
       </p>
       <p className="mb-4 text-xs leading-relaxed text-ink-soft">
@@ -185,7 +185,7 @@ export default function CalculadoraReagentesDia() {
 
               {r.tipo === "escala" && r.componentesEscalados && (
                 <>
-                  <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                  <p className="mb-1 text-xs text-ink-soft font-medium">
                     Para {n} amostra(s)
                   </p>
                   <div className="overflow-x-auto">
@@ -198,7 +198,7 @@ export default function CalculadoraReagentesDia() {
                 <>
                   {r.componentesMinimo && r.componentesMinimo.length > 0 && (
                     <>
-                      <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                      <p className="mb-1 text-xs text-ink-soft font-medium">
                         Receita mínima (não escala pra baixo)
                       </p>
                       <div className="overflow-x-auto">

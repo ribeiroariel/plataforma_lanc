@@ -154,7 +154,7 @@ export function Abas({
               }}
               className="text-sm text-ink-soft transition-colors hover:text-ink"
             >
-              ← {abas[iAtiva - 1].rotulo}
+              Voltar para {abas[iAtiva - 1].rotulo.toLowerCase()}
             </button>
           ) : (
             <span />
@@ -168,7 +168,7 @@ export function Abas({
               }}
               className="inline-flex items-center gap-1.5 rounded bg-signal px-4 py-2 text-sm font-medium text-white transition hover:brightness-110"
             >
-              {abas[iAtiva + 1].rotulo} →
+              Ir para {abas[iAtiva + 1].rotulo.toLowerCase()}
             </button>
           )}
         </div>

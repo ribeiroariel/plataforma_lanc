@@ -1,5 +1,6 @@
 "use client";
 
+import { useAmostrasDoDia } from "./AmostrasDoDia";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { protocoloDoSlug, type ReagenteConsumo } from "@/lib/protocoloEnsaio";
@@ -12,7 +13,6 @@ type Props = {
   projetoId: string;
   projetoTesteId: string;
   slug: string;
-  nRoster: number;
   recipiente: string | null;
   // reagente_nome -> volume real já registrado (µL)
   existentes: Record<string, number | null>;
@@ -28,12 +28,12 @@ export default function ConsumoReal({
   projetoId,
   projetoTesteId,
   slug,
-  nRoster,
   recipiente,
   existentes,
   podeRegistrar,
 }: Props) {
   const protocolo = protocoloDoSlug(slug);
+  const { n: nDia } = useAmostrasDoDia();
   const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [salvandoNome, setSalvandoNome] = useState<string | null>(null);
@@ -47,13 +47,15 @@ export default function ConsumoReal({
   if (!protocolo) return null;
 
   const rec = ehRecipiente(recipiente) ? recipiente : null;
-  const recEfetivo = rec ?? "microplaca_96";
+  // Mesmo recipiente padrão das calculadoras do dia (o 1º modo do ensaio),
+  // para a estimativa daqui bater com o que foi preparado.
+  const recEfetivo = rec ?? protocolo.modos[0]?.recipiente ?? "microplaca_96";
   const fator = !protocolo.escala
     ? 1
     : protocolo.fatores
       ? protocolo.fatores[recEfetivo] ?? 1
       : fatorRecipiente(recEfetivo);
-  const n = nRoster > 0 ? nRoster : 10;
+  const n = Number.isFinite(nDia) ? nDia : 10;
 
   const tubos = (r: ReagenteConsumo) =>
     protocolo.brancoParaCadaAmostra && (r.escopo ?? "ambos") === "ambos" ? 2 : 1;
@@ -97,7 +99,7 @@ export default function ConsumoReal({
 
   return (
     <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-absorbance">
+      <p className="mb-1 text-xs text-absorbance font-medium">
         Consumo real (baixa do estoque)
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -106,11 +108,15 @@ export default function ConsumoReal({
         estoque da solução correspondente é abatido automaticamente. Deixe em
         branco os reagentes de que não quer dar baixa.
       </p>
+      <p className="mb-3 text-xs text-ink-soft">
+        Estimativa para <span className="font-medium text-ink">{n} amostras</span>{" "}
+        — o mesmo nº das abas Preparar e Procedimento (mude lá se precisar).
+      </p>
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+            <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
               <th className="py-1 pr-4 font-medium">Reagente</th>
               <th className="py-1 pr-4 font-medium">Estimado</th>
               <th className="py-1 pr-4 font-medium">Real usado (mL)</th>

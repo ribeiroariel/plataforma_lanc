@@ -17,7 +17,7 @@ export default function RedefinirSenha() {
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-sm flex-col justify-center px-4 py-16">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="text-xs text-ink-soft font-medium">
         Recuperar acesso
       </p>
       <h1 className="mt-1 font-display text-3xl text-ink">Nova senha</h1>

@@ -16,7 +16,7 @@ export default async function PaginaCadastros() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="text-xs text-ink-soft font-medium">
         Administração
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">

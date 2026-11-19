@@ -54,7 +54,7 @@ export default function FotosCaderno({
 
   return (
     <section className="mt-10">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-1 text-xs text-ink-soft font-medium">
         Foto da tabela colada no caderno
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">

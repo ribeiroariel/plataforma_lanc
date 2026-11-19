@@ -58,7 +58,7 @@ export default function OrdemCaixas({
 
   return (
     <section className="rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-1 text-xs text-ink-soft font-medium">
         Ordem das caixas
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">

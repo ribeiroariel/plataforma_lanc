@@ -79,7 +79,7 @@ export default function PlanejarSacrificio({
     <div className="mt-8 flex flex-col gap-8">
       {podeGerenciar && levasDisponiveis.length > 0 && (
         <div className="rounded border border-dashed border-rule p-4">
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          <p className="mb-3 text-xs text-ink-soft font-medium">
             Novo sacrifício
           </p>
           <div className="flex flex-wrap items-end gap-3">
@@ -213,7 +213,7 @@ function PainelSacrificio({
   return (
     <section className="rounded border border-rule bg-paper-raised p-4">
       <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-soft">
-        <span className="rounded-full bg-signal/12 px-2 py-0.5 uppercase tracking-wide text-signal">
+        <span className="rounded bg-signal/12 px-1.5 py-px text-signal font-medium">
           {sacrificio.leva ? `Leva ${sacrificio.leva}` : "Sem leva"}
         </span>
         {sacrificio.data && (
@@ -228,14 +228,20 @@ function PainelSacrificio({
         )}
         <span>· {sacrificio.status}</span>
         <Link
-          href={`/projetos/${projetoId}/sacrificio/${sacrificio.id}`}
-          className="ml-auto rounded border border-rule px-2 py-0.5 text-[11px] normal-case tracking-normal text-ink transition-colors hover:border-signal"
+          href={`/agenda?nova=1&sala=T-129&tipo=sacrificio&projeto=${projetoId}${sacrificio.data ? `&data=${sacrificio.data}` : ""}`}
+          className="ml-auto text-xs text-absorbance hover:underline"
         >
-          Abrir dia →
+          Reservar laboratório
+        </Link>
+        <Link
+          href={`/projetos/${projetoId}/sacrificio/${sacrificio.id}`}
+          className="rounded border border-rule px-2 py-0.5 text-xs text-ink transition-colors hover:border-signal"
+        >
+          Abrir dia
         </Link>
       </div>
 
-      <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-2 text-xs text-ink-soft font-medium">
         Funções do dia
       </p>
       <div className="flex flex-col gap-1.5">

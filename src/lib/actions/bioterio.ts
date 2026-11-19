@@ -104,6 +104,15 @@ export async function registrarMortesCaixa(dados: {
   mortos: number;
 }): Promise<{ erro: string } | { sucesso: true }> {
   const supabase = await createClient();
+  const { data: caixa } = await supabase
+    .from("bioterio_caixas")
+    .select("num_ratos")
+    .eq("id", dados.id)
+    .maybeSingle();
+  if (!caixa) return { erro: "Caixa não encontrada." };
+  if (dados.mortos > caixa.num_ratos) {
+    return { erro: `A caixa tem ${caixa.num_ratos} animais; não dá para registrar mais mortos que isso.` };
+  }
   const { error } = await supabase
     .from("bioterio_caixas")
     .update({ mortos: Math.max(0, dados.mortos) })

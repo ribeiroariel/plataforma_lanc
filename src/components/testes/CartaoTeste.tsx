@@ -15,13 +15,13 @@ export function CartaoTeste({ t, destaque = false }: { t: MeuTeste; destaque?: b
   return (
     <Link
       href={`/projetos/${t.projetoId}/testes/${t.id}`}
-      className={`group flex flex-col rounded-lg border bg-paper-raised p-4 transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_-12px_rgba(0,0,0,0.35)] ${
+      className={`group flex flex-col rounded-lg border bg-paper-raised p-4 transition-colors ${
         destaque ? "border-signal/50" : "border-rule hover:border-absorbance"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-signal">
+          <p className="text-xs text-signal font-medium">
             {t.tecido}
             {t.leva ? ` · Leva ${t.leva}` : ""}
           </p>
@@ -49,9 +49,6 @@ export function CartaoTeste({ t, destaque = false }: { t: MeuTeste; destaque?: b
       </div>
       <span className="mt-3 inline-flex items-center gap-1 font-mono text-[11px] text-absorbance">
         {acao}
-        <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
-          →
-        </span>
       </span>
     </Link>
   );

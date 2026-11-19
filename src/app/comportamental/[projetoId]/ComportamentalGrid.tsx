@@ -205,7 +205,7 @@ export default function ComportamentalGrid({
         <>
           {/* CAMPO ABERTO */}
           <section>
-            <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+            <p className="mb-1 text-xs text-ink-soft font-medium">
               Campo aberto (6 min)
             </p>
             <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -216,7 +216,7 @@ export default function ComportamentalGrid({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                  <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
                     <th className="py-2 pr-3 font-normal">Nº</th>
                     <th className="py-2 pr-3 font-normal">Grupo</th>
                     <th className="py-2 pr-2 font-normal">Quadrados</th>
@@ -312,7 +312,7 @@ export default function ComportamentalGrid({
 
           {/* NADO FORÇADO */}
           <section>
-            <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+            <p className="mb-1 text-xs text-ink-soft font-medium">
               Nado forçado (6 min)
             </p>
             <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -321,7 +321,7 @@ export default function ComportamentalGrid({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+                  <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
                     <th className="py-2 pr-3 font-normal">Nº</th>
                     <th className="py-2 pr-3 font-normal">Grupo</th>
                     <th className="py-2 pr-2 font-normal">Imobilidade (s)</th>

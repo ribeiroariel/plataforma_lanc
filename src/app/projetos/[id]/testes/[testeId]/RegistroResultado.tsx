@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -65,6 +65,37 @@ function absReal(s: string): number {
   if (t.includes(".")) return parseFloat(t);
   const n = parseFloat(t);
   return Number.isNaN(n) ? NaN : n / 1000;
+}
+
+// Faixa de leitura útil dos aparelhos do lab (Infinite / UV-Vis). Fora disso
+// quase sempre é erro de digitação (vírgula esquecida, dígito a mais).
+const ABS_MIN = -0.05;
+const ABS_MAX = 3.5;
+
+/** Aviso (não bloqueio) para um valor que parece errado; null se ok. */
+function avisoDoValor(
+  col: { key: string; absorbancia: boolean },
+  v: number,
+  linha: Record<string, string>
+): string | null {
+  if (!col.absorbancia) return null;
+  if (v > ABS_MAX || v < ABS_MIN) {
+    return `${v.toFixed(3)} está fora da faixa do aparelho. Confira a vírgula.`;
+  }
+  // Branco maior que a amostra dá absorbância líquida negativa.
+  if (col.key === "abs_branco_amostra") {
+    const amostra = absReal(linha.abs_amostra ?? "");
+    if (!Number.isNaN(amostra) && v > amostra) {
+      return "O branco ficou maior que a amostra. Inverteu os poços?";
+    }
+  }
+  if (col.key === "abs_amostra") {
+    const branco = absReal(linha.abs_branco_amostra ?? "");
+    if (!Number.isNaN(branco) && branco > v) {
+      return "A amostra ficou menor que o branco. Inverteu os poços?";
+    }
+  }
+  return null;
 }
 
 function temposDaFamilia(familia: ConfigTeste["familia"]): number[] {
@@ -177,6 +208,8 @@ export default function RegistroResultado({
   const [alterandoStatus, setAlterandoStatus] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
   const [erroCelula, setErroCelula] = useState<Record<string, string>>({});
+  // Aviso já mostrado para a célula: o 2º clique/Enter confirma mesmo assim.
+  const [avisoCelula, setAvisoCelula] = useState<Record<string, string>>({});
 
   const editavel = (rato: string) => podeRegistrar && !confirmados.has(rato);
   const celulaConfirmada = (rato: string, key: string) =>
@@ -381,6 +414,11 @@ export default function RegistroResultado({
       }
       valor = v.toFixed(3);
       setCelula(rato, col.key, valor);
+      const aviso = avisoDoValor(col, v, linhas[rato] ?? {});
+      if (aviso && avisoCelula[chave] !== aviso) {
+        setAvisoCelula((p) => ({ ...p, [chave]: aviso }));
+        return;
+      }
     } else {
       valor = bruto.trim();
       if (valor === "") {
@@ -431,8 +469,45 @@ export default function RegistroResultado({
       return;
     }
     setConfirmadas((prev) => ({ ...prev, [rato]: jaConf }));
+    setAvisoCelula((p) => ({ ...p, [chave]: "" }));
     if (completa) setConfirmados((prev) => new Set(prev).add(rato));
+    focarProxima(rato, col.key);
   }
+
+  // Depois de confirmar, o cursor vai para a próxima célula aberta (mesma
+  // linha, depois o próximo rato) — dá para registrar só com o teclado.
+  function focarProxima(rato: string, key: string) {
+    const ordem: string[] = [];
+    for (const r of roster) for (const c of colunas) ordem.push(`${r.numero}:${c.key}`);
+    const i = ordem.indexOf(`${rato}:${key}`);
+    for (let k = i + 1; k < ordem.length; k++) {
+      const el = document.querySelector<HTMLInputElement>(`input[data-cel="${ordem[k]}"]`);
+      if (el && !el.disabled) {
+        el.focus();
+        el.select();
+        return;
+      }
+    }
+  }
+
+  // Valor digitado e ainda não confirmado não é salvo: avisa antes de sair.
+  const temNaoConfirmado = useMemo(
+    () =>
+      Object.entries(linhas).some(([rato, cols]) =>
+        Object.entries(cols).some(
+          ([k, v]) => String(v).trim() !== "" && !(confirmadas[rato]?.has(k) ?? false) && !confirmados.has(rato)
+        )
+      ),
+    [linhas, confirmadas, confirmados]
+  );
+  useEffect(() => {
+    if (!temNaoConfirmado) return;
+    const aviso = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", aviso);
+    return () => window.removeEventListener("beforeunload", aviso);
+  }, [temNaoConfirmado]);
 
   async function alternarStatus() {
     const novo = status === "concluido" ? "pendente" : "concluido";
@@ -455,7 +530,7 @@ export default function RegistroResultado({
     <div className="mt-6">
       <div className="mb-6 flex items-center gap-3">
         <span
-          className={`rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide ${
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
             status === "concluido"
               ? "bg-sucesso/12 text-sucesso"
               : "bg-reagent/12 text-reagent"
@@ -602,7 +677,7 @@ export default function RegistroResultado({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+            <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
               <th className="py-2 pr-3 font-normal">Nº</th>
               {temLevas && <th className="py-2 pr-3 font-normal">Leva</th>}
               <th className="py-2 pr-3 font-normal">Grupo</th>
@@ -628,7 +703,7 @@ export default function RegistroResultado({
                 <tr key={rato} className="border-b border-rule/60">
                   <td className="py-1.5 pr-3 font-mono text-ink">
                     {r.numero}
-                    {travado && <span title="confirmado"> 🔒</span>}
+                    {travado && <span className="ml-1 text-xs text-sucesso">✓</span>}
                   </td>
                   {temLevas && (
                     <td className="py-1.5 pr-3 font-mono text-ink-soft">{r.leva}</td>
@@ -645,11 +720,24 @@ export default function RegistroResultado({
                           <input
                             type="text"
                             inputMode="decimal"
+                            data-cel={chaveCel}
+                            aria-label={`Rato ${rato}, ${c.label}`}
                             value={linhas[rato]?.[c.key] ?? ""}
-                            onChange={(e) => setCelula(rato, c.key, e.target.value)}
+                            onChange={(e) => {
+                              setCelula(rato, c.key, e.target.value);
+                              if (avisoCelula[chaveCel]) setAvisoCelula((p) => ({ ...p, [chaveCel]: "" }));
+                            }}
                             onBlur={() => normalizarCelula(rato, c)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && podeRegistrar) {
+                                e.preventDefault();
+                                confirmarCelula(rato, c);
+                              }
+                            }}
                             disabled={!celulaEditavel(rato, c.key)}
-                            className={`${INPUT_SM} w-20`}
+                            className={`${INPUT_SM} w-20 ${
+                              avisoCelula[chaveCel] ? "border-reagent" : ""
+                            } ${conf ? "bg-sucesso/[0.06]" : ""}`}
                           />
                           {podeRegistrar &&
                             (conf ? (
@@ -672,8 +760,13 @@ export default function RegistroResultado({
                             ))}
                         </div>
                         {erroCelula[chaveCel] && (
-                          <span className="mt-0.5 block max-w-[8rem] text-[10px] leading-tight text-alerta">
+                          <span className="mt-0.5 block max-w-[9rem] text-[11px] leading-tight text-alerta">
                             {erroCelula[chaveCel]}
+                          </span>
+                        )}
+                        {avisoCelula[chaveCel] && (
+                          <span className="mt-0.5 block max-w-[10rem] text-[11px] leading-tight text-reagent">
+                            {avisoCelula[chaveCel]} Enter de novo grava assim mesmo.
                           </span>
                         )}
                       </td>
@@ -682,7 +775,7 @@ export default function RegistroResultado({
                   {config.familia !== "simples" && (
                     <td className="py-1.5 pr-2 font-mono tabular-nums text-ink">
                       {fmt(valor, config.familia === "curva" ? 3 : 4)}
-                      {travado && <span title="valor travado"> 🔒</span>}
+                      {travado && <span className="ml-1 text-xs text-ink-soft">(travado)</span>}
                     </td>
                   )}
                   <td className="py-1.5 pl-2">
@@ -716,10 +809,9 @@ export default function RegistroResultado({
       {podeRegistrar && (
         <div className="mt-4 space-y-1">
           <p className="max-w-2xl text-xs leading-relaxed text-ink-soft">
-            Confirme célula por célula no ✓ ao lado de cada leitura. Cada célula
-            confirmada é salva na hora e travada — não dá pra alterar depois, e
-            só o que é confirmado fica salvo. Quando a última célula da linha é
-            confirmada, o valor calculado fecha e trava automaticamente.
+            Digite a leitura e aperte Enter (ou o ✓): a célula é gravada,
+            travada, e o cursor vai para a próxima. Só o que foi confirmado fica
+            salvo, e depois de gravado não dá para alterar.
           </p>
           {mensagem && <p className="text-sm text-alerta">{mensagem}</p>}
         </div>
@@ -728,7 +820,7 @@ export default function RegistroResultado({
       {/* Curva cinética por rato (CAT/SOD) — pra ver o decaimento */}
       {ehCinetico && ratosComCurva.length > 0 && (
         <div className="mt-10">
-          <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+          <p className="mb-2 text-xs text-ink-soft font-medium">
             Curva cinética por rato (absorbância × tempo)
           </p>
           <p className="mb-3 text-xs text-ink-soft">
@@ -799,7 +891,7 @@ function GraficoGrupos({
 
   return (
     <div className="mt-10">
-      <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-2 text-xs text-ink-soft font-medium">
         Valores por grupo (visão geral)
       </p>
       <div className="h-64 w-full rounded border border-rule bg-paper-raised p-2">
@@ -839,7 +931,7 @@ function PainelSessao({
 }) {
   return (
     <div className="mb-6 rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-2 text-xs text-ink-soft font-medium">
         {titulo}
       </p>
       {children}
@@ -912,7 +1004,7 @@ function PainelBrancos({
         />
         {confirmado ? (
           <span title="confirmado" className="text-sucesso">
-            {podeRegistrar ? "✓" : "🔒"}
+            ✓
           </span>
         ) : (
           podeRegistrar && (

@@ -10,7 +10,7 @@ export default async function LayoutBolsista({
   if (usuario && !usuario.aprovado) {
     return (
       <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+        <p className="text-xs text-ink-soft font-medium">
           Cadastro em análise
         </p>
         <h1 className="mt-1 font-display text-3xl leading-tight text-ink">

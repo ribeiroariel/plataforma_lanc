@@ -61,7 +61,7 @@ function LinhaCadastro({ pendente }: { pendente: CadastroPendente }) {
               type="button"
               onClick={aprovar}
               disabled={pendente_}
-              className="rounded bg-signal px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-paper hover:bg-ink disabled:opacity-50"
+              className="rounded bg-signal px-3 py-1.5 text-xs text-paper hover:bg-ink disabled:opacity-50 font-medium"
             >
               {pendente_ ? "..." : "Aprovar"}
             </button>
@@ -69,7 +69,7 @@ function LinhaCadastro({ pendente }: { pendente: CadastroPendente }) {
               type="button"
               onClick={() => setConfirmandoRecusa(true)}
               disabled={pendente_}
-              className="rounded border border-rule px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-ink-soft hover:border-alerta hover:text-alerta disabled:opacity-50"
+              className="rounded border border-rule px-3 py-1.5 text-xs text-ink-soft hover:border-alerta hover:text-alerta disabled:opacity-50 font-medium"
             >
               Recusar
             </button>
@@ -81,7 +81,7 @@ function LinhaCadastro({ pendente }: { pendente: CadastroPendente }) {
               type="button"
               onClick={recusar}
               disabled={pendente_}
-              className="rounded bg-alerta px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-paper hover:bg-ink disabled:opacity-50"
+              className="rounded bg-alerta px-3 py-1.5 text-xs text-paper hover:bg-ink disabled:opacity-50 font-medium"
             >
               {pendente_ ? "..." : "Sim, recusar"}
             </button>
@@ -89,7 +89,7 @@ function LinhaCadastro({ pendente }: { pendente: CadastroPendente }) {
               type="button"
               onClick={() => setConfirmandoRecusa(false)}
               disabled={pendente_}
-              className="rounded border border-rule px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-ink-soft hover:text-ink disabled:opacity-50"
+              className="rounded border border-rule px-3 py-1.5 text-xs text-ink-soft hover:text-ink disabled:opacity-50 font-medium"
             >
               Cancelar
             </button>

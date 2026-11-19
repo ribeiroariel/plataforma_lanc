@@ -89,9 +89,10 @@ export default async function PaginaTabelaDoses({
             grupo: nomeGrupo.get(c.grupo_id) ?? "?",
             leva: c.leva ?? 1,
             pesoMedio,
-            numRatos: c.num_ratos,
+            // Vivos: a dose é preparada para quem está na caixa hoje.
+            numRatos: Math.max(0, c.num_ratos - (c.mortos ?? 0)),
             dose,
-            total: dose != null ? dose * c.num_ratos : null,
+            total: dose != null ? dose * Math.max(0, c.num_ratos - (c.mortos ?? 0)) : null,
           };
         });
       return { proc: p, linhas };

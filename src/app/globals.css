@@ -203,16 +203,6 @@ body {
 .anim-gaveta {
   animation: lanc-gaveta 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-/* Entrada em cascata: filhos diretos aparecem um após o outro. */
-.anim-cascata > * {
-  animation: lanc-entrada 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-.anim-cascata > *:nth-child(2) { animation-delay: 40ms; }
-.anim-cascata > *:nth-child(3) { animation-delay: 80ms; }
-.anim-cascata > *:nth-child(4) { animation-delay: 120ms; }
-.anim-cascata > *:nth-child(5) { animation-delay: 160ms; }
-.anim-cascata > *:nth-child(n + 6) { animation-delay: 200ms; }
-
 /* Esqueleto de carregamento (loading.tsx). */
 .esqueleto {
   border-radius: 6px;

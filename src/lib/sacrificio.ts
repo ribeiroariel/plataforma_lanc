@@ -143,3 +143,10 @@ export function orgaosDoProjeto(
     (ORGAO_TECIDOS[o.valor] ?? []).some((t) => set.has(t))
   ).map((o) => o.valor);
 }
+
+/** Órgãos dissecáveis que alimentam um tecido de análise (ex.: rins → os dois rins). */
+export function orgaosDoTecido(tecido: string): string[] {
+  return Object.entries(ORGAO_TECIDOS)
+    .filter(([, tecidos]) => tecidos.includes(tecido))
+    .map(([orgao]) => orgao);
+}

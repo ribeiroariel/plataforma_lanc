@@ -248,7 +248,7 @@ export default async function PainelOrientadora() {
     <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
       {/* Hero editorial */}
       <header className="border-b border-rule pb-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-signal">
+        <p className="text-xs text-signal font-medium">
           LANC · Painel da orientadora
         </p>
         <h1 className="mt-3 font-display text-4xl leading-[1.05] text-ink sm:text-5xl">
@@ -259,7 +259,7 @@ export default async function PainelOrientadora() {
           projetos e a atividade de bancada — para acompanhar de perto sem
           precisar perguntar.
         </p>
-        <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-soft/70">
+        <p className="mt-4 text-xs text-ink-soft/70 font-medium">
           {dataHoje()}
         </p>
       </header>
@@ -271,15 +271,10 @@ export default async function PainelOrientadora() {
             key={k.rotulo}
             className="relative overflow-hidden rounded-lg border border-rule bg-paper-raised px-4 py-4"
           >
-            <span
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-[3px]"
-              style={{ background: k.cor }}
-            />
             <p className="font-display text-4xl leading-none tabular-nums text-ink">
               {k.valor}
             </p>
-            <p className="mt-2 font-mono text-[10px] uppercase leading-tight tracking-[0.1em] text-ink-soft">
+            <p className="mt-2 text-xs leading-tight text-ink-soft font-medium">
               {k.rotulo}
             </p>
           </div>
@@ -314,7 +309,7 @@ export default async function PainelOrientadora() {
 
       {/* Projetos */}
       <section className="mt-16">
-        <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-signal">
+        <p className="mb-4 text-xs text-signal font-medium">
           Projetos
         </p>
         {(!projetos || projetos.length === 0) && (
@@ -334,14 +329,14 @@ export default async function PainelOrientadora() {
               <Link
                 key={p.id}
                 href={`/projetos/${p.id}?aba=resultados`}
-                className="group block rounded-lg border border-rule bg-paper-raised p-4 transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-signal"
+                className="group block rounded-lg border border-rule bg-paper-raised p-4 transition-colors hover:border-signal"
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-display text-lg leading-snug text-ink group-hover:text-signal">
                     {p.nome}
                   </p>
                   {p.finalizado && (
-                    <span className="shrink-0 rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wide text-ink-soft">
+                    <span className="shrink-0 rounded-full bg-ink/5 px-2 py-0.5 text-xs text-ink-soft font-medium">
                       finalizado
                     </span>
                   )}

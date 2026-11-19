@@ -21,6 +21,9 @@ import {
   desvioPadrao,
   doseMlPorAnimal,
   diasRestantes,
+  diaDoTratamento,
+  tipoReservaDoProcedimento,
+  vivosNaCaixa,
   numeracaoCaixas,
   siglaVia,
   textoDose,
@@ -73,7 +76,9 @@ export default function Bioterio({
         numero: numeros[i],
         grupo: nomeGrupo.get(c.grupo_id) ?? "?",
         pesoMedio: media((c.pesos ?? []).map(Number)),
-        numRatos: c.num_ratos,
+        // Vivos (animais da caixa menos os mortos) — é o que entra no
+        // volume total de dose a preparar.
+        numRatos: Math.max(0, c.num_ratos - (c.mortos ?? 0)),
       },
     ])
   );
@@ -100,6 +105,8 @@ export default function Bioterio({
         </div>
       )}
 
+      {caixas.length > 0 && <ResumoGrupos grupos={grupos} caixas={caixas} />}
+
       <CaixasSection
         projetoId={projetoId}
         grupos={grupos}
@@ -122,6 +129,68 @@ export default function Bioterio({
         />
       )}
     </div>
+  );
+}
+
+/* ─────────────────────────── Resumo ─────────────────────────── */
+
+// Quantos animais cada grupo tem hoje — o número que vai para doses,
+// sacrifício e testes (os mortos já descontados).
+function ResumoGrupos({ grupos, caixas }: { grupos: Grupo[]; caixas: CaixaRow[] }) {
+  const linhas = grupos
+    .map((g) => {
+      const doGrupo = caixas.filter((c) => c.grupo_id === g.id);
+      const total = doGrupo.reduce((s, c) => s + c.num_ratos, 0);
+      const mortos = doGrupo.reduce((s, c) => s + (c.mortos ?? 0), 0);
+      return { g, caixas: doGrupo.length, total, mortos, vivos: total - mortos };
+    })
+    .filter((l) => l.caixas > 0);
+  const soma = linhas.reduce(
+    (a, l) => ({ total: a.total + l.total, mortos: a.mortos + l.mortos }),
+    { total: 0, mortos: 0 }
+  );
+  return (
+    <section>
+      <h2 className="mb-2 text-sm font-medium text-ink">Animais hoje</h2>
+      <div className="overflow-x-auto rounded border border-rule">
+        <table className="w-full text-sm">
+          <thead className="bg-paper-raised text-left text-xs text-ink-soft">
+            <tr>
+              <th className="px-3 py-2 font-medium">Grupo</th>
+              <th className="px-3 py-2 text-right font-medium">Caixas</th>
+              <th className="px-3 py-2 text-right font-medium">Alojados</th>
+              <th className="px-3 py-2 text-right font-medium">Mortos</th>
+              <th className="px-3 py-2 text-right font-medium">Vivos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((l) => (
+              <tr key={l.g.id} className="border-t border-rule/70">
+                <td className="px-3 py-1.5 text-ink">{l.g.nome}</td>
+                <td className="px-3 py-1.5 text-right font-mono text-ink-soft">{l.caixas}</td>
+                <td className="px-3 py-1.5 text-right font-mono text-ink-soft">{l.total}</td>
+                <td className={`px-3 py-1.5 text-right font-mono ${l.mortos > 0 ? "text-alerta" : "text-ink-soft"}`}>
+                  {l.mortos}
+                </td>
+                <td className="px-3 py-1.5 text-right font-mono font-medium text-ink">{l.vivos}</td>
+              </tr>
+            ))}
+            <tr className="border-t border-rule bg-paper-raised">
+              <td className="px-3 py-1.5 text-ink-soft">Total</td>
+              <td />
+              <td className="px-3 py-1.5 text-right font-mono text-ink-soft">{soma.total}</td>
+              <td className="px-3 py-1.5 text-right font-mono text-ink-soft">{soma.mortos}</td>
+              <td className="px-3 py-1.5 text-right font-mono font-medium text-ink">
+                {soma.total - soma.mortos}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-1.5 text-xs text-ink-soft">
+        Os mortos registrados aqui já saem das doses, do sacrifício e da contagem dos testes.
+      </p>
+    </section>
   );
 }
 
@@ -180,7 +249,7 @@ function CaixasSection({
 
   return (
     <section>
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      <p className="mb-1 text-xs text-signal font-medium">
         Caixas dos animais
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -199,7 +268,7 @@ function CaixasSection({
             return (
               <div key={c.id} className="flex flex-col gap-2">
                 {mostraCabecalho && (
-                  <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.12em] text-signal">
+                  <p className="mt-2 text-xs text-signal font-medium">
                     Leva {leva}
                   </p>
                 )}
@@ -280,7 +349,7 @@ function CaixaItem({
     while (base.length < caixa.num_ratos) base.push("");
     return base;
   });
-  const [mortos, setMortos] = useState(String(caixa.mortos));
+  const [confirmaRemover, setConfirmaRemover] = useState(false);
 
   const pesosNum = pesos.map((s) => num(s)).filter((n): n is number => n != null);
   const m = media(pesosNum);
@@ -323,10 +392,15 @@ function CaixaItem({
       else router.refresh();
     });
   }
-  function salvarMortos(v: string) {
-    setMortos(v);
+  // Mortos: só por botão (−/+), entre 0 e o nº de animais da caixa. Antes era
+  // um campo que salvava a cada tecla ("12" gravava 1 e depois 12).
+  function mudarMortos(delta: number) {
+    const novo = Math.min(caixa.num_ratos, Math.max(0, (caixa.mortos ?? 0) + delta));
+    if (novo === caixa.mortos) return;
+    setErro(null);
     iniciar(async () => {
-      await registrarMortesCaixa({ projetoId, id: caixa.id, mortos: int0(v) });
+      const r = await registrarMortesCaixa({ projetoId, id: caixa.id, mortos: novo });
+      if (r && "erro" in r) setErro(r.erro);
       router.refresh();
     });
   }
@@ -348,32 +422,52 @@ function CaixaItem({
         <span className="font-mono text-ink">Caixa {numero}</span>
         <span className="text-ink">{nomeGrupo.get(caixa.grupo_id) ?? "?"}</span>
         {numeroLevas > 1 && (
-          <span className="rounded-full bg-signal/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+          <span className="rounded-full bg-signal/12 px-2 py-0.5 text-xs text-signal font-medium">
             Leva {caixa.leva ?? 1}
           </span>
         )}
-        <span className="font-mono text-ink-soft">{caixa.num_ratos} animais</span>
+        <span className="font-mono text-ink-soft">
+          {vivosNaCaixa(caixa)}
+          {caixa.mortos > 0 ? ` de ${caixa.num_ratos}` : ""} {vivosNaCaixa(caixa) === 1 ? "animal" : "animais"}
+        </span>
         {m != null && (
           <span className="font-mono text-xs text-ink-soft">
             · {fmt(m)}{dp != null ? ` ± ${fmt(dp)}` : ""} g
           </span>
         )}
         {caixa.mortos > 0 && (
-          <span className="rounded-full bg-alerta/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-alerta">
+          <span className="rounded-full bg-alerta/12 px-2 py-0.5 text-xs text-alerta font-medium">
             {caixa.mortos} morto(s)
           </span>
         )}
         {podeEditar && (
           <span className="ml-auto flex items-center gap-3">
-            <label className="flex items-center gap-1 text-xs text-ink-soft">
+            <span className="flex items-center gap-1 text-xs text-ink-soft">
               mortos
-              <input
-                inputMode="numeric"
-                value={mortos}
-                onChange={(e) => salvarMortos(e.target.value)}
-                className={`${INPUT_SM} w-12`}
-              />
-            </label>
+              <span className="inline-flex items-center overflow-hidden rounded border border-rule">
+                <button
+                  type="button"
+                  aria-label="Um morto a menos"
+                  disabled={pend || caixa.mortos <= 0}
+                  onClick={() => mudarMortos(-1)}
+                  className="px-2 py-0.5 text-ink-soft hover:bg-ink/5 disabled:opacity-40"
+                >
+                  −
+                </button>
+                <span className="min-w-[1.75rem] border-x border-rule px-1 text-center font-mono text-ink">
+                  {caixa.mortos ?? 0}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Registrar um morto"
+                  disabled={pend || caixa.mortos >= caixa.num_ratos}
+                  onClick={() => mudarMortos(1)}
+                  className="px-2 py-0.5 text-ink-soft hover:bg-ink/5 disabled:opacity-40"
+                >
+                  +
+                </button>
+              </span>
+            </span>
             <button
               type="button"
               onClick={() => setEditando(true)}
@@ -418,7 +512,7 @@ function CaixaItem({
       {acima && <p className="mt-1 text-xs text-alerta">Acima do limite ({limite}/caixa).</p>}
 
       <div className="mt-3">
-        <p className="mb-1 font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Peso de cada rato (g)
         </p>
         <div className="flex flex-wrap gap-2">
@@ -449,9 +543,21 @@ function CaixaItem({
         <button type="button" onClick={() => setEditando(false)} className="text-xs text-ink-soft hover:underline">
           cancelar
         </button>
-        <button type="button" onClick={remover} disabled={pend} className="ml-auto text-xs text-alerta hover:underline">
-          remover
-        </button>
+        {confirmaRemover ? (
+          <span className="ml-auto flex items-center gap-2 text-xs">
+            Remover a caixa {numero}?
+            <button type="button" onClick={remover} disabled={pend} className="font-medium text-alerta hover:underline">
+              Sim, remover
+            </button>
+            <button type="button" onClick={() => setConfirmaRemover(false)} className="text-ink-soft hover:underline">
+              Não
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setConfirmaRemover(true)} disabled={pend} className="ml-auto text-xs text-alerta hover:underline">
+            remover caixa
+          </button>
+        )}
       </div>
     </div>
   );
@@ -500,7 +606,7 @@ function CriarCaixas({
 
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-3 text-xs text-ink-soft font-medium">
         Adicionar caixas
       </p>
       {numeroLevas > 1 && (
@@ -572,7 +678,7 @@ function ProcedimentosSection({
 
   return (
     <section>
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      <p className="mb-1 text-xs text-signal font-medium">
         Procedimentos
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -629,6 +735,7 @@ function ProcedimentoItem({
   const router = useRouter();
   const [pend, iniciar] = useTransition();
   const [editando, setEditando] = useState(false);
+  const [confirmaRemover, setConfirmaRemover] = useState(false);
 
   if (editando) {
     return (
@@ -643,11 +750,13 @@ function ProcedimentoItem({
   }
 
   const rest = diasRestantes(proc);
+  const diaAtual = diaDoTratamento(proc);
   const ids = proc.caixa_ids ?? [];
+  const linkReserva = `/agenda?nova=1&sala=T-206&tipo=${tipoReservaDoProcedimento(proc)}&projeto=${projetoId}`;
   return (
     <div className="rounded border border-rule bg-paper-raised p-3 text-sm">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="rounded-full bg-signal/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-signal">
+        <span className="rounded-full bg-signal/12 px-2 py-0.5 text-xs text-signal font-medium">
           {proc.tipo === "inducao" ? "Indução" : "Tratamento"}
         </span>
         <span className="font-medium text-ink">{proc.substancia ?? "—"}</span>
@@ -663,26 +772,47 @@ function ProcedimentoItem({
             · {proc.dias} dias{rest != null ? (rest === 0 ? " (concluído)" : `, faltam ${rest}`) : ""}
           </span>
         )}
-        {podeEditar && (
-          <span className="ml-auto flex gap-3">
-            <button type="button" onClick={() => setEditando(true)} className="text-xs text-signal hover:underline">
-              editar
-            </button>
-            <button
-              type="button"
-              disabled={pend}
-              onClick={() =>
-                iniciar(async () => {
-                  await removerProcedimento({ projetoId, id: proc.id });
-                  router.refresh();
-                })
-              }
-              className="text-xs text-alerta hover:underline"
-            >
-              remover
-            </button>
+        {diaAtual && rest !== 0 && (
+          <span className="rounded bg-pyrogallol/12 px-1.5 py-px text-xs font-medium text-pyrogallol">
+            hoje é o dia {diaAtual.dia} de {diaAtual.total}
           </span>
         )}
+        <span className="ml-auto flex items-center gap-3">
+          <Link href={linkReserva} className="text-xs text-absorbance hover:underline">
+            reservar o T-206
+          </Link>
+          {podeEditar && !confirmaRemover && (
+            <>
+              <button type="button" onClick={() => setEditando(true)} className="text-xs text-signal hover:underline">
+                editar
+              </button>
+              <button type="button" onClick={() => setConfirmaRemover(true)} className="text-xs text-alerta hover:underline">
+                remover
+              </button>
+            </>
+          )}
+          {podeEditar && confirmaRemover && (
+            <span className="flex items-center gap-2 text-xs">
+              Remover este procedimento?
+              <button
+                type="button"
+                disabled={pend}
+                onClick={() =>
+                  iniciar(async () => {
+                    await removerProcedimento({ projetoId, id: proc.id });
+                    router.refresh();
+                  })
+                }
+                className="font-medium text-alerta hover:underline"
+              >
+                Sim
+              </button>
+              <button type="button" onClick={() => setConfirmaRemover(false)} className="text-ink-soft hover:underline">
+                Não
+              </button>
+            </span>
+          )}
+        </span>
       </div>
       <div className="mt-2 overflow-x-auto">
         <table className="text-xs">

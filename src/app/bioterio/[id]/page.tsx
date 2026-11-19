@@ -61,9 +61,9 @@ export default async function PaginaBioterioProjeto({
   if (!souMembro && !souOrientador) notFound();
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <Link href="/bioterio" className="text-sm text-ink-soft hover:text-signal">
-        ← Procedimentos de biotério
+        ← Biotério
       </Link>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
         {projeto.nome}

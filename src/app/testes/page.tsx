@@ -1,7 +1,7 @@
 export default function IndiceTestes() {
   return (
     <div className="flex min-h-[40vh] flex-col justify-center">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="text-xs text-ink-soft font-medium">
         Protocolos
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">

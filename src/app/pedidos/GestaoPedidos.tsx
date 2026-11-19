@@ -57,7 +57,7 @@ function Secao({
 }) {
   return (
     <section>
-      <p className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      <p className="mb-2 text-xs text-signal font-medium">
         {titulo}
       </p>
       {itens.length === 0 ? (
@@ -108,7 +108,7 @@ function LinhaPedido({ pedido }: { pedido: PedidoRow }) {
           <span className="font-mono text-xs text-ink-soft">· {pedido.quantidade}</span>
         )}
         {pedido.categoria && (
-          <span className="rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-soft">
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs text-ink-soft font-medium">
             {pedido.categoria === "outro" ? "Outro" : nomeCategoria(pedido.categoria)}
           </span>
         )}

@@ -132,7 +132,7 @@ export default function ResultadosProjeto({
               href={`/projetos/${projetoId}/testes/${teste.id}`}
               className="text-sm text-absorbance hover:underline"
             >
-              Abrir o teste →
+              Abrir o teste
             </Link>
           }
         />
@@ -144,7 +144,7 @@ export default function ResultadosProjeto({
           <div className="overflow-x-auto rounded-lg border border-rule bg-paper-raised">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-rule text-left font-mono text-[10px] uppercase tracking-wide text-ink-soft">
+                <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
                   <th className="px-3 py-2 font-normal">Grupo</th>
                   <th className="px-2 py-2 text-right font-normal">n</th>
                   <th className="px-2 py-2 text-right font-normal">Média</th>

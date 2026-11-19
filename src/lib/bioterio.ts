@@ -138,3 +138,26 @@ export function diasRestantes(p: ProcedimentoRow): number | null {
   const fim = inicio + p.dias * 24 * 3600 * 1000;
   return Math.max(0, Math.ceil((fim - Date.now()) / (24 * 3600 * 1000)));
 }
+
+/** Em que dia do tratamento estamos (1..dias), ou null se não começou/sem datas. */
+export function diaDoTratamento(p: ProcedimentoRow): { dia: number; total: number } | null {
+  if (p.tipo !== "tratamento" || !p.dias || !p.inicio) return null;
+  const inicio = new Date(`${p.inicio}T00:00:00-03:00`).getTime();
+  if (Number.isNaN(inicio)) return null;
+  const dia = Math.floor((Date.now() - inicio) / (24 * 3600 * 1000)) + 1;
+  if (dia < 1) return null;
+  return { dia: Math.min(dia, p.dias), total: p.dias };
+}
+
+/** Tipo de reserva da agenda (sala T-206) que corresponde ao procedimento. */
+export function tipoReservaDoProcedimento(p: ProcedimentoRow): string {
+  if (p.tipo === "inducao") return "inducao";
+  if (p.via === "gavagem") return "gavagem";
+  if (p.via === "sc") return "subcutanea";
+  if (p.via === "ip") return "intraperitoneal";
+  return "tratamento";
+}
+
+export function vivosNaCaixa(c: { num_ratos: number; mortos: number | null }): number {
+  return Math.max(0, c.num_ratos - (c.mortos ?? 0));
+}

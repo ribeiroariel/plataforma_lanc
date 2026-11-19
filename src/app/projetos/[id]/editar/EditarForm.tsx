@@ -197,7 +197,7 @@ export default function EditarForm({
         <div className="overflow-x-auto">
           <table className="text-sm">
             <thead>
-              <tr className="text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <tr className="text-left text-xs text-ink-soft font-medium">
                 <th className="pb-2 pr-3 font-normal">Grupo</th>
                 {Array.from({ length: numeroLevas }, (_, l) => (
                   <th key={l} className="pb-2 pr-2 font-normal">Leva {l + 1}</th>

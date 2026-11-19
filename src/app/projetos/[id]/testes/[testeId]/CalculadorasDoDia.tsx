@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   protocoloDoSlug,
@@ -12,7 +11,7 @@ import {
   nomeRecipiente,
   type Recipiente,
 } from "@/lib/recipientes";
-import { INPUT_SM } from "@/lib/estilos";
+import { CampoAmostras, useAmostrasDoDia } from "./AmostrasDoDia";
 
 function fmtVol(ul: number): string {
   if (!Number.isFinite(ul)) return "—";
@@ -24,25 +23,18 @@ function fmtVol(ul: number): string {
 
 export default function CalculadorasDoDia({
   slug,
-  nRoster,
   recipiente,
 }: {
   slug: string;
-  nRoster: number;
   recipiente: string | null;
 }) {
   const protocolo = protocoloDoSlug(slug);
-  const [amostras, setAmostras] = useState(String(nRoster > 0 ? nRoster : 10));
-
-  const n = useMemo(() => {
-    const v = parseInt(amostras, 10);
-    return Number.isFinite(v) && v > 0 ? v : NaN;
-  }, [amostras]);
+  const { n } = useAmostrasDoDia();
 
   if (!protocolo) {
     return (
       <div className="mt-6 rounded border border-rule bg-paper-raised p-4 text-sm text-ink-soft">
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em]">
+        <p className="mb-1 text-xs font-medium">
           Reagentes do dia
         </p>
         <p>
@@ -89,13 +81,14 @@ export default function CalculadorasDoDia({
 
   return (
     <div className="mt-6 rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-absorbance">
+      <p className="mb-1 text-xs text-absorbance font-medium">
         Consumo de reagentes
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
         Quanto de cada reagente o ensaio consome, por amostra e no total (com +10%
-        de margem). Os volumes vêm do protocolo do manual. Ajuste o nº de amostras
-        se incluir brancos ou curva-padrão.{" "}
+        de margem). Os volumes vêm do protocolo do manual. O nº de amostras já
+        desconta os ratos mortos ou fora do teste; ajuste se for rodar em mais de
+        uma sessão.{" "}
         {protocolo.escala
           ? rec
             ? `Recipiente: ${nomeRecipiente(rec)} — os volumes já estão ajustados a ele (${fator}× a microplaca 96).`
@@ -103,16 +96,9 @@ export default function CalculadorasDoDia({
           : "Ensaio feito em tubo de volume fixo — o consumo não muda com o recipiente."}
       </p>
 
-      <label className="mb-4 flex w-fit flex-col gap-1 text-xs text-ink-soft">
-        Nº de amostras
-        <input
-          type="text"
-          inputMode="numeric"
-          value={amostras}
-          onChange={(e) => setAmostras(e.target.value)}
-          className={`${INPUT_SM} w-24`}
-        />
-      </label>
+      <div className="mb-4">
+        <CampoAmostras rotulo="Nº de amostras" />
+      </div>
 
       {!Number.isFinite(n) ? (
         <p className="text-xs text-alerta">
@@ -122,7 +108,7 @@ export default function CalculadorasDoDia({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+              <tr className="border-b border-rule text-left text-xs text-ink-soft font-medium">
                 <th className="py-1 pr-4 font-medium">Reagente</th>
                 <th className="py-1 pr-4 font-medium">µL/amostra</th>
                 <th className="py-1 text-right font-medium">
@@ -139,14 +125,14 @@ export default function CalculadorasDoDia({
                       <span
                         className={
                           r.origem === "dia"
-                            ? "rounded-full bg-reagent/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-reagent"
-                            : "rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-soft"
+                            ? "rounded bg-reagent/12 px-1.5 py-0.5 text-xs text-reagent"
+                            : "rounded bg-ink/5 px-1.5 py-0.5 text-xs text-ink-soft"
                         }
                       >
                         {r.origem === "dia" ? "preparar no dia" : "estoque"}
                       </span>
                       {rotuloEscopo(r) && (
-                        <span className="rounded-full bg-ink/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-ink-soft">
+                        <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs text-ink-soft font-medium">
                           {rotuloEscopo(r)}
                         </span>
                       )}

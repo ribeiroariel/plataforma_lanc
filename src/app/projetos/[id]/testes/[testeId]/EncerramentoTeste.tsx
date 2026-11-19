@@ -67,7 +67,7 @@ export default function EncerramentoTeste({
     if (!podeEncerrar) return null;
     return (
       <section className="mt-10 rounded border border-rule bg-paper-raised p-4">
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-1 text-xs text-ink-soft font-medium">
           Encerrar teste
         </p>
         <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">
@@ -93,7 +93,7 @@ export default function EncerramentoTeste({
   // Encerrado: banner travado + impressão.
   return (
     <section className="mt-10 rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      <p className="mb-1 text-xs text-signal font-medium">
         🔒 Teste encerrado
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">

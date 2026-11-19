@@ -101,7 +101,7 @@ export default async function PaginaFuncaoSacrificio({
       >
         ← Minhas funções
       </Link>
-      <p className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="mt-1 text-xs text-ink-soft font-medium">
         Função no sacrifício
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
@@ -114,7 +114,7 @@ export default async function PaginaFuncaoSacrificio({
       </p>
 
       <section className="mt-6">
-        <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-soft">
+        <p className="mb-2 text-xs text-ink-soft font-medium">
           Equipe desta função
         </p>
         <div className="flex flex-wrap gap-2">

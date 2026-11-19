@@ -49,7 +49,7 @@ export default function NovoPedido() {
 
   return (
     <section className="mt-10 border-t border-rule pt-6">
-      <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+      <p className="mb-1 text-xs text-signal font-medium">
         Pedidos
       </p>
       <p className="mb-3 max-w-2xl text-xs leading-relaxed text-ink-soft">

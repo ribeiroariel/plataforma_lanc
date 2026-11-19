@@ -76,7 +76,7 @@ export default function GestaoEstoque({
         const doGrupo = itens.filter((i) => i.categoria === cat.valor);
         return (
           <section key={cat.valor}>
-            <p className="mb-1 font-mono text-xs uppercase tracking-[0.12em] text-signal">
+            <p className="mb-1 text-xs text-signal font-medium">
               {cat.rotulo}
             </p>
             <p className="mb-3 text-xs text-ink-soft">{cat.descricao}</p>
@@ -173,7 +173,7 @@ function AdicionarForm({
 
   return (
     <div className="rounded border border-rule bg-paper-raised p-4">
-      <p className="mb-3 font-mono text-xs uppercase tracking-[0.12em] text-ink-soft">
+      <p className="mb-3 text-xs text-ink-soft font-medium">
         Novo item no estoque
       </p>
       <div className="flex flex-col gap-3">
@@ -374,7 +374,7 @@ function LinhaEstoque({
           <span className="text-xs text-ink-soft">· {nomeLocalizacao(item.localizacao)}</span>
         )}
         {baixo && (
-          <span className="rounded-full bg-alerta/12 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-alerta">
+          <span className="rounded-full bg-alerta/12 px-2 py-0.5 text-xs text-alerta font-medium">
             baixo
           </span>
         )}

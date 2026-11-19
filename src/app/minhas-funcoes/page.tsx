@@ -54,8 +54,8 @@ export default async function MinhasFuncoes() {
               : ""}
           </p>
         </div>
-        <span className="shrink-0 font-mono text-xs uppercase text-signal">
-          Abrir →
+        <span className="shrink-0 text-xs text-signal font-medium">
+          Abrir
         </span>
       </Link>
     );
@@ -63,7 +63,7 @@ export default async function MinhasFuncoes() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink-soft">
+      <p className="text-xs text-ink-soft font-medium">
         Bancada
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
@@ -83,7 +83,7 @@ export default async function MinhasFuncoes() {
 
       {ativos.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 border-t-2 border-ink pt-2 font-mono text-xs uppercase tracking-[0.12em] text-ink">
+          <h2 className="mb-3 border-t-2 border-ink pt-2 text-xs text-ink font-medium">
             Ativas ({ativos.length})
           </h2>
           <div className="flex flex-col gap-2">
@@ -96,7 +96,7 @@ export default async function MinhasFuncoes() {
 
       {concluidos.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-3 border-t-2 border-ink pt-2 font-mono text-xs uppercase tracking-[0.12em] text-ink">
+          <h2 className="mb-3 border-t-2 border-ink pt-2 text-xs text-ink font-medium">
             Encerradas ({concluidos.length})
           </h2>
           <div className="flex flex-col gap-2">

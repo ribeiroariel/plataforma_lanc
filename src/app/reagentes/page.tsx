@@ -8,7 +8,7 @@ export const metadata = {
 export default function PaginaReagentes() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <p className="font-mono text-xs font-medium uppercase tracking-[0.14em] text-signal">
+      <p className="text-xs font-medium text-signal">
         Preparo e cálculo
       </p>
       <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
@@ -23,7 +23,7 @@ export default function PaginaReagentes() {
       <section className="mt-8">
         <div className="mb-3 flex items-baseline gap-3">
           <h2 className="font-display text-xl text-ink">Reagentes do dia</h2>
-          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+          <span className="text-xs text-ink-soft font-medium">
             por ensaio · nº de amostras · recipiente
           </span>
         </div>
@@ -40,7 +40,7 @@ export default function PaginaReagentes() {
           <h2 className="font-display text-xl text-ink">
             Tampões e soluções de estoque
           </h2>
-          <span className="font-mono text-[11px] uppercase tracking-wide text-ink-soft">
+          <span className="text-xs text-ink-soft font-medium">
             por volume final
           </span>
         </div>

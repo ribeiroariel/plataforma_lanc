@@ -173,7 +173,7 @@ export default async function PaginaEtiquetas({
                     Grupo {nomeGrupo.get(c.grupo_id) ?? "?"}
                   </p>
                   <p className="mt-0.5 text-center font-mono text-[10px] uppercase tracking-wide text-neutral-600">
-                    Caixa {numeros[i]} · {c.num_ratos} {unidade}
+                    Caixa {numeros[i]} · {Math.max(0, c.num_ratos - (c.mortos ?? 0))} {unidade}
                   </p>
 
                   {(ind || trat) && (

@@ -78,7 +78,7 @@ export default async function PaginaNoticia({
       </Link>
 
       <article className="mt-4">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-signal">
+        <span className="text-xs font-medium text-signal">
           {noticia.tipo === "publicacao" ? "Publicação" : "Atividade"}
         </span>
         <h1 className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
@@ -122,9 +122,9 @@ export default async function PaginaNoticia({
               href={noticia.link_artigo}
               target="_blank"
               rel="noreferrer"
-              className="inline-block font-mono text-xs uppercase tracking-wide text-signal hover:text-ink"
+              className="inline-block text-xs text-signal hover:text-ink font-medium"
             >
-              Ler o artigo completo (DOI) →
+              Ler o artigo completo (DOI)
             </a>
           </div>
         )}

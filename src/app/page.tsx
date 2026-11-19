@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Papel } from "@/lib/supabase/profile";
 import { IlustracaoRedox, varianteNoticia } from "@/components/IlustracaoRedox";
 import { Avatar } from "@/components/Avatar";
+import { LinksContato } from "@/components/Contato";
 
 type Noticia = {
   id: string;
@@ -69,7 +70,7 @@ function formatarData(iso: string) {
 
 function Eyebrow({ tipo }: { tipo: Noticia["tipo"] }) {
   return (
-    <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-signal">
+    <span className="text-xs font-medium text-signal">
       {tipo === "publicacao" ? "Publicação" : "Atividade"}
     </span>
   );
@@ -132,7 +133,7 @@ export default async function Home() {
       <div className="grid gap-x-10 gap-y-8 lg:grid-cols-3">
         {/* Coluna principal */}
         <div className="lg:col-span-2">
-          <p className="mb-4 border-b border-ink pb-2 font-mono text-xs font-medium uppercase tracking-[0.14em] text-ink">
+          <p className="mb-4 border-b border-ink pb-2 text-xs font-medium text-ink">
             Divulgação científica
           </p>
 
@@ -166,12 +167,12 @@ export default async function Home() {
               <p className="mt-3 max-w-2xl leading-relaxed text-ink-soft">
                 {destaque.resumo}
               </p>
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs uppercase tracking-wide">
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-medium">
                 <Link
                   href={`/noticias/${destaque.id}`}
                   className="text-signal hover:text-ink"
                 >
-                  Ler a notícia →
+                  Ler a notícia
                 </Link>
                 {destaque.link_artigo && (
                   <a
@@ -180,7 +181,7 @@ export default async function Home() {
                     rel="noreferrer"
                     className="text-ink-soft hover:text-ink"
                   >
-                    Artigo (DOI) →
+                    Artigo (DOI)
                   </a>
                 )}
               </div>
@@ -246,6 +247,10 @@ export default async function Home() {
             </Widget>
           )}
 
+          <Widget titulo="Fale com o laboratório">
+            <LinksContato />
+          </Widget>
+
           <Widget titulo="Linhas de pesquisa">
             <ul className="flex flex-col gap-2 text-sm">
               {LINHAS_DE_PESQUISA.map((linha) => (
@@ -261,9 +266,28 @@ export default async function Home() {
             <Widget titulo="Quem somos">
               <div className="flex flex-col gap-4">
                 {orientadora && <PessoaLinha pessoa={orientadora} />}
-                {bolsistas.map((b) => (
-                  <PessoaLinha key={b.id} pessoa={b} />
-                ))}
+                {bolsistas.length > 0 && (
+                  // Com muitos bolsistas a coluna ficava enorme e esticava a
+                  // página de notícias: a lista rola dentro de uma altura fixa,
+                  // com um degradê embaixo indicando que tem mais.
+                  <div className="relative">
+                    <div
+                      tabIndex={0}
+                      aria-label={`Bolsistas (${bolsistas.length})`}
+                      className="flex max-h-[26rem] flex-col gap-4 overflow-y-auto overscroll-contain pr-2 pb-6 [scrollbar-color:var(--color-rule)_transparent] [scrollbar-width:thin]"
+                    >
+                      {bolsistas.map((b) => (
+                        <PessoaLinha key={b.id} pessoa={b} />
+                      ))}
+                    </div>
+                    {bolsistas.length > 6 && (
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-paper to-transparent"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </Widget>
           )}
@@ -282,7 +306,7 @@ function Widget({
 }) {
   return (
     <section>
-      <h2 className="mb-3 border-t-2 border-ink pt-2 font-mono text-xs font-medium uppercase tracking-[0.12em] text-ink">
+      <h2 className="mb-3 border-t-2 border-ink pt-2 text-xs font-medium text-ink">
         {titulo}
       </h2>
       {children}
@@ -311,7 +335,7 @@ function PessoaLinha({ pessoa }: { pessoa: Pessoa }) {
       <Avatar fotoUrl={pessoa.foto_url} nome={pessoa.nome} tamanho={44} />
       <div className="min-w-0">
         <p className="text-sm font-medium text-ink">{pessoa.nome}</p>
-        <p className="font-mono text-[11px] uppercase tracking-wide text-signal">
+        <p className="text-xs text-signal font-medium">
           {pessoa.papel === "orientador" ? "Orientadora" : "Bolsista"}
         </p>
         {pessoa.apresentacao && (
