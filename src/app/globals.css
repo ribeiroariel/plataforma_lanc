@@ -156,7 +156,13 @@ body {
   }
 }
 
-/* ── Movimento ────────────────────────────────────────────────────────────
+/* ── Movimento ────
+   "backwards" (e não "both") de propósito: com "both" a animação de
+   transform/opacity continua "valendo" depois de terminar, e o navegador
+   passa a tratar o elemento como moldura dos position:fixed de dentro —
+   janelas (recorte de foto, reserva da agenda) ficavam presas atrás do
+   cabeçalho. Com "backwards" ela só vale antes/durante.
+   ────────────────────────────────────────────────────────────
    Curto e discreto: o conteúdo novo sobe 6px com fade ao trocar de tela
    (template.tsx), abas cruzam em fade, a gaveta "Mais" do celular sobe de
    baixo. prefers-reduced-motion (acima) neutraliza tudo. */
@@ -195,10 +201,10 @@ body {
   }
 }
 .anim-entrada {
-  animation: lanc-entrada 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: lanc-entrada 260ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 .anim-fade {
-  animation: lanc-fade 180ms ease-out both;
+  animation: lanc-fade 180ms ease-out backwards;
 }
 .anim-gaveta {
   animation: lanc-gaveta 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -215,4 +221,24 @@ body {
   background-size: 200% 100%;
   animation: lanc-brilho 1.4s ease-in-out infinite;
   opacity: 0.7;
+}
+
+/* Revelar ao rolar (componente Revelar). Transição, não animação: não deixa
+   o elemento "preso" como moldura de position:fixed depois de terminar. */
+.revelar {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.revelar[data-visivel="true"] {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .revelar {
+    opacity: 1;
+    transform: none;
+  }
 }

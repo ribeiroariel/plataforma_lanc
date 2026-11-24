@@ -3,7 +3,8 @@
 import { useActionState, useRef, useState } from "react";
 import type { Profile } from "@/lib/supabase/profile";
 import { atualizarPerfil } from "@/lib/actions/perfil";
-import { reduzirImagem, trocarArquivoDoInput } from "@/lib/reduzirImagem";
+import { trocarArquivoDoInput } from "@/lib/reduzirImagem";
+import RecortarFoto from "@/components/RecortarFoto";
 import { INPUT, BOTAO_PRIMARIO } from "@/lib/estilos";
 import { VINCULOS, type Vinculo } from "@/lib/vinculo";
 
@@ -19,34 +20,51 @@ export default function PerfilForm({
 }) {
   const [estado, formAction, pendente] = useActionState(atualizarPerfil, undefined);
   const [preview, setPreview] = useState<string | null>(usuario.foto_url);
-  const [preparando, setPreparando] = useState(false);
+  // Foto escolhida esperando o recorte (abre a janela de ajuste).
+  const [paraRecortar, setParaRecortar] = useState<File | null>(null);
+  // Original da última foto escolhida, para "ajustar de novo".
+  const [original, setOriginal] = useState<File | null>(null);
   const [erroFoto, setErroFoto] = useState<string | null>(null);
   const [removerFoto, setRemoverFoto] = useState(false);
   const [apresentacao, setApresentacao] = useState(usuario.apresentacao ?? "");
   const inputFoto = useRef<HTMLInputElement>(null);
 
-  // A foto é reduzida e recortada em quadrado aqui no navegador antes do
-  // envio: foto de celular passava do limite de envio e nunca chegava.
-  async function aoEscolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+  // Escolheu a foto: abre a janela de recorte. Só o recorte confirmado vai
+  // para o formulário (JPEG quadrado de até 800 px, bem abaixo do limite).
+  function aoEscolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0];
     setErroFoto(null);
     if (!arquivo) return;
-    setPreparando(true);
-    try {
-      const reduzida = await reduzirImagem(arquivo, { lado: 800, quadrado: true });
-      trocarArquivoDoInput(e.target, reduzida);
-      setPreview(URL.createObjectURL(reduzida));
-      setRemoverFoto(false);
-    } catch (err) {
-      setErroFoto((err as Error).message);
+    if (!arquivo.type.startsWith("image/") && !/\.(heic|heif)$/i.test(arquivo.name)) {
+      setErroFoto("O arquivo escolhido não é uma imagem.");
       e.target.value = "";
-    } finally {
-      setPreparando(false);
+      return;
+    }
+    setOriginal(arquivo);
+    setParaRecortar(arquivo);
+  }
+
+  function aoRecortar(recortada: File, previa: string) {
+    if (inputFoto.current) trocarArquivoDoInput(inputFoto.current, recortada);
+    setPreview(previa);
+    setRemoverFoto(false);
+    setParaRecortar(null);
+  }
+
+  function aoCancelarRecorte() {
+    setParaRecortar(null);
+    // Cancelou na primeira escolha: não fica arquivo "cru" no formulário.
+    if (inputFoto.current && !preview?.startsWith("blob:")) {
+      inputFoto.current.value = "";
+      setOriginal(null);
     }
   }
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
+      {paraRecortar && (
+        <RecortarFoto arquivo={paraRecortar} onConfirmar={aoRecortar} onCancelar={aoCancelarRecorte} />
+      )}
       <input type="hidden" name="remover_foto" value={removerFoto ? "1" : "0"} />
 
       <div className="flex items-center gap-5">
@@ -59,11 +77,6 @@ export default function PerfilForm({
               <circle cx="20" cy="15" r="7" />
               <path d="M6 38c0-8 6.5-13 14-13s14 5 14 13v2H6v-2Z" />
             </svg>
-          )}
-          {preparando && (
-            <span className="absolute inset-0 flex items-center justify-center bg-paper/70 text-xs text-ink-soft">
-              preparando...
-            </span>
           )}
         </div>
         <div className="flex flex-col gap-2 text-sm">
@@ -82,10 +95,20 @@ export default function PerfilForm({
           >
             {preview ? "Trocar foto" : "Escolher foto"}
           </label>
+          {original && preview?.startsWith("blob:") && (
+            <button
+              type="button"
+              onClick={() => setParaRecortar(original)}
+              className="w-fit text-xs text-absorbance hover:underline"
+            >
+              Ajustar o recorte
+            </button>
+          )}
           {preview && (
             <button
               type="button"
               onClick={() => {
+                setOriginal(null);
                 setPreview(null);
                 setRemoverFoto(true);
                 if (inputFoto.current) inputFoto.current.value = "";
@@ -96,7 +119,7 @@ export default function PerfilForm({
             </button>
           )}
           <span className="text-xs text-ink-soft">
-            Qualquer foto do celular serve; o site recorta no centro e reduz.
+            Depois de escolher, você ajusta o enquadramento.
           </span>
           {erroFoto && <span className="text-xs text-alerta">{erroFoto}</span>}
         </div>
@@ -149,7 +172,7 @@ export default function PerfilForm({
 
       <button
         type="submit"
-        disabled={pendente || preparando}
+        disabled={pendente || !!paraRecortar}
         className={`self-start text-sm ${BOTAO_PRIMARIO}`}
       >
         {pendente ? "Salvando..." : "Salvar"}
