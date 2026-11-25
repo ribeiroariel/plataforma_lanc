@@ -7,6 +7,10 @@ orientação da Profa. Dra. Débora Delwing Dal Magro. Segue a mesma lógica do
 projeto irmão `plataforma-atletas` (Next.js + Supabase + Vercel), mas para o
 grupo de pesquisa em vez do treinamento de atletismo.
 
+## Mudanças visuais
+
+Antes de mexer em cores, tipografia, layout, animação, imagens ou textos de tela, ler o [DESIGN.md](DESIGN.md): identidade de periódico científico, papel de cada cor, módulos públicos, tom dos textos e o que evitar.
+
 ## Status atual (2026-07-07)
 
 Scaffold do Next.js já existe (mesma stack/versões do `plataforma-atletas`:
